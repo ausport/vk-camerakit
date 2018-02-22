@@ -1,6 +1,9 @@
 import sys
-from PyQt5.QtWidgets import (QWidget, QToolTip, QPushButton, QApplication, QMessageBox, QAction, QMainWindow)
+from PyQt5.QtWidgets import (QWidget, QToolTip, QPushButton, QApplication, QMessageBox, QAction, QMainWindow, QHBoxLayout, QLabel)
 from PyQt5.QtGui import (QFont, QIcon)
+from PyQt5.QtGui import QPixmap
+
+from PIL.ImageQt import ImageQt
 
 import VideoTools as tools
 
@@ -38,7 +41,24 @@ class Annotator(QWidget):
         exitAct.setStatusTip('Exit application')
         exitAct.triggered.connect(app.quit)
 
+        hbox = QHBoxLayout(self)
 
+        mpv = tools.VideoObject("/Users/stuartmorgan/Desktop/Cam1a.mp4", target_resolution = (720, 1280))
+        mpv.showDetails()
+        im = mpv.getFrame(1)
+        mpv.close()
+
+        qim = ImageQt(im)
+        pixmap = QPixmap.fromImage(qim)
+
+        lbl = QLabel(self)
+
+        lbl.setMinimumHeight(720)
+        lbl.setMinimumWidth(1280)
+        lbl.setPixmap(pixmap)
+
+        hbox.addWidget(lbl)
+        self.setLayout(hbox)
 
         self.setGeometry(300, 300, 500, 600)
         self.setWindowTitle('Tooltips')
