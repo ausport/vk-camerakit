@@ -3,6 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PIL import Image, ImageDraw, ImageFont
+import json
 
 class GraphicsScene(QGraphicsScene):
     #Create signal exporting QPointF position.
@@ -119,11 +120,15 @@ class Window(QWidget):
         self.editImageCoordsInfo.setReadOnly(True)
         self.editModelCoords = QLineEdit(self)
         self.editModelCoords.setReadOnly(False)
+        self.editModelCoords.returnPressed.connect(self.addCorrespondances)
+        self.listCorrespondances = QListWidget()
         self.viewer.ImageClicked.connect(self.ImageClicked)
-
+        self._mylastImagePairs = {0,0}
         # Arrange layout
         VBlayout = QVBoxLayout(self)
         VBlayout.addWidget(self.viewer)
+        VBlayout.addWidget(self.listCorrespondances)
+
         HBlayout = QHBoxLayout()
         HBlayout.setAlignment(Qt.AlignLeft)
         HBlayout.addWidget(self.btnLoad)
@@ -132,9 +137,25 @@ class Window(QWidget):
         HBlayout.addWidget(self.editModelCoords)
         VBlayout.addLayout(HBlayout)
 
+        #Initial data:
+        #x-image, y-image, x-model, y-model
+        self._my_correspondances = []
+        self._my_correspondances.append({'cx':460, 'cy':223, 'rx': 0, 'ry': 0})
+        self._my_correspondances.append({'cx':1245, 'cy':454, 'rx': 25, 'ry': 25})
+        self._my_correspondances.append({'cx':1152, 'cy':125, 'rx': 25, 'ry': -25})
+        self._my_correspondances.append({'cx':541, 'cy':101, 'rx': 0, 'ry': -25})
+        print(self._my_correspondances)
+
+        for c in self._my_correspondances:
+            self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(c['cx'], c['cy'], c['rx'], c['ry']))
 
     def loadImage(self):
         self.viewer.setImage(QPixmap("./shot0001.png"))
+        #Draw point
+        pen = QPen(Qt.red)
+        brush = QBrush(Qt.yellow)
+        for c in self._my_correspondances:
+            self.viewer._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
 
     def pixInfo(self):
         self.viewer.toggleDragMode()
@@ -148,8 +169,23 @@ class Window(QWidget):
             brush = QBrush(Qt.yellow)
             self.viewer._scene.addEllipse(pos.x()-3, pos.y()-3, 6, 6, pen, brush)
             self.viewer.toggleDragMode()
-
+            self._mylastImagePairs = {pos.x(), pos.y()}
             self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
+
+    def addCorrespondances(self):
+        #Verify correct entry (x, y)
+        inputNumber = self.editModelCoords.text()
+        try:
+            (xval,yval) = [int(s) for s in inputNumber.split(',')]
+            print(xval,yval)
+            self.editModelCoords.setStyleSheet("background-color: rgb(255, 255, 255);")
+            self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(list(self._mylastImagePairs)[0], list(self._mylastImagePairs)[1], xval,yval))
+            # item = QListWidgetItem("Item %i" % i)
+
+        except Exception as e:
+            print(e)
+            print("Please select a number, `{0}` isn't valid!".format(inputNumber))
+            return
 
 
 if __name__ == '__main__':
