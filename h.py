@@ -3,7 +3,9 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PIL import Image, ImageDraw, ImageFont
-import json
+import cv2
+import numpy as np
+
 
 class GraphicsScene(QGraphicsScene):
     #Create signal exporting QPointF position.
@@ -116,6 +118,9 @@ class Window(QWidget):
         self.btnAddCorrespondances = QToolButton(self)
         self.btnAddCorrespondances.setText('Add Correspondance')
         self.btnAddCorrespondances.clicked.connect(self.pixInfo)
+        self.btnComputeHomograhy = QToolButton(self)
+        self.btnComputeHomograhy.setText('Compute Homograhy')
+        self.btnComputeHomograhy.clicked.connect(self.computeHomograhy)
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
         self.editModelCoords = QLineEdit(self)
@@ -135,6 +140,7 @@ class Window(QWidget):
         HBlayout.addWidget(self.btnAddCorrespondances)
         HBlayout.addWidget(self.editImageCoordsInfo)
         HBlayout.addWidget(self.editModelCoords)
+        HBlayout.addWidget(self.btnComputeHomograhy)
         VBlayout.addLayout(HBlayout)
 
         #Initial data:
@@ -187,6 +193,33 @@ class Window(QWidget):
             print("Please select a number, `{0}` isn't valid!".format(inputNumber))
             return
 
+    def computeHomograhy(self):
+        '''
+        pts_src and pts_dst are numpy arrays of points
+        in source and destination images. We need at least
+        4 corresponding points.
+        '''
+        pts_src = np.array([[460, 223], [1245, 454], [1152, 125],[541, 101]])
+        pts_dst = np.array([[25, 25], [50, 50], [50, 0],[25, 0]])
+        h, status = cv2.findHomography(pts_src, pts_dst)
+
+        print(h)
+        '''
+        The calculated homography can be used to warp
+        the source image to destination. Size is the
+        size (width,height) of im_dst
+        '''
+        im_src = cv2.imread("./shot0001.png")
+        # Warp source image to destination based on homography
+        # im_out = cv2.warpPerspective(im_src, h, (im_src.shape[1],im_src.shape[0]))
+        im_out = cv2.warpPerspective(im_src, h, (50,50))
+
+        # Display images
+        # cv2.imshow("Source Image", im_src)
+        # cv2.imshow("Destination Image", im_dst)
+        cv2.imshow("Warped Source Image", im_out)
+
+        cv2.waitKey(0)
 
 if __name__ == '__main__':
     import sys
