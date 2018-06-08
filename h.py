@@ -200,7 +200,7 @@ class Window(QWidget):
         4 corresponding points.
         '''
         pts_src = np.array([[460, 223], [1245, 454], [1152, 125],[541, 101]])
-        pts_dst = np.array([[25, 25], [50, 50], [50, 0],[25, 0]])
+        pts_dst = np.array([[250, 250], [500, 500], [500, 0],[250, 0]])
         h, status = cv2.findHomography(pts_src, pts_dst)
 
         print(h)
@@ -212,14 +212,16 @@ class Window(QWidget):
         im_src = cv2.imread("./shot0001.png")
         # Warp source image to destination based on homography
         # im_out = cv2.warpPerspective(im_src, h, (im_src.shape[1],im_src.shape[0]))
-        im_out = cv2.warpPerspective(im_src, h, (50,50))
+        im_out = cv2.warpPerspective(im_src, h, (1920,1080))
 
         # Display images
         # cv2.imshow("Source Image", im_src)
         # cv2.imshow("Destination Image", im_dst)
-        cv2.imshow("Warped Source Image", im_out)
-
-        cv2.waitKey(0)
+        # cv2.imshow("Warped Source Image", im_out)
+        height, width, channel = im_out.shape
+        bytesPerLine = 3 * width
+        qImg = QImage(im_out.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        self.viewer.setImage(QPixmap(qImg))
 
 if __name__ == '__main__':
     import sys
