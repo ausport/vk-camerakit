@@ -112,11 +112,13 @@ class Window(QWidget):
         self.btnLoad.setText('Load image')
         self.btnLoad.clicked.connect(self.loadImage)
         # Button to change from drag/pan to getting pixel info
-        self.btnPixInfo = QToolButton(self)
-        self.btnPixInfo.setText('Add Correspondance')
-        self.btnPixInfo.clicked.connect(self.pixInfo)
-        self.editPixInfo = QLineEdit(self)
-        self.editPixInfo.setReadOnly(True)
+        self.btnAddCorrespondances = QToolButton(self)
+        self.btnAddCorrespondances.setText('Add Correspondance')
+        self.btnAddCorrespondances.clicked.connect(self.pixInfo)
+        self.editImageCoordsInfo = QLineEdit(self)
+        self.editImageCoordsInfo.setReadOnly(True)
+        self.editModelCoords = QLineEdit(self)
+        self.editModelCoords.setReadOnly(False)
         self.viewer.ImageClicked.connect(self.ImageClicked)
 
         # Arrange layout
@@ -125,8 +127,9 @@ class Window(QWidget):
         HBlayout = QHBoxLayout()
         HBlayout.setAlignment(Qt.AlignLeft)
         HBlayout.addWidget(self.btnLoad)
-        HBlayout.addWidget(self.btnPixInfo)
-        HBlayout.addWidget(self.editPixInfo)
+        HBlayout.addWidget(self.btnAddCorrespondances)
+        HBlayout.addWidget(self.editImageCoordsInfo)
+        HBlayout.addWidget(self.editModelCoords)
         VBlayout.addLayout(HBlayout)
 
 
@@ -135,14 +138,10 @@ class Window(QWidget):
 
     def pixInfo(self):
         self.viewer.toggleDragMode()
-        # if self.viewer.dragMode()  == QGraphicsView.NoDrag:
-        #     self.btnPixInfo.setText('Correspondance Mode is ON')
-        # else:
-        #     self.btnPixInfo.setText('Correspondance Mode is OFF')
 
     def ImageClicked(self, pos):
         if self.viewer.dragMode()  == QGraphicsView.NoDrag:
-            self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
+            self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
 
             #Draw point
             pen = QPen(Qt.red)
@@ -150,8 +149,7 @@ class Window(QWidget):
             self.viewer._scene.addEllipse(pos.x()-3, pos.y()-3, 6, 6, pen, brush)
             self.viewer.toggleDragMode()
 
-        # if self.viewer.dragMode()  == QGraphicsView.NoDrag:
-        #     self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
+            self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
 
 
 if __name__ == '__main__':
