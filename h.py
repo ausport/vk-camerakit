@@ -18,16 +18,6 @@ class GraphicsScene(QGraphicsScene):
         self.opt = opt
 
     def mousePressEvent(self, event):
-        pen = QPen(Qt.red)
-        brush = QBrush(Qt.yellow)
-        x = event.scenePos().x()
-        y = event.scenePos().y()
-        if True:
-            self.addEllipse(x-3, y-3, 6, 6, pen, brush)
-        elif self.opt == "Select":
-            pass
-            # print(x, y)
-
         # #Emit the signal
         self.SceneClicked.emit(QPointF(event.scenePos()))
 
@@ -105,14 +95,12 @@ class ImageViewer(QGraphicsView):
             self.setDragMode(QGraphicsView.ScrollHandDrag)
 
     def mousePressEvent(self, event):
-        if self._Image.isUnderMouse():
-            self.ImageClicked.emit(QPoint(event.pos()))
-
         super(ImageViewer, self).mousePressEvent(event)
 
     def SceneClicked(self, pos):
         # Pass local (scene) coordinates to ImageClicked()
-        self.ImageClicked.emit(pos.toPoint())
+        if self._Image.isUnderMouse():
+            self.ImageClicked.emit(pos.toPoint())
 
 
 class Window(QWidget):
@@ -125,7 +113,7 @@ class Window(QWidget):
         self.btnLoad.clicked.connect(self.loadImage)
         # Button to change from drag/pan to getting pixel info
         self.btnPixInfo = QToolButton(self)
-        self.btnPixInfo.setText('Correspondance Mode is OFF')
+        self.btnPixInfo.setText('Add Correspondance')
         self.btnPixInfo.clicked.connect(self.pixInfo)
         self.editPixInfo = QLineEdit(self)
         self.editPixInfo.setReadOnly(True)
@@ -147,14 +135,20 @@ class Window(QWidget):
 
     def pixInfo(self):
         self.viewer.toggleDragMode()
-        if self.viewer.dragMode()  == QGraphicsView.NoDrag:
-            self.btnPixInfo.setText('Correspondance Mode is ON')
-        else:
-            self.btnPixInfo.setText('Correspondance Mode is OFF')
+        # if self.viewer.dragMode()  == QGraphicsView.NoDrag:
+        #     self.btnPixInfo.setText('Correspondance Mode is ON')
+        # else:
+        #     self.btnPixInfo.setText('Correspondance Mode is OFF')
 
     def ImageClicked(self, pos):
         if self.viewer.dragMode()  == QGraphicsView.NoDrag:
             self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
+
+            #Draw point
+            pen = QPen(Qt.red)
+            brush = QBrush(Qt.yellow)
+            self.viewer._scene.addEllipse(pos.x()-3, pos.y()-3, 6, 6, pen, brush)
+            self.viewer.toggleDragMode()
 
         # if self.viewer.dragMode()  == QGraphicsView.NoDrag:
         #     self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
