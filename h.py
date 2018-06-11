@@ -114,6 +114,13 @@ class Window(QWidget):
         self.btnLoad = QToolButton(self)
         self.btnLoad.setText('Load image')
         self.btnLoad.clicked.connect(self.loadImage)
+
+        self.cboSurfaces = QComboBox()
+        for s in ("issia", "ncaacourt", "ncaafield", "netball", "hockey", "rugby", "tennis", "pool"):
+            self.cboSurfaces.addItem(s)
+        self.cboSurfaces.setCurrentText("pool")
+        self.cboSurfaces.currentIndexChanged.connect(self.loadSurface)
+
         # Button to change from drag/pan to getting pixel info
         self.btnAddCorrespondances = QToolButton(self)
         self.btnAddCorrespondances.setText('Add Correspondance')
@@ -123,9 +130,9 @@ class Window(QWidget):
         self.btnComputeHomograhy.clicked.connect(self.computeHomograhy)
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
-        self.editModelCoords = QLineEdit(self)
-        self.editModelCoords.setReadOnly(False)
-        self.editModelCoords.returnPressed.connect(self.addCorrespondances)
+        # self.editModelCoords = QLineEdit(self)
+        # self.editModelCoords.setReadOnly(False)
+        # self.editModelCoords.returnPressed.connect(self.addCorrespondances)
         self.listCorrespondances = QListWidget()
         self.viewer.ImageClicked.connect(self.ImageClicked)
         self.surface.ImageClicked.connect(self.SurfaceClicked)
@@ -149,7 +156,8 @@ class Window(QWidget):
         HBlayout.addWidget(self.btnLoad)
         HBlayout.addWidget(self.btnAddCorrespondances)
         HBlayout.addWidget(self.editImageCoordsInfo)
-        HBlayout.addWidget(self.editModelCoords)
+        # HBlayout.addWidget(self.editModelCoords)
+        HBlayout.addWidget(self.cboSurfaces)
         HBlayout.addWidget(self.btnComputeHomograhy)
         VBlayout.addLayout(HBlayout)
 
@@ -190,7 +198,6 @@ class Window(QWidget):
                 return
 
             if event.key() == Qt.Key_Space:
-                print("Is space")
                 self.viewer.toggleDragMode()
                 self.surface.toggleDragMode()
 
@@ -201,16 +208,23 @@ class Window(QWidget):
                 self.surface.toggleDragMode()
 
     def loadSurface(self):
-        self.viewer.setImage(QPixmap("./shot0001.png"))
+        print("Loading surface:", self.cboSurfaces.currentText())
+        self.surface.setImage(QPixmap("./Surfaces/{:s}.png".format(self.cboSurfaces.currentText())))
+
+        #Draw point
+        # pen = QPen(Qt.red)
+        # brush = QBrush(Qt.yellow)
+        # for c in self._my_correspondances:
+        #     self.surface._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
 
     def loadImage(self):
-        self.viewer.setImage(QPixmap("./shot0001.png"))
-        self.surface.setImage(QPixmap("./Surfaces/pool.png"))
+        self.viewer.setImage(QPixmap("./hq3.png"))
+
         #Draw point
-        pen = QPen(Qt.red)
-        brush = QBrush(Qt.yellow)
-        for c in self._my_correspondances:
-            self.viewer._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
+        # pen = QPen(Qt.red)
+        # brush = QBrush(Qt.yellow)
+        # for c in self._my_correspondances:
+        #     self.viewer._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
 
     def pixInfo(self):
         # self.viewer.toggleDragMode()
@@ -250,9 +264,7 @@ class Window(QWidget):
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             print("_mylastSurfacePairs:", self._mylastSurfacePairs)
 
-            # self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(list(self._mylastImagePairs)[0], list(self._mylastImagePairs)[1], list(self._mylastSurfacePairs)[0], list(self._mylastSurfacePairs)[1]))
-            # item = QListWidgetItem("Item %i" % i)
-            self.editImageCoordsInfo.setText("{0}, {1} ,{2}, {3}".format(list(self._mylastImagePairs)[0], list(self._mylastImagePairs)[1], list(self._mylastSurfacePairs)[0], list(self._mylastSurfacePairs)[1]))
+            self.editImageCoordsInfo.setText("{0}, {1} ,{2}, {3}".format(list(self._mylastImagePairs)[1], list(self._mylastImagePairs)[0], list(self._mylastSurfacePairs)[1], list(self._mylastSurfacePairs)[0]))
 
             #Save corresponances
             self.resetControls()
@@ -263,27 +275,6 @@ class Window(QWidget):
             self.addingCorrespondancesEnabled = True
             self.btnAddCorrespondances.setStyleSheet("background-color: green")
 
-        #2. Detect an image space click.
-        #3. Highlight surface space.
-        #4. Detect a surface space click.
-        #5. Retain corresponance pair.
-        #6. Compute homography if at least 4 pairs.
-
-
-
-        # #Verify correct entry (x, y)
-        # inputNumber = self.editModelCoords.text()
-        # try:
-        #     (xval,yval) = [int(s) for s in inputNumber.split(',')]
-        #     print(xval,yval)
-        #     self.editModelCoords.setStyleSheet("background-color: rgb(255, 255, 255);")
-        #     self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(list(self._mylastImagePairs)[0], list(self._mylastImagePairs)[1], xval,yval))
-        #     # item = QListWidgetItem("Item %i" % i)
-        #
-        # except Exception as e:
-        #     print(e)
-        #     print("Please select a number, `{0}` isn't valid!".format(inputNumber))
-        #     return
 
     def computeHomograhy(self):
         '''
@@ -291,8 +282,12 @@ class Window(QWidget):
         in source and destination images. We need at least
         4 corresponding points.
         '''
-        pts_src = np.array([[460, 223], [1245, 454], [1152, 125],[541, 101]])
-        pts_dst = np.array([[250, 250], [500, 500], [500, 0],[250, 0]])
+        # pts_src = np.array([[460, 223], [1245, 454], [1152, 125],[541, 101]])
+        # pts_dst = np.array([[250, 250], [500, 500], [500, 0],[250, 0]])
+
+        pts_src = np.array([[832, 889], [155, 1394], [3046, 887],[3695, 1412]])
+        pts_dst = np.array([[10, 10], [10, 260], [510, 10],[510, 260]])
+
         h, status = cv2.findHomography(pts_src, pts_dst)
 
         print(h)
@@ -301,16 +296,16 @@ class Window(QWidget):
         the source image to destination. Size is the
         size (width,height) of im_dst
         '''
-        im_src = cv2.imread("./shot0001.png")
+        im_src = cv2.imread("./hq3.png")
         # Warp source image to destination based on homography
         # im_out = cv2.warpPerspective(im_src, h, (im_src.shape[1],im_src.shape[0]))
-        im_out = cv2.warpPerspective(im_src, h, (1920,1080))
+        im_out = cv2.warpPerspective(im_src, h, (520,270))
 
         # Display images
         height, width, channel = im_out.shape
         bytesPerLine = 3 * width
         qImg = QImage(im_out.data, width, height, bytesPerLine, QImage.Format_RGB888)
-        self.viewer.setImage(QPixmap(qImg))
+        self.surface.setImage(QPixmap(qImg))
 
         self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
         self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
@@ -322,4 +317,6 @@ if __name__ == '__main__':
     window = Window()
     window.setGeometry(500, 300, 800, 600)
     window.show()
+    window.loadImage()
+    window.loadSurface()
     sys.exit(app.exec_())
