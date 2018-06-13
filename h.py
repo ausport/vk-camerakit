@@ -414,7 +414,7 @@ class Window(QWidget):
         im_src = self._draw(im_src,camera_points,imgpts)
 
 
-        if True:
+        if False:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
