@@ -130,6 +130,14 @@ class Window(QWidget):
         self.btnComputeHomograhy.clicked.connect(self.computeHomograhy)
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
+        self.sliderFocalLength = QSlider(Qt.Horizontal)
+        self.sliderFocalLength.setMinimum(0)
+        self.sliderFocalLength.setMaximum(50)
+        self.sliderFocalLength.setValue(10)
+        self.sliderFocalLength.setTickPosition(QSlider.TicksBelow)
+        self.sliderFocalLength.setTickInterval(1)
+        self.sliderFocalLength.valueChanged.connect(self.updateFocalLength)
+
         # self.editModelCoords = QLineEdit(self)
         # self.editModelCoords.setReadOnly(False)
         # self.editModelCoords.returnPressed.connect(self.addCorrespondances)
@@ -138,6 +146,9 @@ class Window(QWidget):
         self.surface.ImageClicked.connect(self.SurfaceClicked)
         self._mylastImagePairs = {0,0}
         self.addingCorrespondancesEnabled = False
+        self._myHomography = None
+        self._focal_length = 10.8
+
         # Arrange layout
         VBlayout = QVBoxLayout(self)
         HB_images_layout = QHBoxLayout()
@@ -158,6 +169,7 @@ class Window(QWidget):
         HBlayout.addWidget(self.editImageCoordsInfo)
         # HBlayout.addWidget(self.editModelCoords)
         HBlayout.addWidget(self.cboSurfaces)
+        HBlayout.addWidget(self.sliderFocalLength)
         HBlayout.addWidget(self.btnComputeHomograhy)
         VBlayout.addLayout(HBlayout)
 
@@ -283,6 +295,9 @@ class Window(QWidget):
         return img
 
 
+    def updateFocalLength(self):
+        self._focal_length = self.sliderFocalLength.value()
+        self.computeHomograhy()
 
     def computeHomograhy(self):
         '''
@@ -300,6 +315,7 @@ class Window(QWidget):
 
         # Compute 2D homography
         h, status = cv2.findHomography(pts_src, pts_dst)
+        self._myHomography = h
 
         '''
         The calculated homography can be used to warp
@@ -332,18 +348,18 @@ class Window(QWidget):
         val, H = cv2.invert(h)
 
         # Estimate naive camera intrinsics (camera matrix)
-        size = im_src.shape
-        focal_length = size[1]
-        center = (size[1]/2, size[0]/2)
-        camera_matrix = np.array(
-                                 [[focal_length, 0, center[0]],
-                                 [0, focal_length, center[1]],
-                                 [0, 0, 1]], dtype = "float32")
+        print("Image dimensions :\n {0}".format(im_src.shape))
+        h, w = im_src.shape[:2]
+        fx = 0.5 + self._focal_length / 50.0
+        camera_matrix = np.float64([[fx*w, 0, 0.5*(w-1)],
+                        [0, fx*w, 0.5*(h-1)],
+                        [0.0,0.0,      1.0]])
 
-        print ("Camera Matrix :\n {0}".format(camera_matrix))
+        print ("Camera Matrix {0}:\n {1}".format(self._focal_length, camera_matrix))
 
         # ...assuming no lens distortion
         distortion_matrix = np.zeros((4,1))
+        print ("Distortion Matrix :\n {0}".format(distortion_matrix))
 
         #NB Generate square calibration corresponances using existing homography.
         # The problem is how to learn the camera pose, which we need to estimate a 3D camera coordinate system.
@@ -367,7 +383,7 @@ class Window(QWidget):
         # camera extrinsics.  Obviously this is a hack, and it would be nice to have more accurate global extrinsics parameters, but we would otherwise
         # need some way of computing the camera distortion accurately.
 
-        _global_calibration = False
+        _global_calibration = True
 
         if _global_calibration:
             # Manually set world point calibration for global extrinsics.
@@ -402,6 +418,8 @@ class Window(QWidget):
 
         # Solve rotation and translation matrices
         (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points, camera_points, camera_matrix, distortion_matrix)
+        print ("Rotation Matrix :\n {0}".format(rotation_vector))
+        print ("Translation Matrix :\n {0}".format(translation_vector))
 
 
         # Top left of pool space
@@ -440,7 +458,7 @@ class Window(QWidget):
                 # (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
                 ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
                 ground_point = cv2.perspectiveTransform(ground_point, H)
-                ref_point = np.array([[[world_point[0], world_point[1], -20]]], dtype='float32')
+                ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
                 (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
                 # Render vertical
                 im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
