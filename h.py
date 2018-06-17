@@ -7,6 +7,11 @@ import cv2
 import numpy as np
 #https://www.learnopencv.com/homography-examples-using-opencv-python-c/
 
+
+# TODO: Add distortion slider.
+# TODO: Fix corresponances and include auto entry.
+
+
 class GraphicsScene(QGraphicsScene):
     #Create signal exporting QPointF position.
     SceneClicked = pyqtSignal(QPointF)
@@ -119,7 +124,7 @@ class Window(QWidget):
         for s in ("issia", "ncaacourt", "ncaafield", "netball", "hockey", "rugby", "tennis", "pool"):
             self.cboSurfaces.addItem(s)
         self.cboSurfaces.setCurrentText("pool")
-        self.cboSurfaces.currentIndexChanged.connect(self.loadSurface)
+        self.cboSurfaces.currentIndexChanged.connect(self.updateImageSet)
 
         # Button to change from drag/pan to getting pixel info
         self.btnAddCorrespondances = QToolButton(self)
@@ -143,6 +148,7 @@ class Window(QWidget):
         self.surface.ImageClicked.connect(self.SurfaceClicked)
         self._mylastImagePairs = {0,0}
         self.addingCorrespondancesEnabled = False
+        self.surfaceDimensions = None
 
         # Camera properties
         self._myHomography = None
@@ -172,16 +178,16 @@ class Window(QWidget):
         VBlayout.addLayout(HBlayout)
 
         #Initial data:
-        #x-image, y-image, x-model, y-model
-        self._my_correspondances = []
-        self._my_correspondances.append({'cx':460, 'cy':223, 'rx': 0, 'ry': 0})
-        self._my_correspondances.append({'cx':1245, 'cy':454, 'rx': 25, 'ry': 25})
-        self._my_correspondances.append({'cx':1152, 'cy':125, 'rx': 25, 'ry': -25})
-        self._my_correspondances.append({'cx':541, 'cy':101, 'rx': 0, 'ry': -25})
-        print(self._my_correspondances)
-
-        for c in self._my_correspondances:
-            self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(c['cx'], c['cy'], c['rx'], c['ry']))
+        # #x-image, y-image, x-model, y-model
+        # self._my_correspondances = []
+        # self._my_correspondances.append({'cx':460, 'cy':223, 'rx': 0, 'ry': 0})
+        # self._my_correspondances.append({'cx':1245, 'cy':454, 'rx': 25, 'ry': 25})
+        # self._my_correspondances.append({'cx':1152, 'cy':125, 'rx': 25, 'ry': -25})
+        # self._my_correspondances.append({'cx':541, 'cy':101, 'rx': 0, 'ry': -25})
+        # print(self._my_correspondances)
+        #
+        # for c in self._my_correspondances:
+        #     self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(c['cx'], c['cy'], c['rx'], c['ry']))
 
     def resetControls(self):
 
@@ -218,11 +224,18 @@ class Window(QWidget):
                 self.surface.toggleDragMode()
 
     def loadSurface(self):
+
         print("Loading surface:", self.cboSurfaces.currentText())
-        self.surface.setImage(QPixmap("./Surfaces/{:s}.png".format(self.cboSurfaces.currentText())))
+        px = QPixmap("./Surfaces/{:s}.png".format(self.cboSurfaces.currentText()))
+        self.surface.setImage(px)
+        self.surfaceDimensions = px.size()
 
     def loadImage(self):
-        self.viewer.setImage(QPixmap("./hq3.png"))
+        self.viewer.setImage(QPixmap("./Images/{:s}.png".format(self.cboSurfaces.currentText())))
+
+    def updateImageSet(self):
+        self.loadImage()
+        self.loadSurface()
 
     def pixInfo(self):
         # self.viewer.toggleDragMode()
@@ -315,7 +328,7 @@ class Window(QWidget):
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             print("_mylastSurfacePairs:", self._mylastSurfacePairs)
 
-            self.editImageCoordsInfo.setText("{0}, {1} ,{2}, {3}".format(list(self._mylastImagePairs)[1], list(self._mylastImagePairs)[0], list(self._mylastSurfacePairs)[1], list(self._mylastSurfacePairs)[0]))
+            self.editImageCoordsInfo.setText("Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(list(self._mylastImagePairs)[0], list(self._mylastImagePairs)[1], list(self._mylastSurfacePairs)[0], list(self._mylastSurfacePairs)[1]))
 
             #Save corresponances
             self.resetControls()
@@ -340,20 +353,24 @@ class Window(QWidget):
 
     def computeHomograhy(self):
         '''
-        pts_src and pts_dst are numpy arrays of points
+        image_points and surface_points are numpy arrays of points
         in source and destination images. We need at least
         4 corresponding points.
         '''
-        # pts_src = np.array([[460, 223], [1245, 454], [1152, 125],[541, 101]])
-        # pts_dst = np.array([[250, 250], [500, 500], [500, 0],[250, 0]])
 
-        pts_src = np.array([[832, 889], [155, 1394], [3046, 887],[3695, 1412]], dtype='float32')
-        pts_src = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
-        pts_dst = np.array([[10, 10], [10, 260], [510, 10],[510, 260]], dtype='float32')
-        pts_dst = np.array([ (10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0) ], dtype='float32')
+        if self.cboSurfaces.currentText() == "pool":
+            #Pool
+            image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
+            surface_points = np.array([ (10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0) ], dtype='float32')
+
+        elif self.cboSurfaces.currentText() == "tennis":
+            #Tennis
+            image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
+            surface_points = np.array([ (157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0) ], dtype='float32')
+
 
         # Compute 2D homography
-        h, status = cv2.findHomography(pts_src, pts_dst)
+        h, status = cv2.findHomography(image_points, surface_points)
         self._myHomography = h
 
         '''
@@ -361,10 +378,10 @@ class Window(QWidget):
         the source image to destination. Size is the
         size (width,height) of im_dst
         '''
-        im_src = cv2.imread("./hq3.png")
+        im_src = cv2.imread("./Images/{:s}.png".format(self.cboSurfaces.currentText()))
 
         # Warp source image to destination based on homography
-        im_out = cv2.warpPerspective(im_src, h, (520,270))
+        im_out = cv2.warpPerspective(im_src, h, (self.surfaceDimensions.width(),self.surfaceDimensions.height()))
 
         # Display images in QT
         height, width, channel = im_out.shape
@@ -377,10 +394,10 @@ class Window(QWidget):
         self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
         # Render pool boundaries.
-        cv2.line(im_src, ( int(pts_src[0][0]), int(pts_src[0][1])), ( int(pts_src[1][0]), int(pts_src[1][1])), (255,255,0), 2)
-        cv2.line(im_src, ( int(pts_src[2][0]), int(pts_src[2][1])), ( int(pts_src[1][0]), int(pts_src[1][1])), (255,0,255), 2)
-        cv2.line(im_src, ( int(pts_src[2][0]), int(pts_src[2][1])), ( int(pts_src[3][0]), int(pts_src[3][1])), (0,255,0), 2)
-        cv2.line(im_src, ( int(pts_src[0][0]), int(pts_src[0][1])), ( int(pts_src[3][0]), int(pts_src[3][1])), (0,255,255), 2)
+        cv2.line(im_src, ( int(image_points[0][0]), int(image_points[0][1])), ( int(image_points[1][0]), int(image_points[1][1])), (255,255,0), 1)
+        cv2.line(im_src, ( int(image_points[2][0]), int(image_points[2][1])), ( int(image_points[1][0]), int(image_points[1][1])), (255,0,255), 1)
+        cv2.line(im_src, ( int(image_points[2][0]), int(image_points[2][1])), ( int(image_points[3][0]), int(image_points[3][1])), (0,255,0), 1)
+        cv2.line(im_src, ( int(image_points[0][0]), int(image_points[0][1])), ( int(image_points[3][0]), int(image_points[3][1])), (0,255,255), 1)
 
 
         # Compute inverse of 2D homography
@@ -477,7 +494,7 @@ class Window(QWidget):
         im_src = self._draw(im_src,camera_points,imgpts)
 
 
-        if True:
+        if False:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
