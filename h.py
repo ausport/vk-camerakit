@@ -138,16 +138,19 @@ class Window(QWidget):
         self.sliderFocalLength.setTickInterval(1)
         self.sliderFocalLength.valueChanged.connect(self.updateFocalLength)
 
-        # self.editModelCoords = QLineEdit(self)
-        # self.editModelCoords.setReadOnly(False)
-        # self.editModelCoords.returnPressed.connect(self.addCorrespondances)
         self.listCorrespondances = QListWidget()
         self.viewer.ImageClicked.connect(self.ImageClicked)
         self.surface.ImageClicked.connect(self.SurfaceClicked)
         self._mylastImagePairs = {0,0}
         self.addingCorrespondancesEnabled = False
+
+        # Camera properties
         self._myHomography = None
         self._focal_length = 10.8
+        self._myCameraMatrix = None
+        self._myDistortionMatrix = None
+        self._myRotationVector = None
+        self._myTranslationVector = None
 
         # Arrange layout
         VBlayout = QVBoxLayout(self)
@@ -156,11 +159,6 @@ class Window(QWidget):
         HB_images_layout.addWidget(self.viewer)
         HB_images_layout.addWidget(self.surface)
         VBlayout.addLayout(HB_images_layout)
-        # VBlayout.addWidget(self.listCorrespondances)
-        # self.setSpaceAction=QAction("Set Space", self, shortcut=Qt.Key_Space, triggered=self.setSpace)
-        # self.addAction(self.setSpaceAction)
-        # VBlayout.addWidget(QPushButton("Space", self, clicked=self.setSpaceAction.triggered))
-
 
         HBlayout = QHBoxLayout()
         HBlayout.setAlignment(Qt.AlignLeft)
@@ -223,20 +221,8 @@ class Window(QWidget):
         print("Loading surface:", self.cboSurfaces.currentText())
         self.surface.setImage(QPixmap("./Surfaces/{:s}.png".format(self.cboSurfaces.currentText())))
 
-        #Draw point
-        # pen = QPen(Qt.red)
-        # brush = QBrush(Qt.yellow)
-        # for c in self._my_correspondances:
-        #     self.surface._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
-
     def loadImage(self):
         self.viewer.setImage(QPixmap("./hq3.png"))
-
-        #Draw point
-        # pen = QPen(Qt.red)
-        # brush = QBrush(Qt.yellow)
-        # for c in self._my_correspondances:
-        #     self.viewer._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
 
     def pixInfo(self):
         # self.viewer.toggleDragMode()
@@ -260,8 +246,61 @@ class Window(QWidget):
             self.surface.setBackgroundBrush(QBrush(QColor(30, 100, 30)))
             print("_mylastImagePairs:", self._mylastImagePairs)
 
+
+    def _drawImageSpaceDetection(self, pos):
+
+        # Render reference point annotation.
+        r = 5
+        yellow = Qt.yellow
+        pen = QPen(Qt.red)
+        brush = QBrush(QColor(255, 255, 0, 100))
+
+        poly = QPolygonF()
+        x, y = pos.x(), pos.y()
+        poly_points = np.array([])
+        for i in range(1, 33):
+            #These points are in world coordinates.
+            _x = x + (r * math.cos(2 * math.pi * i / 32))
+            _y = y + (r * math.sin(2 * math.pi * i / 32))
+
+            #Convert to image coordinates.
+            axis = np.float32([[_x, _y, 0]]).reshape(-1,3)
+            (imgpts, jacobian) = cv2.projectPoints(axis, self._myRotationVector, self._myTranslationVector, self._myCameraMatrix, self._myDistortionMatrix)
+
+            #Draw the points in a circle in perspective.
+            (xx, yy) = tuple(imgpts[0].ravel())
+
+            poly_points = np.append(poly_points, [xx, yy])
+
+            _p = QPointF(xx,yy)
+            poly.append(QPointF(xx,yy))
+
+        self.viewer._scene.addPolygon(poly, pen, brush)
+
+        #Render image-space point
+        axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
+        (imgpts, jacobian) = cv2.projectPoints(axis, self._myRotationVector, self._myTranslationVector, self._myCameraMatrix, self._myDistortionMatrix)
+        (x, y) = tuple(imgpts[0].ravel())
+        (xx, yy) = tuple(imgpts[1].ravel())
+        self.viewer._scene.addLine(xx, yy, x, y, pen)
+
+
     def SurfaceClicked(self, pos):
-        print("Surface")
+        print(self._myHomography.__class__.__name__)
+
+        if not self._myHomography.__class__.__name__ == "NoneType":
+            print("ok")
+            print(pos.x(), pos.y())
+            #Draw point
+            pen = QPen(Qt.red)
+            brush = QBrush(Qt.yellow)
+            self.surface._scene.addEllipse(pos.x()-3, pos.y()-3, 6, 6, pen, brush)
+            self.surface.toggleDragMode()
+            self._mylastSurfacePairs = {pos.x(), pos.y()}
+
+            self._drawImageSpaceDetection(pos)
+
+
         if self.surface.dragMode()  == QGraphicsView.NoDrag and self.addingCorrespondancesEnabled == True:
             # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
             print(pos.x(), pos.y())
@@ -421,6 +460,12 @@ class Window(QWidget):
         print ("Rotation Matrix :\n {0}".format(rotation_vector))
         print ("Translation Matrix :\n {0}".format(translation_vector))
 
+        # Retain matrices
+        self._myHomography = h
+        self._myCameraMatrix = camera_matrix
+        self._myDistortionMatrix = distortion_matrix
+        self._myRotationVector = rotation_vector
+        self._myTranslationVector = translation_vector
 
         # Top left of pool space
         axis = np.float32([[60,10,0], [10,60,0], [10,10,-50]]).reshape(-1,3)
@@ -432,7 +477,7 @@ class Window(QWidget):
         im_src = self._draw(im_src,camera_points,imgpts)
 
 
-        if False:
+        if True:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
@@ -474,8 +519,6 @@ class Window(QWidget):
         cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
         qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
         self.viewer.setImage(QPixmap(qImg))
-        # self.viewer._scene.addEllipse(c['cx']-3, c['cy']-3, 6, 6, pen, brush)
-
 
 
 if __name__ == '__main__':
