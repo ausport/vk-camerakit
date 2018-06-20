@@ -123,7 +123,7 @@ class Window(QWidget):
         self.cboSurfaces = QComboBox()
         for s in ("issia", "ncaacourt", "ncaafield", "netball", "hockey", "rugby", "tennis", "pool"):
             self.cboSurfaces.addItem(s)
-        self.cboSurfaces.setCurrentText("pool")
+        self.cboSurfaces.setCurrentText("tennis")
         self.cboSurfaces.currentIndexChanged.connect(self.updateImageSet)
 
         # Button to change from drag/pan to getting pixel info
@@ -149,6 +149,15 @@ class Window(QWidget):
         self._mylastImagePairs = {0,0}
         self.addingCorrespondancesEnabled = False
         self.surfaceDimensions = None
+
+        #Swimming defaults
+        self.model_width = 50
+        self.model_height = 25
+        self.model_offset_x = 1
+        self.model_offset_y = 1
+        #Scaling factor required to convert from real world in meters to surface pixels.
+        self.model_scale = 10
+
 
         # Camera properties
         self._myHomography = None
@@ -177,17 +186,6 @@ class Window(QWidget):
         HBlayout.addWidget(self.btnComputeHomograhy)
         VBlayout.addLayout(HBlayout)
 
-        #Initial data:
-        # #x-image, y-image, x-model, y-model
-        # self._my_correspondances = []
-        # self._my_correspondances.append({'cx':460, 'cy':223, 'rx': 0, 'ry': 0})
-        # self._my_correspondances.append({'cx':1245, 'cy':454, 'rx': 25, 'ry': 25})
-        # self._my_correspondances.append({'cx':1152, 'cy':125, 'rx': 25, 'ry': -25})
-        # self._my_correspondances.append({'cx':541, 'cy':101, 'rx': 0, 'ry': -25})
-        # print(self._my_correspondances)
-        #
-        # for c in self._my_correspondances:
-        #     self.listCorrespondances.addItem("{0}, {1} ,{2}, {3}".format(c['cx'], c['cy'], c['rx'], c['ry']))
 
     def resetControls(self):
 
@@ -225,10 +223,10 @@ class Window(QWidget):
 
     def loadSurface(self):
 
-        print("Loading surface:", self.cboSurfaces.currentText())
         px = QPixmap("./Surfaces/{:s}.png".format(self.cboSurfaces.currentText()))
         self.surface.setImage(px)
         self.surfaceDimensions = px.size()
+        print("Loading surface:", self.cboSurfaces.currentText(), self.surfaceDimensions)
 
     def loadImage(self):
         self.viewer.setImage(QPixmap("./Images/{:s}.png".format(self.cboSurfaces.currentText())))
@@ -262,6 +260,8 @@ class Window(QWidget):
 
     def _drawImageSpaceDetection(self, pos):
 
+# TODO: store homography gloablly for reference here.
+        return
         # Render reference point annotation.
         r = 5
         yellow = Qt.yellow
@@ -271,14 +271,28 @@ class Window(QWidget):
         poly = QPolygonF()
         x, y = pos.x(), pos.y()
         poly_points = np.array([])
+        #
+        # # Compute inverse of 2D homography
+        # print("**", _myHomography)
+        #
+        # val, H = cv2.invert(_myHomography)
+        #
         for i in range(1, 33):
             #These points are in world coordinates.
             _x = x + (r * math.cos(2 * math.pi * i / 32))
             _y = y + (r * math.sin(2 * math.pi * i / 32))
 
+                # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
+                # ground_point = cv2.perspectiveTransform(ground_point, H)
+                # ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
+                # (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+                # # Render vertical
+                # im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
+
+
             #Convert to image coordinates.
-            axis = np.float32([[_x, _y, 0]]).reshape(-1,3)
-            (imgpts, jacobian) = cv2.projectPoints(axis, self._myRotationVector, self._myTranslationVector, self._myCameraMatrix, self._myDistortionMatrix)
+            axis = np.float32([[_x, _y]]).reshape(-1,2)
+            imgpts = cv2.perspectiveTransform(axis, H)
 
             #Draw the points in a circle in perspective.
             (xx, yy) = tuple(imgpts[0].ravel())
@@ -291,6 +305,7 @@ class Window(QWidget):
         self.viewer._scene.addPolygon(poly, pen, brush)
 
         #Render image-space point
+        # axis = np.float32([[pos.x(),pos.y()]]).reshape(-1,3)
         axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
         (imgpts, jacobian) = cv2.projectPoints(axis, self._myRotationVector, self._myTranslationVector, self._myCameraMatrix, self._myDistortionMatrix)
         (x, y) = tuple(imgpts[0].ravel())
@@ -362,11 +377,24 @@ class Window(QWidget):
             #Pool
             image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
             surface_points = np.array([ (10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0) ], dtype='float32')
+            self.model_width = 50
+            self.model_height = 25
+            self.model_offset_x = 1
+            self.model_offset_y = 1
+            #Scaling factor required to convert from real world in meters to surface pixels.
+            self.model_scale = 10
+
 
         elif self.cboSurfaces.currentText() == "tennis":
             #Tennis
             image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
             surface_points = np.array([ (157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0) ], dtype='float32')
+            self.model_width = 30
+            self.model_height = 15
+            self.model_offset_x = 1
+            self.model_offset_y = 1
+            #Scaling factor required to convert from real world in meters to surface pixels.
+            self.model_scale = 50
 
 
         # Compute 2D homography
@@ -442,14 +470,9 @@ class Window(QWidget):
         _global_calibration = True
 
         if _global_calibration:
-            # Manually set world point calibration for global extrinsics.
-            model_width = 50
-            model_height = 25
-            model_offset_x = 1
-            model_offset_y = 1
-            world_points = np.zeros((model_width*model_height,3), np.float32)
-            world_points[:,:2] = np.mgrid[model_offset_x:model_width+model_offset_x,model_offset_y:model_height+model_offset_y].T.reshape(-1,2)*10 #convert to meters (scale is 1:10)
-            camera_points = np.zeros((model_width*model_height,2), np.float32)
+            world_points = np.zeros((self.model_width*self.model_height,3), np.float32)
+            world_points[:,:2] = np.mgrid[self.model_offset_x:self.model_width+self.model_offset_x,self.model_offset_y:self.model_height+self.model_offset_y].T.reshape(-1,2)*self.model_scale #convert to meters (scale is 1:10)
+            camera_points = np.zeros((self.model_width*self.model_height,2), np.float32)
         else:
             # Manually set world point calibration for local extrinsics.
 
@@ -494,7 +517,7 @@ class Window(QWidget):
         im_src = self._draw(im_src,camera_points,imgpts)
 
 
-        if False:
+        if True:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
@@ -507,20 +530,16 @@ class Window(QWidget):
             # Using a global calibration grid (i.e. a grid over the entire model space), then only the points near the
             # center of the image are in proper perspective.
 
-            model_width = 50
-            model_height = 25
-            model_offset_x = 1
-            model_offset_y = 1
-            world_points = np.zeros((model_width*model_height,3), np.float32)
-            world_points[:,:2] = np.mgrid[model_offset_x:model_width+model_offset_x,model_offset_y:model_height+model_offset_y].T.reshape(-1,2)*10 #convert to meters (scale is 1:10)
-            camera_points = np.zeros((model_width*model_height,2), np.float32)
+            world_points = np.zeros((self.model_width*self.model_height,3), np.float32)
+            world_points[:,:2] = np.mgrid[self.model_offset_x:self.model_width+self.model_offset_x,self.model_offset_y:self.model_height+self.model_offset_y].T.reshape(-1,2)*self.model_scale #convert to meters (scale is 1:10)
+            camera_points = np.zeros((self.model_width*self.model_height,2), np.float32)
 
             for world_point in world_points:
                 # ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
                 # (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
                 ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
                 ground_point = cv2.perspectiveTransform(ground_point, H)
-                ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
+                ref_point = np.array([[[world_point[0], world_point[1], -1.8*self.model_scale]]], dtype='float32')
                 (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
                 # Render vertical
                 im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
