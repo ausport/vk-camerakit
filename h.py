@@ -135,6 +135,7 @@ class Window(QWidget):
         self.btnComputeHomograhy.clicked.connect(self.computeHomograhy)
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
+        #Focal length slider
         self.sliderFocalLength = QSlider(Qt.Horizontal)
         self.sliderFocalLength.setMinimum(0)
         self.sliderFocalLength.setMaximum(50)
@@ -142,6 +143,14 @@ class Window(QWidget):
         self.sliderFocalLength.setTickPosition(QSlider.TicksBelow)
         self.sliderFocalLength.setTickInterval(1)
         self.sliderFocalLength.valueChanged.connect(self.updateFocalLength)
+        # Distortion slider
+        self.sliderDistortion = QSlider(Qt.Horizontal)
+        self.sliderDistortion.setMinimum(0)
+        self.sliderDistortion.setMaximum(30000)
+        self.sliderDistortion.setValue(100)
+        self.sliderDistortion.setTickPosition(QSlider.TicksBelow)
+        self.sliderDistortion.setTickInterval(1)
+        self.sliderDistortion.valueChanged.connect(self.updateDistortionEstimate)
 
         self.listCorrespondances = QListWidget()
         self.viewer.ImageClicked.connect(self.ImageClicked)
@@ -183,6 +192,7 @@ class Window(QWidget):
         # HBlayout.addWidget(self.editModelCoords)
         HBlayout.addWidget(self.cboSurfaces)
         HBlayout.addWidget(self.sliderFocalLength)
+        HBlayout.addWidget(self.sliderDistortion)
         HBlayout.addWidget(self.btnComputeHomograhy)
         VBlayout.addLayout(HBlayout)
 
@@ -275,7 +285,7 @@ class Window(QWidget):
         # # Compute inverse of 2D homography
         # print("**", _myHomography)
         #
-        # val, H = cv2.invert(_myHomography)
+        val, H = cv2.invert(self._myHomography)
         #
         for i in range(1, 33):
             #These points are in world coordinates.
@@ -366,6 +376,9 @@ class Window(QWidget):
         self._focal_length = self.sliderFocalLength.value()
         self.computeHomograhy()
 
+    def updateDistortionEstimate(self):
+        self.computeHomograhy()
+
     def computeHomograhy(self):
         '''
         image_points and surface_points are numpy arrays of points
@@ -398,8 +411,11 @@ class Window(QWidget):
 
 
         # Compute 2D homography
-        h, status = cv2.findHomography(image_points, surface_points)
-        self._myHomography = h
+        self._myHomography, status = cv2.findHomography(image_points, surface_points)
+        print("Image Homograhy :\n {0}".format(self._myHomography))
+
+        # Compute inverse of 2D homography
+        val, H = cv2.invert(self._myHomography)
 
         '''
         The calculated homography can be used to warp
@@ -501,11 +517,12 @@ class Window(QWidget):
         print ("Translation Matrix :\n {0}".format(translation_vector))
 
         # Retain matrices
-        self._myHomography = h
         self._myCameraMatrix = camera_matrix
         self._myDistortionMatrix = distortion_matrix
         self._myRotationVector = rotation_vector
         self._myTranslationVector = translation_vector
+
+
 
         # Top left of pool space
         axis = np.float32([[60,10,0], [10,60,0], [10,10,-50]]).reshape(-1,3)
@@ -517,7 +534,7 @@ class Window(QWidget):
         im_src = self._draw(im_src,camera_points,imgpts)
 
 
-        if True:
+        if False:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
