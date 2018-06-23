@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 # https://www.learnopencv.com/homography-examples-using-opencv-python-c/
 
+# TODO - get correspondences for undistorted image.
+
 class CameraModel:
 
     def compute_homography(self):
