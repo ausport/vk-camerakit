@@ -7,6 +7,9 @@ import cv2
 import numpy as np
 # https://www.learnopencv.com/homography-examples-using-opencv-python-c/
 
+# TODO Compute reprojection error - mean L2 loss between 2D homography and 3D projections on the ground plane.
+
+
 class CameraModel:
 
     def compute_homography(self):
@@ -73,6 +76,7 @@ class CameraModel:
         # Image correspondences
         self.image_points = np.array([])
         self.model_points = np.array([])
+        self.sourceImage = cv2.imread("./Images/{:s}.png".format(sport))
 
         if sport == "pool":
             # Pool
@@ -105,10 +109,6 @@ class CameraModel:
 
             self.focal_length = 7
             print("Focal Length :\n {0}".format(self.focal_length))
-
-            self.sourceImage = cv2.imread("./Images/{:s}.png".format(sport))
-            # print("Image dimensions :\n {0}".format(self.sourceImage.shape))
-
 
         # Compute the camera matrix, including focal length and distortion.
         self.compute_camera_matrix()
@@ -329,6 +329,7 @@ class Window(QWidget):
 
     def setCameraModel(self):
 
+        self.camera_model = CameraModel(sport=self.cboSurfaces.currentText())
         self.loadImage()
         self.loadSurface()
 
