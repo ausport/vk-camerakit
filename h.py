@@ -89,7 +89,6 @@ class CameraModel:
             #Scaling factor required to convert from real world in meters to surface pixels.
             self.model_scale = 10
 
-
         elif sport == "tennis":
             # Tennis
             # Distorted
@@ -246,7 +245,7 @@ class Window(QWidget):
         # Focal length slider
         self.sliderFocalLength = QSlider(Qt.Horizontal)
         self.sliderFocalLength.setMinimum(0)
-        self.sliderFocalLength.setMaximum(50)
+        self.sliderFocalLength.setMaximum(80)
         self.sliderFocalLength.setValue(10)
         self.sliderFocalLength.setTickPosition(QSlider.TicksBelow)
         self.sliderFocalLength.setTickInterval(1)
@@ -498,7 +497,28 @@ class Window(QWidget):
                                      (model.surface_dimensions.width(),
                                       model.surface_dimensions.height()))
 
+        # Render image coordinate boundaries.
+        cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                 (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
+        cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                 (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
+        cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                 (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
+        cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                 (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
+
+        # Render surface coordinate boundaries.
+        cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                 (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
+        cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                 (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
+        cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                 (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
+        cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                 (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
+
         # Display images in QT
+        # TODO alpha composite warped image on background surface.
         height, width, channel = im_out.shape
         bytesPerLine = 3 * width
         cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
@@ -507,12 +527,6 @@ class Window(QWidget):
 
         self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
         self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-
-        # Render pool boundaries.
-        cv2.line(im_src, ( int(model.image_points[0][0]), int(model.image_points[0][1])), ( int(model.image_points[1][0]), int(model.image_points[1][1])), (255,255,0), 1)
-        cv2.line(im_src, ( int(model.image_points[2][0]), int(model.image_points[2][1])), ( int(model.image_points[1][0]), int(model.image_points[1][1])), (255,0,255), 1)
-        cv2.line(im_src, ( int(model.image_points[2][0]), int(model.image_points[2][1])), ( int(model.image_points[3][0]), int(model.image_points[3][1])), (0,255,0), 1)
-        cv2.line(im_src, ( int(model.image_points[0][0]), int(model.image_points[0][1])), ( int(model.image_points[3][0]), int(model.image_points[3][1])), (0,255,255), 1)
 
         # NB Generate square calibration corresponances using existing homography.
         # The problem is how to learn the camera pose, which we need to estimate a 3D camera coordinate system.
@@ -562,23 +576,8 @@ class Window(QWidget):
 
         # Solve rotation and translation matrices
         (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points, camera_points, camera_matrix, distortion_matrix)
-        # print ("Rotation Matrix :\n {0}".format(rotation_vector))
-        # print ("Translation Matrix :\n {0}".format(translation_vector))
 
-        # # Top left of pool space
-        # axis = np.float32([[60,10,0], [10,60,0], [10,10,-50]]).reshape(-1,3)
-        # axis = np.float32([[157*2, 102, 0], [157, 102*2, 0], [157, 102, -50]]).reshape(-1, 3)
-        # # Bottom right of pool space
-        # # axis = np.float32([[500,250,0], [510,240,0], [510,250,-50]]).reshape(-1,3)
-        #
-        # # Render reference point annotation.
-        # (imgpts, jacobian) = cv2.projectPoints(axis,
-        #                                        rotation_vector,
-        #                                        translation_vector,
-        #                                        camera_matrix,
-        #                                        distortion_matrix)
-        #
-        # im_src = self.draw(im_src, camera_points, imgpts)
+
 
         if True:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
