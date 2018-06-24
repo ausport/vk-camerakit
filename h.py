@@ -79,7 +79,10 @@ class CameraModel:
 
         elif sport == "tennis":
             # Tennis
+            # Distorted
             self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
+            # Undistorted
+            self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
             self.surface_points = np.array([ (157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0) ], dtype='float32')
             self.model_width = 30
             self.model_height = 15
