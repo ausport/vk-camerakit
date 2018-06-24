@@ -40,6 +40,15 @@ class CameraModel:
         return px
 
 
+    def undistorted_image(self):
+
+        img = cv2.undistort(self.sourceImage,
+                               self.camera_matrix,
+                               self.distortion_matrix)
+
+        return img
+
+
     def __init__(self, sport="tennis"):
 
         self.sport = sport
@@ -478,11 +487,6 @@ class Window(QWidget):
         camera_matrix = model.camera_matrix
         # Distortion matrix
         distortion_matrix = model.distortion_matrix
-
-        #Undistort image
-        im_src = cv2.undistort(im_src,
-                               camera_matrix,
-                               distortion_matrix)
 
         # Warp source image to destination based on homography
         im_out = cv2.warpPerspective(im_src,
