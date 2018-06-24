@@ -11,7 +11,7 @@ class CameraModel:
 
     def compute_homography(self):
         self.homography, status = cv2.findHomography(self.image_points, self.model_points)
-        print("Image Homograhy :\n {0}".format(self.homography))
+        # print("Image Homograhy :\n {0}".format(self.homography))
 
 
     def inverse_homography(self):
@@ -29,7 +29,7 @@ class CameraModel:
                                          [0, fx * w, 0.5 * (h - 1)],
                                          [0.0, 0.0, 1.0]])
 
-        print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
+        # print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
 
 
     def surfaceImage(self):
@@ -100,11 +100,14 @@ class CameraModel:
             # Scaling factor required to convert from real world in meters to surface pixels.
             self.model_scale = 50
 
-            self.distortion_matrix[0] = -0.26055
+            self.distortion_matrix[0] = -0.17751
             print ("Distortion Matrix :\n {0}".format(self.distortion_matrix))
 
+            self.focal_length = 7
+            print("Focal Length :\n {0}".format(self.focal_length))
+
             self.sourceImage = cv2.imread("./Images/{:s}.png".format(sport))
-            print("Image dimensions :\n {0}".format(self.sourceImage.shape))
+            # print("Image dimensions :\n {0}".format(self.sourceImage.shape))
 
 
         # Compute the camera matrix, including focal length and distortion.
@@ -561,21 +564,22 @@ class Window(QWidget):
         # print ("Rotation Matrix :\n {0}".format(rotation_vector))
         # print ("Translation Matrix :\n {0}".format(translation_vector))
 
-        # Top left of pool space
-        axis = np.float32([[60,10,0], [10,60,0], [10,10,-50]]).reshape(-1,3)
-        # Bottom right of pool space
-        # axis = np.float32([[500,250,0], [510,240,0], [510,250,-50]]).reshape(-1,3)
+        # # Top left of pool space
+        # axis = np.float32([[60,10,0], [10,60,0], [10,10,-50]]).reshape(-1,3)
+        # axis = np.float32([[157*2, 102, 0], [157, 102*2, 0], [157, 102, -50]]).reshape(-1, 3)
+        # # Bottom right of pool space
+        # # axis = np.float32([[500,250,0], [510,240,0], [510,250,-50]]).reshape(-1,3)
+        #
+        # # Render reference point annotation.
+        # (imgpts, jacobian) = cv2.projectPoints(axis,
+        #                                        rotation_vector,
+        #                                        translation_vector,
+        #                                        camera_matrix,
+        #                                        distortion_matrix)
+        #
+        # im_src = self.draw(im_src, camera_points, imgpts)
 
-        # Render reference point annotation.
-        (imgpts, jacobian) = cv2.projectPoints(axis,
-                                               rotation_vector,
-                                               translation_vector,
-                                               camera_matrix,
-                                               distortion_matrix)
-
-        im_src = self.draw(im_src, camera_points, imgpts)
-
-        if False:
+        if True:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
@@ -592,12 +596,12 @@ class Window(QWidget):
             world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
             # camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
 
-            for world_point in world_points:
-                # ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-                # (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-                ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-                ground_point = cv2.perspectiveTransform(ground_point, inverse_homography)
-                ref_point = np.array([[[world_point[0], world_point[1], -1.8*model.model_scale]]], dtype='float32')
+            for world_point in model.model_points:
+                ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+                # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
+                # ground_point = cv2.perspectiveTransform(ground_point, inverse_homography)
+                ref_point = np.array([[[world_point[0], world_point[1], -model.model_scale]]], dtype='float32')
                 (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
                 # Render vertical
                 im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
@@ -614,7 +618,7 @@ class Window(QWidget):
         qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
         self.viewer.set_image(QPixmap(qImg))
 
-        self.sliderFocalLength.setValue(model.focal_length)
+        self.sliderFocalLength.setValue(int(model.focal_length))
         self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
 
 if __name__ == '__main__':
