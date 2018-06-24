@@ -10,7 +10,7 @@ import numpy as np
 class CameraModel:
 
     def compute_homography(self):
-        self.homography, status = cv2.findHomography(self.image_points, self.surface_points)
+        self.homography, status = cv2.findHomography(self.image_points, self.model_points)
         print("Image Homograhy :\n {0}".format(self.homography))
 
 
@@ -63,12 +63,12 @@ class CameraModel:
 
         # Image correspondences
         self.image_points = np.array([])
-        self.surface_points = np.array([])
+        self.model_points = np.array([])
 
         if sport == "pool":
             # Pool
             self.image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
-            self.surface_points = np.array([ (10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0) ], dtype='float32')
+            self.model_points = np.array([(10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0)], dtype='float32')
             self.model_width = 50
             self.model_height = 25
             self.model_offset_x = 1
@@ -83,7 +83,7 @@ class CameraModel:
             self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
             # Undistorted
             self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
-            self.surface_points = np.array([ (157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0) ], dtype='float32')
+            self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
             self.model_width = 30
             self.model_height = 15
             self.model_offset_x = 1
@@ -472,7 +472,8 @@ class Window(QWidget):
         model = self.camera_model
 
         # Get model sample image
-        im_src = model.sourceImage
+        im_src = model.undistorted_image()
+
         # Estimate naive camera intrinsics (camera matrix)
         camera_matrix = model.camera_matrix
         # Distortion matrix
@@ -609,6 +610,8 @@ class Window(QWidget):
         qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
         self.viewer.set_image(QPixmap(qImg))
 
+        self.sliderFocalLength.setValue(model.focal_length)
+        self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
 
 if __name__ == '__main__':
     import sys
