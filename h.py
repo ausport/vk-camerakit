@@ -7,14 +7,11 @@ import cv2
 import numpy as np
 # https://www.learnopencv.com/homography-examples-using-opencv-python-c/
 
-# TODO - get correspondences for undistorted image.
-
 class CameraModel:
 
     def compute_homography(self):
         self.homography, status = cv2.findHomography(self.image_points, self.surface_points)
         print("Image Homograhy :\n {0}".format(self.homography))
-
 
 
     def inverse_homography(self):
@@ -24,6 +21,16 @@ class CameraModel:
         # Compute inverse of 2D homography
         val, H = cv2.invert(self.homography)
         return H
+
+    def compute_camera_matrix(self):
+        h, w = self.sourceImage.shape[:2]
+        fx = 0.5 + self.focal_length / 50.0
+        self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
+                                         [0, fx * w, 0.5 * (h - 1)],
+                                         [0.0, 0.0, 1.0]])
+
+        print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
+
 
     def surfaceImage(self):
         
@@ -87,16 +94,10 @@ class CameraModel:
             self.sourceImage = cv2.imread("./Images/{:s}.png".format(sport))
             print("Image dimensions :\n {0}".format(self.sourceImage.shape))
 
-            h, w = self.sourceImage.shape[:2]
-            fx = 0.5 + self.focal_length / 50.0
-            self.camera_matrix = np.float64([[fx*w, 0, 0.5*(w-1)],
-                            [0, fx*w, 0.5*(h-1)],
-                            [0.0,0.0,      1.0]])
 
-            print ("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
-
-
-
+        # Compute the camera matrix, including focal length and distortion.
+        self.compute_camera_matrix()
+        # Compute the homography with the camera matrix, image points and surface points.
         self.compute_homography()
 
 
@@ -224,7 +225,7 @@ class Window(QWidget):
         self.btnAddCorrespondances.clicked.connect(self.addCorrespondances)
         self.btnComputeHomograhy = QToolButton(self)
         self.btnComputeHomograhy.setText('Compute Homograhy')
-        self.btnComputeHomograhy.clicked.connect(self.computeHomograhy)
+        self.btnComputeHomograhy.clicked.connect(self.updateDisplays)
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
         # Focal length slider
@@ -248,6 +249,7 @@ class Window(QWidget):
         self.viewer.ImageClicked.connect(self.ImageClicked)
         self.surface.ImageClicked.connect(self.SurfaceClicked)
         self.last_image_pairs = {0, 0}
+        self.last_surface_pairs = {0, 0}
         self.addingCorrespondancesEnabled = False
   
         self.camera_model = CameraModel(self.cboSurfaces.currentText())
@@ -322,7 +324,8 @@ class Window(QWidget):
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
     def ImageClicked(self, pos):
-        print("Image")
+        print("Image Points:", pos.x(), pos.y())
+
         if self.viewer.dragMode()  == QGraphicsView.NoDrag and self.addingCorrespondancesEnabled == True:
             # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
             print(pos.x(), pos.y())
@@ -338,17 +341,17 @@ class Window(QWidget):
             print("_mylastImagePairs:", self.last_image_pairs)
 
 
-#     def draw_image_space_detection(self, pos):
-#
-#         # Render reference point annotation.
-#         r = 5
-#         yellow = Qt.yellow
-#         pen = QPen(Qt.red)
-#         brush = QBrush(QColor(255, 255, 0, 100))
-#
-#         poly = QPolygonF()
-#         x, y = pos.x(), pos.y()
-#         poly_points = np.array([])
+    def draw_image_space_detection(self, pos):
+
+        # Render reference point annotation.
+        r = 5
+        yellow = Qt.yellow
+        pen = QPen(Qt.red)
+        brush = QBrush(QColor(255, 255, 0, 100))
+
+        poly = QPolygonF()
+        x, y = pos.x(), pos.y()
+        poly_points = np.array([])
 #         #
 #         # # Compute inverse of 2D homography
 #         # print("**", homography)
@@ -396,11 +399,10 @@ class Window(QWidget):
 
 
     def SurfaceClicked(self, pos):
-        print(self.camera_model.homography.__class__.__name__)
 
         if not self.camera_model.homography.__class__.__name__ == "NoneType":
             print("ok")
-            print(pos.x(), pos.y())
+            print("Surface Points:", pos.x(), pos.y())
             #Draw point
             pen = QPen(Qt.red)
             brush = QBrush(Qt.yellow)
@@ -425,7 +427,12 @@ class Window(QWidget):
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             print("_mylastSurfacePairs:", self.last_surface_pairs)
 
-            self.editImageCoordsInfo.setText("Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(list(self.last_image_pairs)[0], list(self.last_image_pairs)[1], list(self.last_surface_pairs)[0], list(self.last_surface_pairs)[1]))
+            self.editImageCoordsInfo.setText(
+                "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+                    list(self.last_image_pairs)[0],
+                    list(self.last_image_pairs)[1],
+                    list(self.last_surface_pairs)[0],
+                    list(self.last_surface_pairs)[1]))
 
             #Save corresponances
             self.reset_controls()
@@ -446,17 +453,21 @@ class Window(QWidget):
 
     def updateFocalLength(self):
         self.camera_model.focal_length = self.sliderFocalLength.value()
-        self.computeHomograhy()
+        print("Updating focal length:{0}".format(self.camera_model.focal_length ))
+        # Update the camera matrix with new focal length.
+        self.camera_model.compute_camera_matrix()
+
+        self.updateDisplays()
 
     def updateDistortionEstimate(self):
-        self.computeHomograhy()
+        self.camera_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5
+        print("Updating distortion parameter:{0}".format(self.camera_model.distortion_matrix[0]))
+        self.updateDisplays()
 
-    def computeHomograhy(self):
+    def updateDisplays(self):
 
         model = self.camera_model
 
-        # Compute 2D homography
-        homography = model.homography
         # Get model sample image
         im_src = model.sourceImage
         # Estimate naive camera intrinsics (camera matrix)
@@ -465,7 +476,9 @@ class Window(QWidget):
         distortion_matrix = model.distortion_matrix
 
         #Undistort image
-        im_src = cv2.undistort(im_src, camera_matrix, distortion_matrix)
+        im_src = cv2.undistort(im_src,
+                               camera_matrix,
+                               distortion_matrix)
 
         # Warp source image to destination based on homography
         im_out = cv2.warpPerspective(im_src,
@@ -537,14 +550,8 @@ class Window(QWidget):
 
         # Solve rotation and translation matrices
         (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points, camera_points, camera_matrix, distortion_matrix)
-        print ("Rotation Matrix :\n {0}".format(rotation_vector))
-        print ("Translation Matrix :\n {0}".format(translation_vector))
-
-        # Retain matrices
-        self._myCameraMatrix = camera_matrix
-        self._myDistortionMatrix = distortion_matrix
-        self._myRotationVector = rotation_vector
-        self._myTranslationVector = translation_vector
+        # print ("Rotation Matrix :\n {0}".format(rotation_vector))
+        # print ("Translation Matrix :\n {0}".format(translation_vector))
 
         # Top left of pool space
         axis = np.float32([[60,10,0], [10,60,0], [10,10,-50]]).reshape(-1,3)
@@ -552,10 +559,15 @@ class Window(QWidget):
         # axis = np.float32([[500,250,0], [510,240,0], [510,250,-50]]).reshape(-1,3)
 
         # Render reference point annotation.
-        (imgpts, jacobian) = cv2.projectPoints(axis, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+        (imgpts, jacobian) = cv2.projectPoints(axis,
+                                               rotation_vector,
+                                               translation_vector,
+                                               camera_matrix,
+                                               distortion_matrix)
+
         im_src = self.draw(im_src, camera_points, imgpts)
 
-        if True:
+        if False:
             # This code demonstrates the problem with ignoring instrinsic camera distortion.
             # It should take the inverse homography image points (reliable), and project in the z-plane
             # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
@@ -570,7 +582,7 @@ class Window(QWidget):
 
             world_points = np.zeros((model.model_width*model.model_height,3), np.float32)
             world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
-            camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
+            # camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
 
             for world_point in world_points:
                 # ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
