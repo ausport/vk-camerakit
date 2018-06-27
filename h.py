@@ -109,6 +109,48 @@ class CameraModel:
             self.focal_length = 7
             print("Focal Length :\n {0}".format(self.focal_length))
 
+        elif sport == "hockey":
+            # Tennis
+            # Distorted
+            self.image_points = np.array([(52, 121), (630, 104), (920, 193), (492, 108)], dtype='float32')
+            # Undistorted
+            # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
+            self.model_points = np.array([(964, 162, 0), (964, 600, 0), (508, 600, 0), (964, 490, 0)],
+                                         dtype='float32')
+            self.model_width = 91
+            self.model_height = 55
+            self.model_offset_x = 5
+            self.model_offset_y = 5
+            # Scaling factor required to convert from real world in meters to surface pixels.
+            self.model_scale = 50
+
+            self.distortion_matrix[0] = -0.17751
+            print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
+
+            self.focal_length = 55
+            print("Focal Length :\n {0}".format(self.focal_length))
+
+        elif sport == "netball":
+            # Tennis
+            # Distorted
+            self.image_points = np.array([(122, 1143), (1241, 1056), (3810, 1360), (3436, 1751)], dtype='float32')
+            # Undistorted
+            # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
+            self.model_points = np.array([(308, 1827, 0), (308, 308, 0), (3352, 308, 0), (3352, 1827, 0)],
+                                         dtype='float32')
+            self.model_width = 31
+            self.model_height = 15
+            self.model_offset_x = 3
+            self.model_offset_y = 3
+            # Scaling factor required to convert from real world in meters to surface pixels.
+            self.model_scale = 100
+
+            self.distortion_matrix[0] = 0.
+            print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
+
+            self.focal_length = 21
+            print("Focal Length :\n {0}".format(self.focal_length))
+
         # Compute the camera matrix, including focal length and distortion.
         self.compute_camera_matrix()
         # Compute the homography with the camera matrix, image points and surface points.
