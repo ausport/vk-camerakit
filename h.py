@@ -249,7 +249,15 @@ class ImageViewer(QGraphicsView):
             self.setDragMode(QGraphicsView.ScrollHandDrag)
 
     def mousePressEvent(self, event):
+        # TODO - only execute this if the space bar is pressed to indicate adding a coorresponence point.
+        # if event.key() == Qt.Key_Space:
+        #   super(ImageViewer, self).mousePressEvent(event)
+        self.toggleDragMode()
         super(ImageViewer, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.toggleDragMode()
+        super(ImageViewer, self).mouseReleaseEvent(event)
 
     def scene_clicked(self, pos):
         # Pass local (scene) coordinates to ImageClicked()
@@ -352,15 +360,15 @@ class Window(QWidget):
             if self.viewer.empty or self.surface.empty:
                 return
 
-            if event.key() == Qt.Key_Space:
-                self.viewer.toggleDragMode()
-                self.surface.toggleDragMode()
+            # if event.key() == Qt.Key_Space:
+            #     self.viewer.toggleDragMode()
+            #     self.surface.toggleDragMode()
 
-    def keyReleaseEvent(self, event):
-        if not event.isAutoRepeat():
-            if event.key() == Qt.Key_Space:
-                self.viewer.toggleDragMode()
-                self.surface.toggleDragMode()
+    # def keyReleaseEvent(self, event):
+        # if not event.isAutoRepeat():
+        #     if event.key() == Qt.Key_Space:
+        #         self.viewer.toggleDragMode()
+        #         self.surface.toggleDragMode()
 
     def loadSurface(self):
         self.surface.set_image(self.camera_model.surfaceImage())
