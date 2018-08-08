@@ -439,12 +439,18 @@ class Window(QWidget):
         self.surface.set_image(self.camera_model.surfaceImage())
 
     def loadImage(self):
-        self.viewer.set_image(QPixmap("./Images/{:s}.png".format(self.cboSurfaces.currentText())))
+
+        image_path = QFileDialog.getOpenFileName(self, "Open Image",
+                                                "/home",
+                                                "Images (*.png *.xpm *.jpg)")
+
+        self.viewer.set_image(QPixmap(image_path[0]))
+       # self.viewer.set_image(QPixmap("./Images/{:s}.png".format(self.cboSurfaces.currentText())))
 
     def setCameraModel(self):
 
         self.camera_model = CameraModel(sport=self.cboSurfaces.currentText())
-        self.loadImage()
+        # self.loadImage()
         self.loadSurface()
 
     def pixInfo(self):
