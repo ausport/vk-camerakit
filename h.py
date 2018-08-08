@@ -383,8 +383,8 @@ class Window(QWidget):
         HBlayout.setAlignment(Qt.AlignLeft)
         HBlayout.addWidget(self.btnLoad)
         HBlayout.addWidget(self.btnAddCorrespondances)
+        HBlayout.addWidget(self.btnSerialiseCameraProperties)
         HBlayout.addWidget(self.editImageCoordsInfo)
-        # HBlayout.addWidget(self.editModelCoords)
         HBlayout.addWidget(self.cboSurfaces)
         HBlayout.addWidget(self.sliderFocalLength)
         HBlayout.addWidget(self.sliderDistortion)
@@ -565,7 +565,9 @@ class Window(QWidget):
 
         if self.camera_model:
             path = QFileDialog.getSaveFileName(self, 'Save File', self.cboSurfaces.currentText(), "json(*.json)")
-            self.camera_model.export_camera_model(path)
+            if path[0] != "":
+                self.camera_model.export_camera_model(path)
+
 
     def draw(self, img, corners, imgpts):
         corner = tuple(corners[0].ravel())
