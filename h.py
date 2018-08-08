@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import *
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
+import json
 # https://www.learnopencv.com/homography-examples-using-opencv-python-c/
 
 # TODO Compute reprojection error - mean L2 loss between 2D homography and 3D projections on the ground plane.
@@ -51,6 +52,50 @@ class CameraModel:
 
         return img
 
+    def export_camera_model(self, json_path):
+        print("Exporting", json_path[0])
+        j = json.dumps(
+                {
+                    'surface_model': self.sport,
+                    'model_dimensions': [self.model_width, self.model_height],
+                    'model_offset': [self.model_offset_x, self.model_offset_y],
+                    'model_scale': self.model_scale,
+                    'homography': self.homography.tolist(),
+                    'focal_length': self.focal_length,
+                    'rotation_vector': self.rotation_vector,
+                    # 'translation_vector': self.translation_vector,
+                    # 'distortion_matrix': self.distortion_matrix.tolist(),
+                    'image_points': self.image_points.tolist(),
+                    'model_points': self.model_points.tolist(),
+                    'camera_matrix': self.camera_matrix.tolist()
+                },
+                indent=4,
+                separators=(',', ': ')
+            )
+
+        print(j)
+
+        with open(json_path[0]+".json", 'w') as data_file:
+            data_file.write(j)
+
+    def import_camera_model(self):
+        '''
+        Load the camera data from the JSON file
+        '''
+        pass
+        # self.space_transform = SpaceTransform(video_path=self.video_path)
+        # self.pool_length = self.space_transform.pool_length
+        # self.inv_transform_matrix = np.linalg.inv(self.space_transform.transform_matrix)
+        # top, bottom = 0, 1
+        # left, right = 0, 1
+        # # Inverse transform from work space back to screen space
+        # self.points = np.array([[[left, top],  # pylint: disable=C0326
+        #                          [left, bottom],
+        #                          [right, bottom],
+        #                          [right, top]]],  # pylint: disable=C0326
+        #                        dtype=np.float32)
+        # self.points = cv2.perspectiveTransform(self.points,
+        #                                        self.inv_transform_matrix)[0]
 
     def __init__(self, sport="tennis"):
 
@@ -156,7 +201,7 @@ class CameraModel:
         # Compute the homography with the camera matrix, image points and surface points.
         self.compute_homography()
 
-
+ 
 class GraphicsScene(QGraphicsScene):
     # Create signal exporting QPointF position.
     SceneClicked = pyqtSignal(QPointF)
@@ -287,9 +332,17 @@ class Window(QWidget):
         self.btnAddCorrespondances = QToolButton(self)
         self.btnAddCorrespondances.setText('Add Correspondance')
         self.btnAddCorrespondances.clicked.connect(self.addCorrespondances)
+
+        # Compute new homography from points.
         self.btnComputeHomograhy = QToolButton(self)
         self.btnComputeHomograhy.setText('Compute Homograhy')
         self.btnComputeHomograhy.clicked.connect(self.updateDisplays)
+
+        # Serialise camera properties & transformation matrix
+        self.btnSerialiseCameraProperties = QToolButton(self)
+        self.btnSerialiseCameraProperties.setText('Save Camera Properties')
+        self.btnSerialiseCameraProperties.clicked.connect(self.save_camera_properties)
+
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
         # Focal length slider
@@ -507,6 +560,12 @@ class Window(QWidget):
         if not self.addingCorrespondancesEnabled:
             self.addingCorrespondancesEnabled = True
             self.btnAddCorrespondances.setStyleSheet("background-color: green")
+
+    def save_camera_properties(self):
+
+        if self.camera_model:
+            path = QFileDialog.getSaveFileName(self, 'Save File', self.cboSurfaces.currentText(), "json(*.json)")
+            self.camera_model.export_camera_model(path)
 
     def draw(self, img, corners, imgpts):
         corner = tuple(corners[0].ravel())
