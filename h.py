@@ -52,6 +52,19 @@ class CameraModel:
 
         return img
 
+
+    def remove_correspondences(self):
+        self.image_points = np.array([])
+        self.model_points = np.array([])
+
+
+    def reset(self):
+        # Remove previous values
+        self.remove_correspondences()
+        pass
+
+
+
     def export_camera_model(self, json_path):
         print("Exporting", json_path[0])
         j = json.dumps(
@@ -100,7 +113,7 @@ class CameraModel:
     def __bool__(self):
         return self.__bool__
 
-    def __init__(self, sport="tennis"):
+    def __init__(self, sport="hockey"):
 
         self.sport = sport
         
@@ -256,6 +269,12 @@ class ImageViewer(QGraphicsView):
     def has_image(self):
         return not self.empty
 
+    def set_cross_cursor(self, state = False):
+        if state:
+            self.setCursor(Qt.CrossCursor)
+        else:
+            self.setCursor(Qt.ArrowCursor)
+
     def fitInView(self, *__args):
 
         rect = QRectF(self.image.pixmap().rect())
@@ -299,11 +318,23 @@ class ImageViewer(QGraphicsView):
             else:
                 self.zoom = 0
 
-    def toggleDragMode(self):
-        if self.dragMode() == QGraphicsView.ScrollHandDrag:
+    def toggleDragMode(self, forceNoDrag = False):
+
+        if forceNoDrag:
             self.setDragMode(QGraphicsView.NoDrag)
+
         else:
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
+
+            if self.dragMode() == QGraphicsView.ScrollHandDrag:
+                self.setDragMode(QGraphicsView.NoDrag)
+            else:
+                self.setDragMode(QGraphicsView.ScrollHandDrag)
+
+    # def toggleCrossCursor(self):
+    #     if self.cursor() == QGraphicsView.CrossCursor:
+    #         self.setDragMode(QGraphicsView.NoDrag)
+    #     else:
+    #         self.setDragMode(QGraphicsView.CrossCursor)
 
     def mousePressEvent(self, event):
         # TODO - only execute this if the space bar is pressed to indicate adding a coorresponence point.
@@ -313,18 +344,32 @@ class ImageViewer(QGraphicsView):
         super(ImageViewer, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        self.toggleDragMode()
+        self.toggleDragMode(forceNoDrag=True)
         super(ImageViewer, self).mouseReleaseEvent(event)
 
     def scene_clicked(self, pos):
         # Pass local (scene) coordinates to ImageClicked()
+        print("scene_clicked")
         if self.image.isUnderMouse():
             self.ImageClicked.emit(pos.toPoint())
+
+
+class MyPopup(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+        self.setWindowTitle("Correspondences")
+        # Arrange layout
+        popup_Correspondences = QVBoxLayout(self)
+        self.listCorrespondences = QListWidget()
+        popup_Correspondences.addWidget(self.listCorrespondences)
+
 
 
 class Window(QWidget):
     def __init__(self):
         super(Window, self).__init__()
+        self.setWindowTitle("Camera Calibration Interface")
+
         self.viewer = ImageViewer(self)
         self.surface = ImageViewer(self)
         # 'Load image' button
@@ -340,20 +385,30 @@ class Window(QWidget):
         # Apply camera model
         self.cboSurfaces.currentIndexChanged.connect(self.setCameraModel)
 
-        # Button to change from drag/pan to getting pixel info
-        self.btnAddCorrespondances = QToolButton(self)
-        self.btnAddCorrespondances.setText('Add Correspondance')
-        self.btnAddCorrespondances.clicked.connect(self.addCorrespondances)
-
         # Compute new homography from points.
         self.btnComputeHomograhy = QToolButton(self)
         self.btnComputeHomograhy.setText('Compute Homograhy')
         self.btnComputeHomograhy.clicked.connect(self.updateDisplays)
 
+        # Correspondence management
+        self.btnShowCorrespondences = QToolButton(self)
+        self.btnShowCorrespondences.setText('Show Correspondences')
+        self.btnShowCorrespondences.clicked.connect(self.showCorrespondences)
+
+        self.btnRemoveAllCorrespondences = QToolButton(self)
+        self.btnRemoveAllCorrespondences.setText('Clear All Correspondences')
+        self.btnRemoveAllCorrespondences.clicked.connect(self.clearCorrespondences)
+        
+        # Button to change from drag/pan to getting pixel info
+        self.btnAddCorrespondences = QToolButton(self)
+        self.btnAddCorrespondences.setText('Add Correspondence')
+        self.btnAddCorrespondences.clicked.connect(self.addCorrespondences)
+
         # Serialise camera properties & transformation matrix
         self.btnSerialiseCameraProperties = QToolButton(self)
         self.btnSerialiseCameraProperties.setText('Save Camera Properties')
         self.btnSerialiseCameraProperties.clicked.connect(self.save_camera_properties)
+
 
         self.editImageCoordsInfo = QLineEdit(self)
         self.editImageCoordsInfo.setReadOnly(True)
@@ -374,19 +429,17 @@ class Window(QWidget):
         self.sliderDistortion.setTickInterval(1)
         self.sliderDistortion.valueChanged.connect(self.updateDistortionEstimate)
 
-        self.listCorrespondances = QListWidget()
         self.viewer.ImageClicked.connect(self.ImageClicked)
         self.surface.ImageClicked.connect(self.SurfaceClicked)
         self.last_image_pairs = {0, 0}
         self.last_surface_pairs = {0, 0}
-        self.addingCorrespondancesEnabled = False
-  
+        self.addingCorrespondencesEnabled = False
+
         self.camera_model = CameraModel(self.cboSurfaces.currentText())
 
         # Arrange layout
         VBlayout = QVBoxLayout(self)
         HB_images_layout = QHBoxLayout()
-
         HB_images_layout.addWidget(self.viewer)
         HB_images_layout.addWidget(self.surface)
         VBlayout.addLayout(HB_images_layout)
@@ -394,7 +447,6 @@ class Window(QWidget):
         HBlayout = QHBoxLayout()
         HBlayout.setAlignment(Qt.AlignLeft)
         HBlayout.addWidget(self.btnLoad)
-        HBlayout.addWidget(self.btnAddCorrespondances)
         HBlayout.addWidget(self.btnSerialiseCameraProperties)
         HBlayout.addWidget(self.editImageCoordsInfo)
         HBlayout.addWidget(self.cboSurfaces)
@@ -403,19 +455,39 @@ class Window(QWidget):
         HBlayout.addWidget(self.btnComputeHomograhy)
         VBlayout.addLayout(HBlayout)
 
+        HB_Correspondences = QHBoxLayout()
+        # self.listCorrespondences = QListWidget()
+        HB_Correspondences.setAlignment(Qt.AlignLeft)
+        HB_Correspondences.addWidget(self.btnShowCorrespondences)
+        HB_Correspondences.addWidget(self.btnAddCorrespondences)
+        HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
+        # HB_Correspondences.addWidget(self.listCorrespondences)
+        #
+        # self.listCorrespondences.setMaximumHeight(HB_Correspondences.sizeHint().height())
+        # self.listCorrespondences.setMaximumWidth(self.btnRemoveAllCorrespondences.sizeHint().width())
+
+        VBlayout.addLayout(HB_Correspondences)
+
+        self.correspondencesWindow = MyPopup()
+
+
     def reset_controls(self):
         # Abort corresponances
         self.last_image_pairs = {0, 0}
         self.last_surface_pairs = {0, 0}
         self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
         self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-        self.btnAddCorrespondances.setStyleSheet("background-color: None")
-        self.addingCorrespondancesEnabled = False
+        self.btnAddCorrespondences.setStyleSheet("background-color: None")
+        self.addingCorrespondencesEnabled = False
         self.viewer.setDragMode(QGraphicsView.NoDrag)
         self.surface.setDragMode(QGraphicsView.NoDrag)
 
-    def keyPressEvent(self, event):
+    # def mousePressEvent(self, event):
+    #     print("Windows Mouse Event")
+    #     # return event
 
+    def keyPressEvent(self, event):
+        # print("down")
         if not event.isAutoRepeat():
             if event.key() == Qt.Key_Escape:
                 # Abort corresponances
@@ -425,11 +497,21 @@ class Window(QWidget):
             if self.viewer.empty or self.surface.empty:
                 return
 
-            # if event.key() == Qt.Key_Space:
-            #     self.viewer.toggleDragMode()
-            #     self.surface.toggleDragMode()
+        # else:
+        # if event.key() == Qt.Key_Space:
+        #     self.viewer.set_cross_cursor(True)
+        #     self.surface.set_cross_cursor(True)
+            #
+            # self.viewer.setCursor(Qt.CrossCursor)
+            # self.surface.setCursor(Qt.CrossCursor)
 
-    # def keyReleaseEvent(self, event):
+
+    def keyReleaseEvent(self, event):
+        pass
+        # if event.key() == Qt.Key_Space:
+        #     self.viewer.set_cross_cursor(False)
+        #     self.surface.set_cross_cursor(False)
+
         # if not event.isAutoRepeat():
         #     if event.key() == Qt.Key_Space:
         #         self.viewer.toggleDragMode()
@@ -445,121 +527,113 @@ class Window(QWidget):
                                                 "Images (*.png *.xpm *.jpg)")
 
         self.viewer.set_image(QPixmap(image_path[0]))
-       # self.viewer.set_image(QPixmap("./Images/{:s}.png".format(self.cboSurfaces.currentText())))
+
+        # Loading a new image should also negate previous data entries.
+        self.camera_model.reset()
+        self.loadSurface()
+
 
     def setCameraModel(self):
 
         self.camera_model = CameraModel(sport=self.cboSurfaces.currentText())
-        # self.loadImage()
         self.loadSurface()
 
     def pixInfo(self):
         # self.viewer.toggleDragMode()
-        if self.addingCorrespondancesEnabled:
+        if self.addingCorrespondencesEnabled:
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 100, 30)))
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
-    def ImageClicked(self, pos):
-        print("Image Points:", pos.x(), pos.y())
+        def draw_image_space_detection(self, pos):
+            # Render reference point annotation.
+            r = 5
+            yellow = Qt.yellow
+            pen = QPen(Qt.red)
+            brush = QBrush(QColor(255, 255, 0, 100))
 
-        if self.viewer.dragMode()  == QGraphicsView.NoDrag and self.addingCorrespondancesEnabled == True:
+            poly = QPolygonF()
+            x, y = pos.x(), pos.y()
+            poly_points = np.array([])
+
+    #         #
+    #         # # Compute inverse of 2D homography
+    #         # print("**", homography)
+    #         #
+    #         val, H = cv2.invert(self.homography)
+    #         #
+    #         for i in range(1, 33):
+    #             # These points are in world coordinates.
+    #             _x = x + (r * math.cos(2 * math.pi * i / 32))
+    #             _y = y + (r * math.sin(2 * math.pi * i / 32))
+    #
+    #                 # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
+    #                 # ground_point = cv2.perspectiveTransform(ground_point, H)
+    #                 # ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
+    #                 # (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+    #                 # # Render vertical
+    #                 # im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
+    #
+    #
+    #             #Convert to image coordinates.
+    #             axis = np.float32([[_x, _y]]).reshape(-1,2)
+    #             imgpts = cv2.perspectiveTransform(axis, H)
+    #
+    #             #Draw the points in a circle in perspective.
+    #             (xx, yy) = tuple(imgpts[0].ravel())
+    #
+    #             poly_points = np.append(poly_points, [xx, yy])
+    #
+    #             _p = QPointF(xx,yy)
+    #             poly.append(QPointF(xx,yy))
+    #
+    #         self.viewer.scene.addPolygon(poly, pen, brush)
+    #
+    #         #Render image-space point
+    #         axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
+    #         (imgpts, jacobian) = cv2.projectPoints(axis,
+    #                                                self._myRotationVector,
+    #                                                self._myTranslationVector,
+    #                                                self._myCameraMatrix,
+    #                                                self._myDistortionMatrix)
+    #
+    #         (x, y) = tuple(imgpts[0].ravel())
+    #         (xx, yy) = tuple(imgpts[1].ravel())
+    #         self.viewer.scene.addLine(xx, yy, x, y, pen)
+
+    def ImageClicked(self, pos):
+
+        print("ImageClicked")
+
+        #Is the control key pressed?
+        if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
             # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
-            print(pos.x(), pos.y())
+            print("Image Points:", pos.x(), pos.y())
             #Draw point
             pen = QPen(Qt.red)
             brush = QBrush(Qt.yellow)
             self.viewer.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
-            self.viewer.toggleDragMode()
+            # self.viewer.toggleDragMode()
             self.last_image_pairs = {pos.x(), pos.y()}
             # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             self.surface.setBackgroundBrush(QBrush(QColor(30, 100, 30)))
+
+            self.viewer.set_cross_cursor(False)
+            self.surface.set_cross_cursor(True)
+
             print("_mylastImagePairs:", self.last_image_pairs)
 
 
-    def draw_image_space_detection(self, pos):
-
-        # Render reference point annotation.
-        r = 5
-        yellow = Qt.yellow
-        pen = QPen(Qt.red)
-        brush = QBrush(QColor(255, 255, 0, 100))
-
-        poly = QPolygonF()
-        x, y = pos.x(), pos.y()
-        poly_points = np.array([])
-#         #
-#         # # Compute inverse of 2D homography
-#         # print("**", homography)
-#         #
-#         val, H = cv2.invert(self.homography)
-#         #
-#         for i in range(1, 33):
-#             # These points are in world coordinates.
-#             _x = x + (r * math.cos(2 * math.pi * i / 32))
-#             _y = y + (r * math.sin(2 * math.pi * i / 32))
-#
-#                 # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-#                 # ground_point = cv2.perspectiveTransform(ground_point, H)
-#                 # ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
-#                 # (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-#                 # # Render vertical
-#                 # im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
-#
-#
-#             #Convert to image coordinates.
-#             axis = np.float32([[_x, _y]]).reshape(-1,2)
-#             imgpts = cv2.perspectiveTransform(axis, H)
-#
-#             #Draw the points in a circle in perspective.
-#             (xx, yy) = tuple(imgpts[0].ravel())
-#
-#             poly_points = np.append(poly_points, [xx, yy])
-#
-#             _p = QPointF(xx,yy)
-#             poly.append(QPointF(xx,yy))
-#
-#         self.viewer.scene.addPolygon(poly, pen, brush)
-#
-#         #Render image-space point
-#         axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
-#         (imgpts, jacobian) = cv2.projectPoints(axis,
-#                                                self._myRotationVector,
-#                                                self._myTranslationVector,
-#                                                self._myCameraMatrix,
-#                                                self._myDistortionMatrix)
-#
-#         (x, y) = tuple(imgpts[0].ravel())
-#         (xx, yy) = tuple(imgpts[1].ravel())
-#         self.viewer.scene.addLine(xx, yy, x, y, pen)
-
-
     def SurfaceClicked(self, pos):
-
-        if not self.camera_model.homography.__class__.__name__ == "NoneType":
-            print("ok")
-            print("Surface Points:", pos.x(), pos.y())
-            #Draw point
-            pen = QPen(Qt.red)
-            brush = QBrush(Qt.yellow)
-            self.surface.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
-            self.surface.toggleDragMode()
-            self.last_surface_pairs = {pos.x(), pos.y()}
-
-            self.draw_image_space_detection(pos)
-
-        else:
-            print("Surface init failed...")
-            return
-
-        if self.surface.dragMode()  == QGraphicsView.NoDrag and self.addingCorrespondancesEnabled == True:
+        print("SurfaceClicked")
+        if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
             # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
-            print(pos.x(), pos.y())
+
             #Draw point
             pen = QPen(Qt.red)
             brush = QBrush(Qt.yellow)
             self.surface.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
-            self.surface.toggleDragMode()
+            # self.surface.toggleDragMode()
             self.last_surface_pairs = {pos.x(), pos.y()}
             # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
@@ -573,14 +647,34 @@ class Window(QWidget):
                     list(self.last_surface_pairs)[0],
                     list(self.last_surface_pairs)[1]))
 
-            #Save corresponances
+            #Save correspondences
             self.reset_controls()
 
-    def addCorrespondances(self):
+            self.viewer.set_cross_cursor(False)
+            self.surface.set_cross_cursor(False)
+
+
+    def addCorrespondences(self):
         #1. Highlight image space.
-        if not self.addingCorrespondancesEnabled:
-            self.addingCorrespondancesEnabled = True
-            self.btnAddCorrespondances.setStyleSheet("background-color: green")
+        if not self.addingCorrespondencesEnabled:
+            self.addingCorrespondencesEnabled = True
+            self.btnAddCorrespondences.setStyleSheet("background-color: green")
+            self.viewer.set_cross_cursor(True)
+            self.surface.set_cross_cursor(False)
+
+    def showCorrespondences(self):
+
+        if not self.correspondencesWindow.isVisible():
+            self.correspondencesWindow = MyPopup()
+            self.correspondencesWindow.setGeometry(QRect(100, 100, 400, 200))
+            self.correspondencesWindow.show()
+
+        if not self.correspondencesWindow.isActiveWindow():
+            self.correspondencesWindow.activateWindow()
+
+
+    def clearCorrespondences(self):
+        self.w.activateWindow()
 
     def save_camera_properties(self):
 
@@ -761,6 +855,5 @@ if __name__ == '__main__':
     window = Window()
     window.setGeometry(500, 300, 800, 600)
     window.show()
-    window.loadImage()
     window.loadSurface()
     sys.exit(app.exec_())
