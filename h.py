@@ -355,14 +355,38 @@ class ImageViewer(QGraphicsView):
 
 
 class MyPopup(QWidget):
-    def __init__(self):
+    def __init__(self, model):
         QWidget.__init__(self)
+        self.camera_model = model
         self.setWindowTitle("Correspondences")
         # Arrange layout
         popup_Correspondences = QVBoxLayout(self)
         self.listCorrespondences = QListWidget()
         popup_Correspondences.addWidget(self.listCorrespondences)
 
+    def update_items(self):
+        self.listCorrespondences.clear()
+
+        if self.camera_model.image_points.size > 0:
+
+            print("self.camera_model.image_points", self.camera_model.image_points)
+            print("self.camera_model.model_points", self.camera_model.model_points)
+
+            #NB: model_points includes the z-axis.  Ignore that for now..
+            two_d_model_points = self.camera_model.model_points[...,:2]
+            assert self.camera_model.image_points.size == two_d_model_points.size
+
+            print("two_d_model_points", two_d_model_points)
+
+            for idx in range(0, two_d_model_points.shape[0]):
+                print(idx)
+                s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+                    self.camera_model.image_points[idx][0],
+                    self.camera_model.image_points[idx][1],
+                    two_d_model_points[idx][0],
+                    two_d_model_points[idx][1])
+
+                self.listCorrespondences.addItem(s)
 
 
 class Window(QWidget):
@@ -456,19 +480,14 @@ class Window(QWidget):
         VBlayout.addLayout(HBlayout)
 
         HB_Correspondences = QHBoxLayout()
-        # self.listCorrespondences = QListWidget()
         HB_Correspondences.setAlignment(Qt.AlignLeft)
         HB_Correspondences.addWidget(self.btnShowCorrespondences)
         HB_Correspondences.addWidget(self.btnAddCorrespondences)
         HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
-        # HB_Correspondences.addWidget(self.listCorrespondences)
-        #
-        # self.listCorrespondences.setMaximumHeight(HB_Correspondences.sizeHint().height())
-        # self.listCorrespondences.setMaximumWidth(self.btnRemoveAllCorrespondences.sizeHint().width())
 
         VBlayout.addLayout(HB_Correspondences)
 
-        self.correspondencesWindow = MyPopup()
+        self.correspondencesWidget = MyPopup(self.camera_model)
 
 
     def reset_controls(self):
@@ -640,12 +659,23 @@ class Window(QWidget):
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             print("_mylastSurfacePairs:", self.last_surface_pairs)
 
-            self.editImageCoordsInfo.setText(
-                "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+            s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
                     list(self.last_image_pairs)[0],
                     list(self.last_image_pairs)[1],
                     list(self.last_surface_pairs)[0],
-                    list(self.last_surface_pairs)[1]))
+                    list(self.last_surface_pairs)[1])
+
+            self.camera_model.image_points = np.append(self.camera_model.image_points,
+                                                       np.array([(list(self.last_image_pairs)[0],
+                                                                  list(self.last_image_pairs)[1])], dtype='float32'), axis=0)
+
+            self.camera_model.model_points = np.append(self.camera_model.model_points,
+                                                       np.array([(pos.x(), pos.y(), 0.)], dtype='float32'), axis=0)
+
+
+            print(self.camera_model.image_points)
+            print(self.camera_model.model_points)
+            self.editImageCoordsInfo.setText(s)
 
             #Save correspondences
             self.reset_controls()
@@ -653,6 +683,7 @@ class Window(QWidget):
             self.viewer.set_cross_cursor(False)
             self.surface.set_cross_cursor(False)
 
+            self.correspondencesWidget.update_items()
 
     def addCorrespondences(self):
         #1. Highlight image space.
@@ -664,14 +695,15 @@ class Window(QWidget):
 
     def showCorrespondences(self):
 
-        if not self.correspondencesWindow.isVisible():
-            self.correspondencesWindow = MyPopup()
-            self.correspondencesWindow.setGeometry(QRect(100, 100, 400, 200))
-            self.correspondencesWindow.show()
+        if not self.correspondencesWidget.isVisible():
+            self.correspondencesWidget = MyPopup(self.camera_model)
+            self.correspondencesWidget.setGeometry(QRect(100, 100, 400, 200))
+            self.correspondencesWidget.show()
 
-        if not self.correspondencesWindow.isActiveWindow():
-            self.correspondencesWindow.activateWindow()
+        if not self.correspondencesWidget.isActiveWindow():
+            self.correspondencesWidget.activateWindow()
 
+        self.correspondencesWidget.update_items()
 
     def clearCorrespondences(self):
         self.w.activateWindow()
