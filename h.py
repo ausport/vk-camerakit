@@ -27,7 +27,7 @@ class CameraModel:
         return H
 
     def compute_camera_matrix(self):
-        h, w = self.sourceImage.shape[:2]
+        h, w = self.__sourceImage.shape[:2]
         fx = 0.5 + self.focal_length / 50.0
         self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
                                          [0, fx * w, 0.5 * (h - 1)],
@@ -36,7 +36,7 @@ class CameraModel:
         # print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
 
 
-    def surfaceImage(self):
+    def surface_image(self):
         
         px = QPixmap("./Surfaces/{:s}.png".format(self.sport))
         self.surface_dimensions = px.size()
@@ -44,25 +44,49 @@ class CameraModel:
         return px
 
 
-    def undistorted_image(self):
+    def set_camera_image(self, image_path):
+        # NB We set the camera image as a cv2 image (numpy array).
+        self.__sourceImage = cv2.imread(image_path)
 
-        img = cv2.undistort(self.sourceImage,
+
+    def distorted_camera_image_cv2(self):
+
+        return self.__sourceImage
+
+
+    def undistorted_camera_image_cv2(self):
+
+        img = cv2.undistort(self.__sourceImage,
                                self.camera_matrix,
                                self.distortion_matrix)
-
         return img
+
+    def distorted_camera_image_qimage(self):
+        # NB But we need to convert cv2 to QImage for display in qt widgets..
+
+        cvImg = self.distorted_camera_image_cv2()
+        height, width, channel = cvImg.shape
+        bytesPerLine = 3 * width
+        cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
+        return QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+
+    def undistorted_camera_image_qimage(self):
+
+        cvImg = self.undistorted_camera_image_cv2()
+        height, width, channel = cvImg.shape
+        bytesPerLine = 3 * width
+        cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
+        return QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
 
 
     def remove_correspondences(self):
-        self.image_points = np.array([])
-        self.model_points = np.array([])
 
+        self.image_points = np.empty([0, 2])  # 2D coordinates system
+        self.model_points = np.empty([0, 3])  # 3D coordinate system
 
     def reset(self):
         # Remove previous values
         self.remove_correspondences()
-        pass
-
 
 
     def export_camera_model(self, json_path):
@@ -77,7 +101,7 @@ class CameraModel:
                     'focal_length': self.focal_length,
                     'rotation_vector': self.rotation_vector,
                     # 'translation_vector': self.translation_vector,
-                    # 'distortion_matrix': self.distortion_matrix.tolist(),
+                    'distortion_matrix': self.distortion_matrix.tolist(),
                     'image_points': self.image_points.tolist(),
                     'model_points': self.model_points.tolist(),
                     'camera_matrix': self.camera_matrix.tolist()
@@ -135,9 +159,11 @@ class CameraModel:
         self.surface_dimensions = None
 
         # Image correspondences
-        self.image_points = np.array([])
-        self.model_points = np.array([])
-        self.sourceImage = cv2.imread("./Images/{:s}.png".format(sport))
+        self.image_points = np.empty([0, 2])    #2D coordinates system
+        self.model_points =np.empty([0, 3])     #3D coordinate system
+
+        self.__sourceImage = None
+        self.set_camera_image("./Images/{:s}.png".format(sport))
 
         #Internal validation
         self.__bool__ = False
@@ -178,22 +204,22 @@ class CameraModel:
         elif sport == "hockey":
             # Tennis
             # Distorted
-            self.image_points = np.array([(52, 121), (630, 104), (920, 193), (492, 108)], dtype='float32')
+            self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
             # Undistorted
             # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            self.model_points = np.array([(964, 162, 0), (964, 600, 0), (508, 600, 0), (964, 490, 0)],
+            self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)],
                                          dtype='float32')
             self.model_width = 91
             self.model_height = 55
             self.model_offset_x = 5
             self.model_offset_y = 5
             # Scaling factor required to convert from real world in meters to surface pixels.
-            self.model_scale = 50
+            self.model_scale = 10
 
-            self.distortion_matrix[0] = -0.17751
+            self.distortion_matrix[0] = -0.023880000000000002
             print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
 
-            self.focal_length = 55
+            self.focal_length = 80
             print("Focal Length :\n {0}".format(self.focal_length))
             self.__bool__ = True
 
@@ -537,7 +563,8 @@ class Window(QWidget):
         #         self.surface.toggleDragMode()
 
     def loadSurface(self):
-        self.surface.set_image(self.camera_model.surfaceImage())
+        self.surface.set_image(self.camera_model.surface_image())
+        self.correspondencesWidget.update_items()
 
     def loadImage(self):
 
@@ -545,7 +572,8 @@ class Window(QWidget):
                                                 "/home",
                                                 "Images (*.png *.xpm *.jpg)")
 
-        self.viewer.set_image(QPixmap(image_path[0]))
+        self.camera_model.set_camera_image(image_path[0])
+        self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
 
         # Loading a new image should also negate previous data entries.
         self.camera_model.reset()
@@ -644,7 +672,7 @@ class Window(QWidget):
 
 
     def SurfaceClicked(self, pos):
-        print("SurfaceClicked")
+        print("SurfaceClicked", pos)
         if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
             # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
 
@@ -653,7 +681,7 @@ class Window(QWidget):
             brush = QBrush(Qt.yellow)
             self.surface.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
             # self.surface.toggleDragMode()
-            self.last_surface_pairs = {pos.x(), pos.y()}
+            self.last_surface_pairs = {pos.y(), pos.x()}
             # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
@@ -665,16 +693,18 @@ class Window(QWidget):
                     list(self.last_surface_pairs)[0],
                     list(self.last_surface_pairs)[1])
 
+            print("## EXISTING PAIRS ##")
+            print(self.camera_model.image_points)
+            print(self.camera_model.model_points)
+
             self.camera_model.image_points = np.append(self.camera_model.image_points,
                                                        np.array([(list(self.last_image_pairs)[0],
                                                                   list(self.last_image_pairs)[1])], dtype='float32'), axis=0)
 
             self.camera_model.model_points = np.append(self.camera_model.model_points,
-                                                       np.array([(pos.x(), pos.y(), 0.)], dtype='float32'), axis=0)
+                                                       np.array([(list(self.last_surface_pairs)[0],
+                                                                  list(self.last_surface_pairs)[1])], dtype='float32'), axis=0)
 
-
-            print(self.camera_model.image_points)
-            print(self.camera_model.model_points)
             self.editImageCoordsInfo.setText(s)
 
             #Save correspondences
@@ -744,10 +774,11 @@ class Window(QWidget):
             model = self.camera_model
 
             # Get model sample image
-            im_src = model.undistorted_image()
+            im_src = model.undistorted_camera_image_cv2()
 
             # Estimate naive camera intrinsics (camera matrix)
             camera_matrix = model.camera_matrix
+
             # Distortion matrix
             distortion_matrix = model.distortion_matrix
 
@@ -757,27 +788,29 @@ class Window(QWidget):
                                          (model.surface_dimensions.width(),
                                           model.surface_dimensions.height()))
 
-            # Render image coordinate boundaries.
-            cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
-                     (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
-            cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
-                     (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
-            cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
-                     (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
-            cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
-                     (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
+            if model.image_points.size > 0:
+                # Render image coordinate boundaries.
+                cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                         (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
+                cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                         (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
+                cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                         (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
+                cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                         (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
 
-            # Render surface coordinate boundaries.
-            cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
-                     (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
-            cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
-                     (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
-            cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
-                     (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
-            cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
-                     (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
+            if model.model_points.size > 0:
+                # Render surface coordinate boundaries.
+                cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                         (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
+                cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                         (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
+                cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                         (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
+                cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                         (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
 
-            # Display images in QT
+            # Display undistored images.
             # TODO alpha composite warped image on background surface.
             height, width, channel = im_out.shape
             bytesPerLine = 3 * width
@@ -869,18 +902,19 @@ class Window(QWidget):
                 if not cv2.imwrite('output.png',im_src):
                     print("Writing failed")
 
-            # Display images
-            height, width, channel = im_src.shape
-            bytesPerLine = 3 * width
+                # Display images
+                height, width, channel = im_src.shape
+                bytesPerLine = 3 * width
 
-            # Convert to RGB for QImage.
-            cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
-            qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
-            self.viewer.set_image(QPixmap(qImg))
+                # Convert to RGB for QImage.
+                cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+                qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
+                self.viewer.set_image(QPixmap(qImg))
 
-            self.sliderFocalLength.setValue(int(model.focal_length))
-            self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
-
+                self.sliderFocalLength.setValue(int(model.focal_length))
+                self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
+        else:
+            print("Warning: No camera model has been initialised.")
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
