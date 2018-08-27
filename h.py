@@ -660,7 +660,7 @@ class Window(QWidget):
             brush = QBrush(Qt.yellow)
             self.viewer.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
             # self.viewer.toggleDragMode()
-            self.last_image_pairs = {pos.x(), pos.y()}
+            self.last_image_pairs = (pos.x(), pos.y())
             # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             self.surface.setBackgroundBrush(QBrush(QColor(30, 100, 30)))
@@ -668,7 +668,7 @@ class Window(QWidget):
             self.viewer.set_cross_cursor(False)
             self.surface.set_cross_cursor(True)
 
-            print("_mylastImagePairs:", self.last_image_pairs)
+
 
 
     def SurfaceClicked(self, pos):
@@ -681,29 +681,35 @@ class Window(QWidget):
             brush = QBrush(Qt.yellow)
             self.surface.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
             # self.surface.toggleDragMode()
-            self.last_surface_pairs = {pos.y(), pos.x()}
+            self.last_surface_pairs = (pos.x(), pos.y())    #tuple
             # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+            print("_mylastImagePairs:", self.last_image_pairs)
             print("_mylastSurfacePairs:", self.last_surface_pairs)
 
             s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
-                    list(self.last_image_pairs)[0],
-                    list(self.last_image_pairs)[1],
-                    list(self.last_surface_pairs)[0],
-                    list(self.last_surface_pairs)[1])
+                    self.last_image_pairs[0],
+                    self.last_image_pairs[1],
+                    self.last_surface_pairs[0],
+                    self.last_surface_pairs[1])
 
             print("## EXISTING PAIRS ##")
             print(self.camera_model.image_points)
             print(self.camera_model.model_points)
+            print(self.camera_model.model_points.shape)
+
+            print("## LAST PAIRS ##")
+            print(self.last_surface_pairs)
+            # print(self.last_surface_pairs.shape)
 
             self.camera_model.image_points = np.append(self.camera_model.image_points,
-                                                       np.array([(list(self.last_image_pairs)[0],
-                                                                  list(self.last_image_pairs)[1])], dtype='float32'), axis=0)
+                                                       np.array([(self.last_image_pairs[0],
+                                                                  self.last_image_pairs[1])], dtype='float32'), axis=0)
 
             self.camera_model.model_points = np.append(self.camera_model.model_points,
-                                                       np.array([(list(self.last_surface_pairs)[0],
-                                                                  list(self.last_surface_pairs)[1])], dtype='float32'), axis=0)
+                                                       np.array([(self.last_surface_pairs[0],
+                                                                  self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
 
             self.editImageCoordsInfo.setText(s)
 
