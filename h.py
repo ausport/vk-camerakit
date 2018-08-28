@@ -150,11 +150,6 @@ class CameraModel:
 
         self.sport = j["surface_model"]
         self.surface_image()
-       #  myApp = QApplication.topLevelWidgets()[0]
-       #  myApp.cboSurfaces.setCurrentText(self.sport)
-       # # Apply camera model
-       #  myApp.cboSurfaces.currentIndexChanged.connect(myApp.setCameraModel)
-
         self.model_width = j["model_dimensions"][0]
         self.model_height = j["model_dimensions"][1]
         self.model_offset_x = j["model_offset"][0]
@@ -164,7 +159,6 @@ class CameraModel:
         self.rotation_vector = j["rotation_vector"]
         self.homography = np.array(j["homography"])
         self.distortion_matrix = np.array(j["distortion_matrix"])
-        print(self.distortion_matrix)
         self.image_points = np.array(j["image_points"])
         self.model_points = np.array(j["model_points"])
         self.camera_matrix = np.array(j["camera_matrix"])
@@ -802,6 +796,7 @@ class Window(QWidget):
             self.camera_model.import_camera_model(path)
             self.updateDisplays()
             self.correspondencesWidget.update_items()
+            self.cboSurfaces.setCurrentText(self.camera_model.sport)
 
     def draw(self, img, corners, imgpts):
         corner = tuple(corners[0].ravel())
