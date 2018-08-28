@@ -26,6 +26,11 @@ class CameraModel:
         val, H = cv2.invert(self.homography)
         return H
 
+    def is_identity(self):
+        identity = np.zeros((3, 3))
+        np.fill_diagonal(identity, 1)
+        return np.array_equal(self.homography, identity)
+
     def compute_camera_matrix(self):
         h, w = self.__sourceImage.shape[:2]
         fx = 0.5 + self.focal_length / 50.0
@@ -835,6 +840,8 @@ class Window(QWidget):
             distortion_matrix = model.distortion_matrix
 
             # Warp source image to destination based on homography
+            print(model.surface_dimensions)
+            print(model.homography)
             im_out = cv2.warpPerspective(im_src,
                                          model.homography,
                                          (model.surface_dimensions.width(),
@@ -862,23 +869,25 @@ class Window(QWidget):
                 cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
                          (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
 
-            # Display undistored images.
-            height, width, channel = im_out.shape
-            bytesPerLine = 3 * width
-            alpha = 0.5
-            beta = (1.0 - alpha)
+            # Only update the surface overlay if there is an existing homography
+            if not model.is_identity():
+                # Display undistored images.
+                height, width, channel = im_out.shape
+                bytesPerLine = 3 * width
+                alpha = 0.5
+                beta = (1.0 - alpha)
 
-            # Composite image
-            cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
-            src1 = model.surface_image_cv2()
-            dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
+                # Composite image
+                cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
+                src1 = model.surface_image_cv2()
+                dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
 
-            # Set composite image to surface model
-            qImg = QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)
-            self.surface.set_image(QPixmap(qImg))
+                # Set composite image to surface model
+                qImg = QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)
+                self.surface.set_image(QPixmap(qImg))
 
-            self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-            self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+                self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+                self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
             # NB Generate square calibration corresponances using existing homography.
             # The problem is how to learn the camera pose, which we need to estimate a 3D camera coordinate system.
