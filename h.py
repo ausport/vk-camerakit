@@ -83,6 +83,8 @@ class CameraModel:
 
         self.image_points = np.empty([0, 2])  # 2D coordinates system
         self.model_points = np.empty([0, 3])  # 3D coordinate system
+        self.homography = np.zeros((3, 3))
+        np.fill_diagonal(self.homography, 1)
 
     def reset(self):
         # Remove previous values
@@ -150,7 +152,9 @@ class CameraModel:
         self.model_scale = 10
 
         # Camera properties
-        self.homography = None
+        self.homography = np.zeros((3, 3))
+        np.fill_diagonal(self.homography, 1)
+
         self.focal_length = 10.8
         self.camera_matrix = None
         self.distortion_matrix = np.zeros((4, 1))
@@ -170,8 +174,8 @@ class CameraModel:
 
         if sport == "pool":
             # Pool
-            self.image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
-            self.model_points = np.array([(10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0)], dtype='float32')
+            # self.image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
+            # self.model_points = np.array([(10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0)], dtype='float32')
             self.model_width = 50
             self.model_height = 25
             self.model_offset_x = 1
@@ -183,10 +187,10 @@ class CameraModel:
         elif sport == "tennis":
             # Tennis
             # Distorted
-            self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
-            # Undistorted
-            self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
-            self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
+            # self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
+            # # # Undistorted
+            # self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
+            # self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
             self.model_width = 30
             self.model_height = 15
             self.model_offset_x = 1
@@ -204,11 +208,11 @@ class CameraModel:
         elif sport == "hockey":
             # Tennis
             # Distorted
-            self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
-            # Undistorted
-            # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)],
-                                         dtype='float32')
+            # self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
+            # # Undistorted
+            # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
+            # self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)], dtype='float32')
+
             self.model_width = 91
             self.model_height = 55
             self.model_offset_x = 5
@@ -226,11 +230,11 @@ class CameraModel:
         elif sport == "netball":
             # Tennis
             # Distorted
-            self.image_points = np.array([(122, 1143), (1241, 1056), (3810, 1360), (3436, 1751)], dtype='float32')
-            # Undistorted
-            # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            self.model_points = np.array([(308, 1827, 0), (308, 308, 0), (3352, 308, 0), (3352, 1827, 0)],
-                                         dtype='float32')
+            # self.image_points = np.array([(122, 1143), (1241, 1056), (3810, 1360), (3436, 1751)], dtype='float32')
+            # # Undistorted
+            # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
+            # self.model_points = np.array([(308, 1827, 0), (308, 308, 0), (3352, 308, 0), (3352, 1827, 0)],
+            #                              dtype='float32')
             self.model_width = 31
             self.model_height = 15
             self.model_offset_x = 3
@@ -742,7 +746,7 @@ class Window(QWidget):
         self.correspondencesWidget.update_items()
 
     def clearCorrespondences(self):
-        self.w.activateWindow()
+        self.correspondencesWidget.activateWindow()
 
     def save_camera_properties(self):
 
