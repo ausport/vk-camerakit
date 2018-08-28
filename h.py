@@ -14,7 +14,10 @@ import json
 class CameraModel:
 
     def compute_homography(self):
-        self.homography, status = cv2.findHomography(self.image_points, self.model_points)
+        self.homography, mask = cv2.findHomography(self.image_points, self.model_points)
+        print("Status\n", self.homography)
+        # if status == 0:
+        #     self.homography = self.identity_homography()
         # print("Image Homograhy :\n {0}".format(self.homography))
 
 
@@ -26,10 +29,11 @@ class CameraModel:
         val, H = cv2.invert(self.homography)
         return H
 
-    def is_identity(self):
-        identity = np.zeros((3, 3))
-        np.fill_diagonal(identity, 1)
-        return np.array_equal(self.homography, identity)
+    def identity_homography(self):
+        return np.fill_diagonal(np.zeros((3, 3)), 1)
+
+    def is_homography_identity(self):
+        return np.array_equal(self.homography, self.identity_homography())
 
     def compute_camera_matrix(self):
         h, w = self.__sourceImage.shape[:2]
@@ -42,10 +46,14 @@ class CameraModel:
 
 
     def surface_image(self):
-        
-        px = QPixmap("./Surfaces/{:s}.png".format(self.sport))
+         return QPixmap("./Surfaces/{:s}.png".format(self.sport))
+
+    def set_surface_image(self, sport):
+
+        self.sport = sport
+        px = QPixmap("./Surfaces/{:s}.png".format(sport))
         self.surface_dimensions = px.size()
-        print("Loading surface:", self.sport, self.surface_dimensions)
+        print("Setting surface:", sport, self.surface_dimensions)
         return px
 
     def surface_image_cv2(self):
@@ -96,6 +104,60 @@ class CameraModel:
     def reset(self):
         # Remove previous values
         self.remove_correspondences()
+
+    def surface_properties(self, sport):
+        # Return a dictionary of values for each sport.
+        properties = {
+            "model_width": 50,
+            "model_height": 25,
+            "model_offset_x": 1,
+            "model_offset_y": 1,
+            # Scaling factor required to convert from real world in meters to surface pixels.
+            "model_scale": 10
+        }
+
+        if sport == "pool":
+            return {
+                "model_width": 50,
+                "model_height": 25,
+                "model_offset_x": 1,
+                "model_offset_y": 1,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 10
+            }
+
+        if sport == "tennis":
+            return {
+                "model_width": 30,
+                "model_height": 15,
+                "model_offset_x": 1,
+                "model_offset_y": 1,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 50
+            }
+
+        if sport == "hockey":
+            return {
+                "model_width": 91,
+                "model_height": 55,
+                "model_offset_x": 5,
+                "model_offset_y": 5,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 10
+            }
+
+        if sport == "netball":
+            return {
+                "model_width": 31,
+                "model_height": 15,
+                "model_offset_x": 3,
+                "model_offset_y": 3,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 100
+            }
+
+        return properties
+
 
     def camera_image_path(self):
         return self.__image_path
@@ -154,7 +216,8 @@ class CameraModel:
                 return
 
         self.sport = j["surface_model"]
-        self.surface_image()
+        self.set_surface_image(self.sport)
+
         self.model_width = j["model_dimensions"][0]
         self.model_height = j["model_dimensions"][1]
         self.model_offset_x = j["model_offset"][0]
@@ -167,6 +230,7 @@ class CameraModel:
         self.image_points = np.array(j["image_points"])
         self.model_points = np.array(j["model_points"])
         self.camera_matrix = np.array(j["camera_matrix"])
+
         self.__bool__ = True
 
 
@@ -176,25 +240,27 @@ class CameraModel:
     def __init__(self, sport="hockey"):
 
         self.sport = sport
-        
+        self.set_surface_image(sport)
+        surface_properties = self.surface_properties(sport)
+        print(surface_properties)
+
         # Model properties
-        self.model_width = 50
-        self.model_height = 25
-        self.model_offset_x = 1
-        self.model_offset_y = 1
+        self.model_width = surface_properties["model_width"]
+        self.model_height = surface_properties["model_height"]
+        self.model_offset_x = surface_properties["model_offset_x"]
+        self.model_offset_y = surface_properties["model_offset_y"]
         #Scaling factor required to convert from real world in meters to surface pixels.
-        self.model_scale = 10
+        self.model_scale = surface_properties["model_scale"]
 
         # Camera properties
         self.homography = np.zeros((3, 3))
         np.fill_diagonal(self.homography, 1)
 
-        self.focal_length = 10.8
+        self.focal_length = 0
         self.camera_matrix = None
         self.distortion_matrix = np.zeros((4, 1))
         self.rotation_vector = None
         self.translation_vector = None
-        self.surface_dimensions = None
 
         # Image correspondences
         self.image_points = np.empty([0, 2])    #2D coordinates system
@@ -213,55 +279,55 @@ class CameraModel:
             # Pool
             # self.image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
             # self.model_points = np.array([(10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0)], dtype='float32')
-            self.model_width = 50
-            self.model_height = 25
-            self.model_offset_x = 1
-            self.model_offset_y = 1
-            #Scaling factor required to convert from real world in meters to surface pixels.
-            self.model_scale = 10
+            # self.model_width = 50
+            # self.model_height = 25
+            # self.model_offset_x = 1
+            # self.model_offset_y = 1
+            # #Scaling factor required to convert from real world in meters to surface pixels.
+            # self.model_scale = 10
             self.__bool__ = True
 
         elif sport == "tennis":
             # Tennis
             # Distorted
-            self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
-            # # # Undistorted
-            self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
-            self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
-            self.model_width = 30
-            self.model_height = 15
-            self.model_offset_x = 1
-            self.model_offset_y = 1
-            # Scaling factor required to convert from real world in meters to surface pixels.
-            self.model_scale = 50
+            # self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
+            # # # # Undistorted
+            # self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
+            # self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
+            # self.model_width = 30
+            # self.model_height = 15
+            # self.model_offset_x = 1
+            # self.model_offset_y = 1
+            # # Scaling factor required to convert from real world in meters to surface pixels.
+            # self.model_scale = 50
 
-            self.distortion_matrix[0] = -0.17751
-            print ("Distortion Matrix :\n {0}".format(self.distortion_matrix))
+            # self.distortion_matrix[0] = -0.17751
+            # print ("Distortion Matrix :\n {0}".format(self.distortion_matrix))
 
-            self.focal_length = 7
-            print("Focal Length :\n {0}".format(self.focal_length))
+            # self.focal_length = 7
+            # print("Focal Length :\n {0}".format(self.focal_length))
             self.__bool__ = True
 
         elif sport == "hockey":
             # Tennis
             # Distorted
-            self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
-            # # Undistorted
-            # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)], dtype='float32')
-
-            self.model_width = 91
-            self.model_height = 55
-            self.model_offset_x = 5
-            self.model_offset_y = 5
-            # Scaling factor required to convert from real world in meters to surface pixels.
-            self.model_scale = 10
-
-            self.distortion_matrix[0] = -0.023880000000000002
-            print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
-
-            self.focal_length = 80
-            print("Focal Length :\n {0}".format(self.focal_length))
+            # self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
+            # # # Undistorted
+            # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
+            # self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)], dtype='float32')
+            #
+            # self.model_width = 91
+            # self.model_height = 55
+            # self.model_offset_x = 5
+            # self.model_offset_y = 5
+            # # Scaling factor required to convert from real world in meters to surface pixels.
+            # self.model_scale = 10
+            #
+            # self.distortion_matrix[0] = -0.023880000000000002
+            # print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
+            #
+            # self.focal_length = 80
+            # print("Focal Length :\n {0}".format(self.focal_length))
             self.__bool__ = True
 
         elif sport == "netball":
@@ -272,18 +338,18 @@ class CameraModel:
             # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
             # self.model_points = np.array([(308, 1827, 0), (308, 308, 0), (3352, 308, 0), (3352, 1827, 0)],
             #                              dtype='float32')
-            self.model_width = 31
-            self.model_height = 15
-            self.model_offset_x = 3
-            self.model_offset_y = 3
-            # Scaling factor required to convert from real world in meters to surface pixels.
-            self.model_scale = 100
-
-            self.distortion_matrix[0] = 0.
-            print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
-
-            self.focal_length = 21
-            print("Focal Length :\n {0}".format(self.focal_length))
+            # self.model_width = 31
+            # self.model_height = 15
+            # self.model_offset_x = 3
+            # self.model_offset_y = 3
+            # # Scaling factor required to convert from real world in meters to surface pixels.
+            # self.model_scale = 100
+            #
+            # self.distortion_matrix[0] = 0.
+            # print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
+            #
+            # self.focal_length = 21
+            # print("Focal Length :\n {0}".format(self.focal_length))
             self.__bool__ = True
 
 
@@ -404,7 +470,6 @@ class ImageViewer(QGraphicsView):
     #         self.setDragMode(QGraphicsView.CrossCursor)
 
     def mousePressEvent(self, event):
-        # TODO - only execute this if the space bar is pressed to indicate adding a coorresponence point.
         # if event.key() == Qt.Key_Space:
         #   super(ImageViewer, self).mousePressEvent(event)
         self.toggleDragMode()
@@ -605,8 +670,9 @@ class Window(QWidget):
         #         self.viewer.toggleDragMode()
         #         self.surface.toggleDragMode()
 
-    def loadSurface(self):
+    def loadSurface(self, sport):
         self.surface.set_image(self.camera_model.surface_image())
+        self.camera_model.set_surface_image(sport)
         self.correspondencesWidget.update_items()
 
     def loadImage(self):
@@ -620,13 +686,13 @@ class Window(QWidget):
 
         # Loading a new image should also negate previous data entries.
         self.camera_model.reset()
-        self.loadSurface()
+        self.loadSurface(self.cboSurfaces.currentText())
 
 
     def setCameraModel(self):
 
         self.camera_model = CameraModel(sport=self.cboSurfaces.currentText())
-        self.loadSurface()
+        self.loadSurface(self.cboSurfaces.currentText())
 
     def pixInfo(self):
         # self.viewer.toggleDragMode()
@@ -754,9 +820,7 @@ class Window(QWidget):
                                                        np.array([(self.last_surface_pairs[0],
                                                                   self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
 
-            self.editImageCoordsInfo.setText(s)
-
-            #Save correspondences
+           #Save correspondences
             self.reset_controls()
 
             self.viewer.set_cross_cursor(False)
@@ -799,9 +863,9 @@ class Window(QWidget):
         path = QFileDialog.getOpenFileName(self, 'Load Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
         if path[0] != "":
             self.camera_model.import_camera_model(path)
+            self.cboSurfaces.setCurrentText(self.camera_model.sport)
             self.updateDisplays()
             self.correspondencesWidget.update_items()
-            self.cboSurfaces.setCurrentText(self.camera_model.sport)
 
     def draw(self, img, corners, imgpts):
         corner = tuple(corners[0].ravel())
@@ -830,6 +894,10 @@ class Window(QWidget):
 
             model = self.camera_model
 
+            #Update homography
+            model.compute_camera_matrix()
+            model.compute_homography()
+
             # Get model sample image
             im_src = model.undistorted_camera_image_cv2()
 
@@ -842,35 +910,38 @@ class Window(QWidget):
             # Warp source image to destination based on homography
             print(model.surface_dimensions)
             print(model.homography)
-            im_out = cv2.warpPerspective(im_src,
-                                         model.homography,
-                                         (model.surface_dimensions.width(),
-                                          model.surface_dimensions.height()))
-
-            if model.image_points.size > 0:
-                # Render image coordinate boundaries.
-                cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
-                         (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
-                cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
-                         (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
-                cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
-                         (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
-                cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
-                         (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
-
-            if model.model_points.size > 0:
-                # Render surface coordinate boundaries.
-                cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
-                         (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
-                cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
-                         (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
-                cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
-                         (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
-                cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
-                         (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
 
             # Only update the surface overlay if there is an existing homography
-            if not model.is_identity():
+            if not model.is_homography_identity():
+
+                im_out = cv2.warpPerspective(im_src,
+                                             model.homography,
+                                             (model.surface_dimensions.width(),
+                                              model.surface_dimensions.height()))
+
+                if model.image_points.size > 0:
+                    # Render image coordinate boundaries.
+                    cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                             (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
+                    cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                             (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
+                    cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                             (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
+                    cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                             (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
+
+                if model.model_points.size > 0:
+                    # Render surface coordinate boundaries.
+                    cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                             (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
+                    cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                             (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
+                    cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                             (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
+                    cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                             (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
+
+
                 # Display undistored images.
                 height, width, channel = im_out.shape
                 bytesPerLine = 3 * width
@@ -889,86 +960,86 @@ class Window(QWidget):
                 self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
                 self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
-            # NB Generate square calibration corresponances using existing homography.
-            # The problem is how to learn the camera pose, which we need to estimate a 3D camera coordinate system.
-            # We need a) the camera instrinics, such as focal length and distortion, and b) camera extrinsics, rotation and translation.
-            # Normally we would like to use a checkerboard for calibrating the camera, and deriving the camera instrinics.
-            # OpenCV has lots of established medthods for doing this - such as cv2.CameraCalibration().
-            # That's not very convenient for ad-hoc camera calibration, but there are some plausible workarounds.
-            # Since we can easily estimate a 2D homography using points corresponding between the image and world coordinate systems,
-            # that should give us a relible planar scene context to solve the camera extrinsics.
-            # First we estimate naively the focal point (see camera_matrix above), and we assume no distortion(!) *more on that.
-            # So, here we use a grid of equi-spaced points in world coordinates, and use the inverse homography to reliably retrieve the
-            # (x,y) loation of the corresponding points in camera coordinates.  The perspective embedded in the grid-based camera coordinates should
-            # approximate the same points learned from a checkerboard, and we use the cv2.solvePnP() function the give us the extrinsics: rotation and translation.
-            # At this point, if we create a grid across the entire image space, the sover does it's best least-suqares approximation of the
-            # extrinsics, bu we find when we project points back to the image space that the perspective model fails at a rate proportional to the
-            # distance from the center of the image.  I suspect this is because of our previous assumption of zero camera distortion.
-            # A hacky workaround is to use a local set of ground truth coordinates, and use the cv2.solvePnP() function
-            # to derive compute quasi-extrinsic parameters.  In other words, let w(x,y,z) be the 3D coordinates in world space that we
-            # want to project into 2D camera space c(x,y).  We take w(x,y,0), and build a 1m x 1m grid surrounding that point (ensuring we don't breach the real camera bounds).
-            # For each point in the 1x1m grid we use the inverse homography transform and directly compute the 2D image coordinates, from which we can compute local
-            # camera extrinsics.  Obviously this is a hack, and it would be nice to have more accurate global extrinsics parameters, but we would otherwise
-            # need some way of computing the camera distortion accurately.
+                # NB Generate square calibration corresponances using existing homography.
+                # The problem is how to learn the camera pose, which we need to estimate a 3D camera coordinate system.
+                # We need a) the camera instrinics, such as focal length and distortion, and b) camera extrinsics, rotation and translation.
+                # Normally we would like to use a checkerboard for calibrating the camera, and deriving the camera instrinics.
+                # OpenCV has lots of established medthods for doing this - such as cv2.CameraCalibration().
+                # That's not very convenient for ad-hoc camera calibration, but there are some plausible workarounds.
+                # Since we can easily estimate a 2D homography using points corresponding between the image and world coordinate systems,
+                # that should give us a relible planar scene context to solve the camera extrinsics.
+                # First we estimate naively the focal point (see camera_matrix above), and we assume no distortion(!) *more on that.
+                # So, here we use a grid of equi-spaced points in world coordinates, and use the inverse homography to reliably retrieve the
+                # (x,y) loation of the corresponding points in camera coordinates.  The perspective embedded in the grid-based camera coordinates should
+                # approximate the same points learned from a checkerboard, and we use the cv2.solvePnP() function the give us the extrinsics: rotation and translation.
+                # At this point, if we create a grid across the entire image space, the sover does it's best least-suqares approximation of the
+                # extrinsics, bu we find when we project points back to the image space that the perspective model fails at a rate proportional to the
+                # distance from the center of the image.  I suspect this is because of our previous assumption of zero camera distortion.
+                # A hacky workaround is to use a local set of ground truth coordinates, and use the cv2.solvePnP() function
+                # to derive compute quasi-extrinsic parameters.  In other words, let w(x,y,z) be the 3D coordinates in world space that we
+                # want to project into 2D camera space c(x,y).  We take w(x,y,0), and build a 1m x 1m grid surrounding that point (ensuring we don't breach the real camera bounds).
+                # For each point in the 1x1m grid we use the inverse homography transform and directly compute the 2D image coordinates, from which we can compute local
+                # camera extrinsics.  Obviously this is a hack, and it would be nice to have more accurate global extrinsics parameters, but we would otherwise
+                # need some way of computing the camera distortion accurately.
 
-            _global_calibration = True
+                _global_calibration = True
 
-            if _global_calibration:
-                world_points = np.zeros((model.model_width*model.model_height,3), np.float32)
-                world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
-                camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
-            else:
-                # Manually set world point calibration for local extrinsics.
+                if _global_calibration:
+                    world_points = np.zeros((model.model_width*model.model_height,3), np.float32)
+                    world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
+                    camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
+                else:
+                    # Manually set world point calibration for local extrinsics.
 
-                # Top left of pool
-                world_points = np.float32([[10,10,0], [60,10,0], [10,60,0],  [60,60,0]])
-                camera_points = np.zeros((2*2,2), np.float32)
+                    # Top left of pool
+                    world_points = np.float32([[10,10,0], [60,10,0], [10,60,0],  [60,60,0]])
+                    camera_points = np.zeros((2*2,2), np.float32)
 
-            # Estimate image point coordinates on the ground plane for world point calibration markers.
-            i = 0
-            inverse_homography = model.inverse_homography()
+                # Estimate image point coordinates on the ground plane for world point calibration markers.
+                i = 0
+                inverse_homography = model.inverse_homography()
 
-            for world_point in world_points:
-                # Remove z-axis (assumed to be zero)
-                point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-                # Get image coordinates for world coordinate point (x,y).
-                camera_points[i] = cv2.perspectiveTransform(point, inverse_homography)
-                i = i + 1
+                for world_point in world_points:
+                    # Remove z-axis (assumed to be zero)
+                    point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
+                    # Get image coordinates for world coordinate point (x,y).
+                    camera_points[i] = cv2.perspectiveTransform(point, inverse_homography)
+                    i = i + 1
 
-            # Solve rotation and translation matrices
-            (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points, camera_points, camera_matrix, distortion_matrix)
+                # Solve rotation and translation matrices
+                (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points, camera_points, camera_matrix, distortion_matrix)
 
 
 
-            if True:
-                # This code demonstrates the problem with ignoring instrinsic camera distortion.
-                # It should take the inverse homography image points (reliable), and project in the z-plane
-                # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
-                # If the 3D image coordinate system is accurate, the vertical yellow lines should be
-                # generally consistent with normal perspective.
-                # By switching between different calibration routines (above), we can see the effects of
-                # poor or non-local calibration.
-                # For instance, if we use a local calibration grid above, ~10m around the origin (10,10), then the
-                # yellow verticals around that region are good, but the non-local distortion corrupts the 3D perspective.
-                # Using a global calibration grid (i.e. a grid over the entire model space), then only the points near the
-                # center of the image are in proper perspective.
+                if True:
+                    # This code demonstrates the problem with ignoring instrinsic camera distortion.
+                    # It should take the inverse homography image points (reliable), and project in the z-plane
+                    # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
+                    # If the 3D image coordinate system is accurate, the vertical yellow lines should be
+                    # generally consistent with normal perspective.
+                    # By switching between different calibration routines (above), we can see the effects of
+                    # poor or non-local calibration.
+                    # For instance, if we use a local calibration grid above, ~10m around the origin (10,10), then the
+                    # yellow verticals around that region are good, but the non-local distortion corrupts the 3D perspective.
+                    # Using a global calibration grid (i.e. a grid over the entire model space), then only the points near the
+                    # center of the image are in proper perspective.
 
-                world_points = np.zeros((model.model_width*model.model_height,3), np.float32)
-                world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
-                # camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
+                    world_points = np.zeros((model.model_width*model.model_height,3), np.float32)
+                    world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
+                    # camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
 
-                for world_point in model.model_points:
-                    ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-                    (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-                    # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-                    # ground_point = cv2.perspectiveTransform(ground_point, inverse_homography)
-                    ref_point = np.array([[[world_point[0], world_point[1], -model.model_scale]]], dtype='float32')
-                    (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-                    # Render vertical
-                    im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
+                    for world_point in model.model_points:
+                        ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                        (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+                        # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
+                        # ground_point = cv2.perspectiveTransform(ground_point, inverse_homography)
+                        ref_point = np.array([[[world_point[0], world_point[1], -model.model_scale]]], dtype='float32')
+                        (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+                        # Render vertical
+                        im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
 
-                if not cv2.imwrite('output.png',im_src):
-                    print("Writing failed")
+                    if not cv2.imwrite('output.png',im_src):
+                        print("Writing failed")
 
                 # Display images
                 height, width, channel = im_src.shape
@@ -989,5 +1060,5 @@ if __name__ == '__main__':
     window = Window()
     window.setGeometry(500, 300, 800, 600)
     window.show()
-    window.loadSurface()
+    window.loadSurface("tennis")
     sys.exit(app.exec_())
