@@ -43,6 +43,8 @@ class CameraModel:
         print("Loading surface:", self.sport, self.surface_dimensions)
         return px
 
+    def surface_image_cv2(self):
+        return cv2.imread("./Surfaces/{:s}.png".format(self.sport))
 
     def set_camera_image(self, image_path):
         # NB We set the camera image as a cv2 image (numpy array).
@@ -187,10 +189,10 @@ class CameraModel:
         elif sport == "tennis":
             # Tennis
             # Distorted
-            # self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
+            self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
             # # # Undistorted
-            # self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
-            # self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
+            self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
+            self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
             self.model_width = 30
             self.model_height = 15
             self.model_offset_x = 1
@@ -821,11 +823,18 @@ class Window(QWidget):
                          (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
 
             # Display undistored images.
-            # TODO alpha composite warped image on background surface.
             height, width, channel = im_out.shape
             bytesPerLine = 3 * width
+            alpha = 0.5
+            beta = (1.0 - alpha)
+
+            # Composite image
             cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
-            qImg = QImage(im_out.data, width, height, bytesPerLine, QImage.Format_RGB888)
+            src1 = model.surface_image_cv2()
+            dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
+
+            # Set composite image to surface model
+            qImg = QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)
             self.surface.set_image(QPixmap(qImg))
 
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
