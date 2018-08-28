@@ -1,4 +1,4 @@
-import sys, math
+import sys, math, os
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -49,7 +49,7 @@ class CameraModel:
     def set_camera_image(self, image_path):
         # NB We set the camera image as a cv2 image (numpy array).
         self.__sourceImage = cv2.imread(image_path)
-
+        self.__image_path = image_path
 
     def distorted_camera_image_cv2(self):
 
@@ -92,12 +92,15 @@ class CameraModel:
         # Remove previous values
         self.remove_correspondences()
 
+    def camera_image_path(self):
+        return self.__image_path
 
     def export_camera_model(self, json_path):
         print("Exporting", json_path[0])
         j = json.dumps(
                 {
                     'surface_model': self.sport,
+                    'image_path' : self.__image_path,
                     'model_dimensions': [self.model_width, self.model_height],
                     'model_offset': [self.model_offset_x, self.model_offset_y],
                     'model_scale': self.model_scale,
@@ -119,24 +122,54 @@ class CameraModel:
         with open(json_path[0]+".json", 'w') as data_file:
             data_file.write(j)
 
-    def import_camera_model(self):
+    def import_camera_model(self, json_path):
         '''
         Load the camera data from the JSON file
         '''
-        pass
-        # self.space_transform = SpaceTransform(video_path=self.video_path)
-        # self.pool_length = self.space_transform.pool_length
-        # self.inv_transform_matrix = np.linalg.inv(self.space_transform.transform_matrix)
-        # top, bottom = 0, 1
-        # left, right = 0, 1
-        # # Inverse transform from work space back to screen space
-        # self.points = np.array([[[left, top],  # pylint: disable=C0326
-        #                          [left, bottom],
-        #                          [right, bottom],
-        #                          [right, top]]],  # pylint: disable=C0326
-        #                        dtype=np.float32)
-        # self.points = cv2.perspectiveTransform(self.points,
-        #                                        self.inv_transform_matrix)[0]
+        print("Importing", json_path[0])
+
+        with open(json_path[0]) as data_file:
+            j = json.load(data_file)
+
+        # Verify path exists:
+        try:
+            image_path = j["image_path"]
+            if os.path.isfile(image_path):
+                self.set_camera_image(image_path)
+
+        except KeyError:
+            print(QApplication.topLevelWidgets()[0])
+            image_path = QFileDialog.getOpenFileName(QApplication.topLevelWidgets()[0], "Locate image for calibration",
+                                                     "/home",
+                                                     "Images (*.png *.xpm *.jpg)")
+            print("Found", image_path[0])
+            if os.path.isfile(image_path[0]):
+                self.set_camera_image(image_path[0])
+            else:
+                return
+
+        self.sport = j["surface_model"]
+        self.surface_image()
+       #  myApp = QApplication.topLevelWidgets()[0]
+       #  myApp.cboSurfaces.setCurrentText(self.sport)
+       # # Apply camera model
+       #  myApp.cboSurfaces.currentIndexChanged.connect(myApp.setCameraModel)
+
+        self.model_width = j["model_dimensions"][0]
+        self.model_height = j["model_dimensions"][1]
+        self.model_offset_x = j["model_offset"][0]
+        self.model_offset_y = j["model_offset"][1]
+        self.model_scale = j["model_scale"]
+        self.focal_length = j["focal_length"]
+        self.rotation_vector = j["rotation_vector"]
+        self.homography = np.array(j["homography"])
+        self.distortion_matrix = np.array(j["distortion_matrix"])
+        print(self.distortion_matrix)
+        self.image_points = np.array(j["image_points"])
+        self.model_points = np.array(j["model_points"])
+        self.camera_matrix = np.array(j["camera_matrix"])
+        self.__bool__ = True
+
 
     def __bool__(self):
         return self.__bool__
@@ -169,10 +202,13 @@ class CameraModel:
         self.model_points =np.empty([0, 3])     #3D coordinate system
 
         self.__sourceImage = None
-        self.set_camera_image("./Images/{:s}.png".format(sport))
+        self.__image_path = os.path.abspath("./Images/{:s}.png".format(sport))
+        self.set_camera_image(self.__image_path)
 
         #Internal validation
         self.__bool__ = False
+
+        print("Model initialisation done.")
 
         if sport == "pool":
             # Pool
@@ -210,10 +246,10 @@ class CameraModel:
         elif sport == "hockey":
             # Tennis
             # Distorted
-            # self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
+            self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
             # # Undistorted
-            # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            # self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)], dtype='float32')
+            # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
+            self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)], dtype='float32')
 
             self.model_width = 91
             self.model_height = 55
@@ -465,9 +501,11 @@ class Window(QWidget):
         self.btnSerialiseCameraProperties.setText('Save Camera Properties')
         self.btnSerialiseCameraProperties.clicked.connect(self.save_camera_properties)
 
+        # Load camera properties & transformation matrix
+        self.btnLoadCameraProperties = QToolButton(self)
+        self.btnLoadCameraProperties.setText('Load Camera Properties')
+        self.btnLoadCameraProperties.clicked.connect(self.load_camera_properties)
 
-        self.editImageCoordsInfo = QLineEdit(self)
-        self.editImageCoordsInfo.setReadOnly(True)
         # Focal length slider
         self.sliderFocalLength = QSlider(Qt.Horizontal)
         self.sliderFocalLength.setMinimum(0)
@@ -504,7 +542,7 @@ class Window(QWidget):
         HBlayout.setAlignment(Qt.AlignLeft)
         HBlayout.addWidget(self.btnLoad)
         HBlayout.addWidget(self.btnSerialiseCameraProperties)
-        HBlayout.addWidget(self.editImageCoordsInfo)
+        HBlayout.addWidget(self.btnLoadCameraProperties)
         HBlayout.addWidget(self.cboSurfaces)
         HBlayout.addWidget(self.sliderFocalLength)
         HBlayout.addWidget(self.sliderDistortion)
@@ -753,10 +791,17 @@ class Window(QWidget):
     def save_camera_properties(self):
 
         if self.camera_model:
-            path = QFileDialog.getSaveFileName(self, 'Save File', self.cboSurfaces.currentText(), "json(*.json)")
+            path = QFileDialog.getSaveFileName(self, 'Save Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
             if path[0] != "":
                 self.camera_model.export_camera_model(path)
 
+    def load_camera_properties(self):
+
+        path = QFileDialog.getOpenFileName(self, 'Load Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
+        if path[0] != "":
+            self.camera_model.import_camera_model(path)
+            self.updateDisplays()
+            self.correspondencesWidget.update_items()
 
     def draw(self, img, corners, imgpts):
         corner = tuple(corners[0].ravel())
