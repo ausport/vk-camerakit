@@ -55,9 +55,13 @@ class CameraModel:
     def surface_image_cv2(self):
         return cv2.imread("./Surfaces/{:s}.png".format(self.sport))
 
-    def set_camera_image(self, image_path):
+    def set_camera_image_from_file(self, image_path):
         # NB We set the camera image as a cv2 image (numpy array).
         self.__sourceImage = cv2.imread(image_path)
+        self.__image_path = image_path
+
+    def set_camera_image_from_image(self, image, image_path):
+        self.__sourceImage = image
         self.__image_path = image_path
 
     def distorted_camera_image_cv2(self):
@@ -198,16 +202,26 @@ class CameraModel:
         try:
             image_path = j["image_path"]
             if os.path.isfile(image_path):
-                self.set_camera_image(image_path)
+                vidcap = cv2.VideoCapture(image_path)
+                success, image = vidcap.read()
+                if success:
+                    self.set_camera_image_from_image(image, image_path)
+                else:
+                    self.set_camera_image_from_file(image_path)
 
         except KeyError:
             print(QApplication.topLevelWidgets()[0])
-            image_path = QFileDialog.getOpenFileName(QApplication.topLevelWidgets()[0], "Locate image for calibration",
+            image_path = QFileDialog.getOpenFileName(QApplication.topLevelWidgets()[0], "Locate media for calibration",
                                                      "/home",
-                                                     "Images (*.png *.xpm *.jpg)")
-            print("Found", image_path[0])
+                                                     "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
             if os.path.isfile(image_path[0]):
-                self.set_camera_image(image_path[0])
+                vidcap = cv2.VideoCapture(image_path[0])
+                success, image = vidcap.read()
+
+                if success:
+                    self.set_camera_image_from_image(image, image_path[0])
+                else:
+                    self.set_camera_image_from_file(image_path[0])
             else:
                 return
 
@@ -266,7 +280,7 @@ class CameraModel:
 
         self.__sourceImage = None
         self.__image_path = os.path.abspath("./Images/{:s}.png".format(sport))
-        self.set_camera_image(self.__image_path)
+        self.set_camera_image_from_file(self.__image_path)
 
         #Internal validation
         self.__bool__ = False
@@ -677,9 +691,16 @@ class Window(QWidget):
 
         image_path = QFileDialog.getOpenFileName(self, "Open Image",
                                                 "/home",
-                                                "Images (*.png *.xpm *.jpg)")
+                                                "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
 
-        self.camera_model.set_camera_image(image_path[0])
+        vidcap = cv2.VideoCapture(image_path[0])
+        success, image = vidcap.read()
+
+        if success:
+            self.camera_model.set_camera_image_from_image(image, image_path[0])
+        else:
+            self.camera_model.set_camera_image_from_file(image_path[0])
+
         self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
 
         # Loading a new image should also negate previous data entries.
