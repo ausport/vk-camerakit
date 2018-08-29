@@ -794,14 +794,14 @@ class Window(QWidget):
             # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
             self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
             self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-            print("_mylastImagePairs:", self.last_image_pairs)
-            print("_mylastSurfacePairs:", self.last_surface_pairs)
-
-            s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
-                    self.last_image_pairs[0],
-                    self.last_image_pairs[1],
-                    self.last_surface_pairs[0],
-                    self.last_surface_pairs[1])
+            # print("_mylastImagePairs:", self.last_image_pairs)
+            # print("_mylastSurfacePairs:", self.last_surface_pairs)
+            #
+            # s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+            #         self.last_image_pairs[0],
+            #         self.last_image_pairs[1],
+            #         self.last_surface_pairs[0],
+            #         self.last_surface_pairs[1])
 
             print("## EXISTING PAIRS ##")
             print(self.camera_model.image_points)
@@ -850,6 +850,9 @@ class Window(QWidget):
 
     def clearCorrespondences(self):
         self.correspondencesWidget.activateWindow()
+        self.camera_model.remove_correspondences()
+        self.correspondencesWidget.update_items()
+        self.updateDisplays()
 
     def save_camera_properties(self):
 
