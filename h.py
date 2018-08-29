@@ -1063,17 +1063,17 @@ class Window(QWidget):
                     if not cv2.imwrite('output.png',im_src):
                         print("Writing failed")
 
-                # Display images
-                height, width, channel = im_src.shape
-                bytesPerLine = 3 * width
+            # Display images
+            height, width, channel = im_src.shape
+            bytesPerLine = 3 * width
 
-                # Convert to RGB for QImage.
-                cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
-                qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
-                self.viewer.set_image(QPixmap(qImg))
+            # Convert to RGB for QImage.
+            cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+            qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
+            self.viewer.set_image(QPixmap(qImg))
 
-                self.sliderFocalLength.setValue(int(model.focal_length))
-                self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
+            self.sliderFocalLength.setValue(int(model.focal_length))
+            self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
         else:
             print("Warning: No camera model has been initialised.")
 if __name__ == '__main__':
