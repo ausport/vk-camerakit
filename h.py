@@ -15,10 +15,6 @@ class CameraModel:
 
     def compute_homography(self):
         self.homography, mask = cv2.findHomography(self.image_points, self.model_points)
-        print("Status\n", self.homography)
-        # if status == 0:
-        #     self.homography = self.identity_homography()
-        # print("Image Homograhy :\n {0}".format(self.homography))
 
 
     def inverse_homography(self):
@@ -230,7 +226,9 @@ class CameraModel:
         self.image_points = np.array(j["image_points"])
         self.model_points = np.array(j["model_points"])
         self.camera_matrix = np.array(j["camera_matrix"])
-
+        self.compute_homography()
+        # self.homography = np.array(j["homography"])
+        print("Imported homography:\n", self.homography)
         self.__bool__ = True
 
 
@@ -866,7 +864,7 @@ class Window(QWidget):
         path = QFileDialog.getOpenFileName(self, 'Load Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
         if path[0] != "":
             self.camera_model.import_camera_model(path)
-            self.cboSurfaces.setCurrentText(self.camera_model.sport)
+            # self.cboSurfaces.setCurrentText(self.camera_model.sport)
             self.updateDisplays()
             self.correspondencesWidget.update_items()
 
