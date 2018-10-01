@@ -32,6 +32,11 @@ class CameraModel:
         return np.array_equal(self.homography, self.identity_homography())
 
     def compute_camera_matrix(self):
+
+        if self.__sourceImage is None:
+            print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
+            self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
+
         h, w = self.__sourceImage.shape[:2]
         fx = 0.5 + self.focal_length / 50.0
         self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
@@ -70,6 +75,10 @@ class CameraModel:
 
 
     def undistorted_camera_image_cv2(self):
+
+        if self.__sourceImage is None:
+            print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
+            self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
 
         img = cv2.undistort(self.__sourceImage,
                                self.camera_matrix,
@@ -243,11 +252,7 @@ class CameraModel:
         self.compute_homography()
         # self.homography = np.array(j["homography"])
         print("Imported homography:\n", self.homography)
-        self.__bool__ = True
 
-
-    def __bool__(self):
-        return self.__bool__
 
     def __init__(self, sport="hockey"):
 
@@ -282,94 +287,10 @@ class CameraModel:
         self.__image_path = os.path.abspath("./Images/{:s}.png".format(sport))
         self.set_camera_image_from_file(self.__image_path)
 
-        #Internal validation
-        self.__bool__ = False
-
-        print("Model initialisation done.")
-
-        if sport == "pool":
-            # Pool
-            # self.image_points = np.array([(832, 889), (155, 1394), (3046, 887),(3695, 1412)], dtype='float32')
-            # self.model_points = np.array([(10, 10, 0), (10, 260, 0), (510, 10, 0), (510, 260, 0)], dtype='float32')
-            # self.model_width = 50
-            # self.model_height = 25
-            # self.model_offset_x = 1
-            # self.model_offset_y = 1
-            # #Scaling factor required to convert from real world in meters to surface pixels.
-            # self.model_scale = 10
-            self.__bool__ = True
-
-        elif sport == "tennis":
-            # Tennis
-            # Distorted
-            # self.image_points = np.array([(67, 293), (484, 288), (353, 157),(230, 158)], dtype='float32')
-            # # # # Undistorted
-            # self.image_points = np.array([(37, 299), (490, 290), (353, 157), (228, 156)], dtype='float32')
-            # self.model_points = np.array([(157, 102, 0), (157, 580, 0), (1343, 580, 0), (1343, 102, 0)], dtype='float32')
-            # self.model_width = 30
-            # self.model_height = 15
-            # self.model_offset_x = 1
-            # self.model_offset_y = 1
-            # # Scaling factor required to convert from real world in meters to surface pixels.
-            # self.model_scale = 50
-
-            # self.distortion_matrix[0] = -0.17751
-            # print ("Distortion Matrix :\n {0}".format(self.distortion_matrix))
-
-            # self.focal_length = 7
-            # print("Focal Length :\n {0}".format(self.focal_length))
-            self.__bool__ = True
-
-        elif sport == "hockey":
-            # Tennis
-            # Distorted
-            # self.image_points = np.array([(630, 104), (920, 193), (108, 225), (52, 121)], dtype='float32')
-            # # # Undistorted
-            # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            # self.model_points = np.array([(964, 600, 0), (508, 600, 0), (508, 162, 0), (964, 162, 0)], dtype='float32')
-            #
-            # self.model_width = 91
-            # self.model_height = 55
-            # self.model_offset_x = 5
-            # self.model_offset_y = 5
-            # # Scaling factor required to convert from real world in meters to surface pixels.
-            # self.model_scale = 10
-            #
-            # self.distortion_matrix[0] = -0.023880000000000002
-            # print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
-            #
-            # self.focal_length = 80
-            # print("Focal Length :\n {0}".format(self.focal_length))
-            self.__bool__ = True
-
-        elif sport == "netball":
-            # Tennis
-            # Distorted
-            # self.image_points = np.array([(122, 1143), (1241, 1056), (3810, 1360), (3436, 1751)], dtype='float32')
-            # # Undistorted
-            # # self.image_points = np.array([(964, 162), (964, 600), (508, 600), (964, 490)], dtype='float32')
-            # self.model_points = np.array([(308, 1827, 0), (308, 308, 0), (3352, 308, 0), (3352, 1827, 0)],
-            #                              dtype='float32')
-            # self.model_width = 31
-            # self.model_height = 15
-            # self.model_offset_x = 3
-            # self.model_offset_y = 3
-            # # Scaling factor required to convert from real world in meters to surface pixels.
-            # self.model_scale = 100
-            #
-            # self.distortion_matrix[0] = 0.
-            # print("Distortion Matrix :\n {0}".format(self.distortion_matrix))
-            #
-            # self.focal_length = 21
-            # print("Focal Length :\n {0}".format(self.focal_length))
-            self.__bool__ = True
-
-
-        if self.__bool__:
-            # Compute the camera matrix, including focal length and distortion.
-            self.compute_camera_matrix()
-            # Compute the homography with the camera matrix, image points and surface points.
-            self.compute_homography()
+        # Compute the camera matrix, including focal length and distortion.
+        self.compute_camera_matrix()
+        # Compute the homography with the camera matrix, image points and surface points.
+        self.compute_homography()
 
  
 class GraphicsScene(QGraphicsScene):
@@ -585,7 +506,7 @@ class Window(QWidget):
         # Focal length slider
         self.sliderFocalLength = QSlider(Qt.Horizontal)
         self.sliderFocalLength.setMinimum(0)
-        self.sliderFocalLength.setMaximum(80)
+        self.sliderFocalLength.setMaximum(200)
         self.sliderFocalLength.setValue(10)
         self.sliderFocalLength.setTickPosition(QSlider.TicksBelow)
         self.sliderFocalLength.setTickInterval(1)
@@ -1076,6 +997,9 @@ class Window(QWidget):
             self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
         else:
             print("Warning: No camera model has been initialised.")
+
+
+
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
