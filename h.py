@@ -83,6 +83,10 @@ class CameraModel:
         img = cv2.undistort(self.__sourceImage,
                                self.camera_matrix,
                                self.distortion_matrix)
+
+        # img = cv2.fisheye.undistortImage(self.__sourceImage,
+        #                        self.camera_matrix,
+        #                        self.distortion_matrix)
         return img
 
     def distorted_camera_image_qimage(self):
