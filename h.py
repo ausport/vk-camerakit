@@ -31,19 +31,24 @@ class CameraModel:
     def is_homography_identity(self):
         return np.array_equal(self.homography, self.identity_homography())
 
-    def compute_camera_matrix(self):
+    def compute_camera_matrix(self, with_optimal_camera_matrix = None):
 
         if self.__sourceImage is None:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
 
-        h, w = self.__sourceImage.shape[:2]
-        fx = 0.5 + self.focal_length / 50.0
-        self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
-                                         [0, fx * w, 0.5 * (h - 1)],
-                                         [0.0, 0.0, 1.0]])
+        if not with_optimal_camera_matrix is None:
+            self.camera_matrix = with_optimal_camera_matrix
 
-        # print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
+        else:
+
+            h, w = self.__sourceImage.shape[:2]
+            fx = 0.5 + self.focal_length / 50.0
+            self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
+                                             [0, fx * w, 0.5 * (h - 1)],
+                                             [0.0, 0.0, 1.0]])
+
+        print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
 
 
     def surface_image(self):
@@ -497,6 +502,11 @@ class Window(QWidget):
         self.btnAddCorrespondences.setText('Add Correspondence')
         self.btnAddCorrespondences.clicked.connect(self.addCorrespondences)
 
+        # Button to initiate auto calibration with checkerboard
+        self.btnUnwarpWithCheckerboard = QToolButton(self)
+        self.btnUnwarpWithCheckerboard.setText('Checkerboard Calibration')
+        self.btnUnwarpWithCheckerboard.clicked.connect(self.doCheckerboardCalibration)
+
         # Serialise camera properties & transformation matrix
         self.btnSerialiseCameraProperties = QToolButton(self)
         self.btnSerialiseCameraProperties.setText('Save Camera Properties')
@@ -555,6 +565,7 @@ class Window(QWidget):
         HB_Correspondences.addWidget(self.btnShowCorrespondences)
         HB_Correspondences.addWidget(self.btnAddCorrespondences)
         HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
+        HB_Correspondences.addWidget(self.btnUnwarpWithCheckerboard)
 
         VBlayout.addLayout(HB_Correspondences)
 
@@ -798,6 +809,52 @@ class Window(QWidget):
         self.correspondencesWidget.update_items()
         self.updateDisplays()
 
+    def doCheckerboardCalibration(self):
+
+        import numpy as np
+        import cv2
+        import glob
+
+        if self.camera_model:
+
+            model = self.camera_model
+
+            CHECKERBOARD = (7, 9)
+
+            # termination criteria
+            subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+            objp = np.zeros((CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
+            objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+
+            # Arrays to store object points and image points from all the images.
+            objpoints = []  # 3d point in real world space
+            imgpoints = []  # 2d points in image plane.
+
+            img = model.undistorted_camera_image_cv2()
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            # Find the chess board corners
+            ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD,
+                                                     cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE)
+
+            # If found, add object points, image points (after refining them)
+            if ret:
+                objpoints.append(objp)
+                cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1), subpix_criteria)
+                imgpoints.append(corners)
+
+            ret, mtx, D, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+
+            model.distortion_matrix = D
+
+            h, w = img.shape[:2]
+            newcameramtx, _ = cv2.getOptimalNewCameraMatrix(mtx, D, (w, h), 1, (w, h))
+            # model.camera_matrix = newcameramtx
+            model.compute_camera_matrix(newcameramtx)
+            self.updateDisplays()
+
+
     def save_camera_properties(self):
 
         if self.camera_model:
@@ -842,7 +899,6 @@ class Window(QWidget):
             model = self.camera_model
 
             #Update homography
-            model.compute_camera_matrix()
             model.compute_homography()
 
             # Get model sample image
@@ -998,7 +1054,7 @@ class Window(QWidget):
             self.viewer.set_image(QPixmap(qImg))
 
             self.sliderFocalLength.setValue(int(model.focal_length))
-            self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
+            # self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
         else:
             print("Warning: No camera model has been initialised.")
 
