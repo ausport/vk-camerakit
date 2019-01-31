@@ -837,7 +837,7 @@ class Window(QWidget):
 
             model = self.camera_model
 
-            CHECKERBOARD = (9, 6)
+            CHECKERBOARD = (9, 7)
 
             # termination criteria
             subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
