@@ -31,14 +31,20 @@ class CameraModel:
     def is_homography_identity(self):
         return np.array_equal(self.homography, self.identity_homography())
 
-    def compute_camera_matrix(self, with_optimal_camera_matrix = None):
+    def update_camera_properties(self, with_distortion_matrix = None, with_camera_matrix = None, with_optimal_camera_matrix = None):
 
         if self.__sourceImage is None:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
 
         if not with_optimal_camera_matrix is None:
-            self.camera_matrix = with_optimal_camera_matrix
+            self.optimal_camera_matrix = with_optimal_camera_matrix
+
+        if not with_distortion_matrix is None:
+            self.distortion_matrix = with_distortion_matrix
+
+        if not with_camera_matrix is None:
+            self.camera_matrix = with_camera_matrix
 
         else:
 
@@ -48,7 +54,9 @@ class CameraModel:
                                              [0, fx * w, 0.5 * (h - 1)],
                                              [0.0, 0.0, 1.0]])
 
-        print("Camera Matrix {0}:\n {1}".format(self.focal_length, self.camera_matrix))
+        print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
+        print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
+        print("Updating Camera Distortion Matrix:\n{0}".format(self.distortion_matrix))
 
 
     def surface_image(self):
@@ -85,9 +93,13 @@ class CameraModel:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
 
-        img = cv2.undistort(self.__sourceImage,
-                               self.camera_matrix,
-                               self.distortion_matrix)
+        img = cv2.undistort(self.distorted_camera_image_cv2(), self.camera_matrix, self.distortion_matrix, None, self.optimal_camera_matrix)
+
+        # img = cv2.undistort(self.distorted_camera_image_cv2(),
+        #                     self.camera_matrix,
+        #                     self.distortion_matrix,
+        #                     None,
+        #                     self.optimal_camera_matrix)
 
         # img = cv2.fisheye.undistortImage(self.__sourceImage,
         #                        self.camera_matrix,
@@ -258,6 +270,7 @@ class CameraModel:
         self.image_points = np.array(j["image_points"])
         self.model_points = np.array(j["model_points"])
         self.camera_matrix = np.array(j["camera_matrix"])
+        self.optimal_camera_matrix = np.array(j["optimal_camera_matrix"])
         self.compute_homography()
         # self.homography = np.array(j["homography"])
         print("Imported homography:\n", self.homography)
@@ -284,6 +297,7 @@ class CameraModel:
 
         self.focal_length = 0
         self.camera_matrix = None
+        self.optimal_camera_matrix = None
         self.distortion_matrix = np.zeros((4, 1))
         self.rotation_vector = None
         self.translation_vector = None
@@ -297,7 +311,8 @@ class CameraModel:
         self.set_camera_image_from_file(self.__image_path)
 
         # Compute the camera matrix, including focal length and distortion.
-        self.compute_camera_matrix()
+        self.update_camera_properties()
+
         # Compute the homography with the camera matrix, image points and surface points.
         self.compute_homography()
 
@@ -834,7 +849,7 @@ class Window(QWidget):
             objpoints = []  # 3d point in real world space
             imgpoints = []  # 2d points in image plane.
 
-            img = model.undistorted_camera_image_cv2()
+            img = model.distorted_camera_image_cv2()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
             # Find the chess board corners
@@ -852,21 +867,14 @@ class Window(QWidget):
 
             height, width, channel = img.shape
             img_size = (img.shape[1], img.shape[0])
-            bytesPerLine = 3 * width
 
             ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
-
             newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), 1, (width, height))
 
-            dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+            # Update the camera properties with updated camera intrinsics.
+            model.update_camera_properties(dist, mtx, newcameramtx)
 
-            self.viewer.set_image(QPixmap(QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)))
-
-            # model.camera_matrix = newcameramtx
-            # model.compute_camera_matrix(newcameramtx)
-            # model.distortion_matrix = dist
-
-            # self.updateDisplays()
+            self.updateDisplays()
 
 
     def save_camera_properties(self):
@@ -897,7 +905,7 @@ class Window(QWidget):
         self.camera_model.focal_length = self.sliderFocalLength.value()
         print("Updating focal length:{0}".format(self.camera_model.focal_length ))
         # Update the camera matrix with new focal length.
-        self.camera_model.compute_camera_matrix()
+        self.camera_model.update_camera_properties()
 
         self.updateDisplays()
 
@@ -1067,7 +1075,7 @@ class Window(QWidget):
             qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
             self.viewer.set_image(QPixmap(qImg))
 
-            self.sliderFocalLength.setValue(int(model.focal_length))
+            # self.sliderFocalLength.setValue(int(model.focal_length))
             # self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
         else:
             print("Warning: No camera model has been initialised.")
