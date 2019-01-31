@@ -134,6 +134,12 @@ class CameraModel:
     def reset(self):
         # Remove previous values
         self.remove_correspondences()
+        self.focal_length = 0
+        self.camera_matrix = None
+        self.optimal_camera_matrix = None
+        self.distortion_matrix = np.zeros((4, 1))
+        self.rotation_vector = None
+        self.translation_vector = None
 
     def surface_properties(self, sport):
         # Return a dictionary of values for each sport.
