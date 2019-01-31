@@ -571,6 +571,9 @@ class Window(QWidget):
 
         self.correspondencesWidget = MyPopup(self.camera_model)
 
+        if True:
+            self.camera_model.set_camera_image_from_file("/Users/stuartmorgan/Dropbox/_py/qtpy/left01.jpg")
+            self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
 
     def reset_controls(self):
         # Abort corresponances
@@ -819,7 +822,7 @@ class Window(QWidget):
 
             model = self.camera_model
 
-            CHECKERBOARD = (7, 9)
+            CHECKERBOARD = (9, 6)
 
             # termination criteria
             subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -835,24 +838,35 @@ class Window(QWidget):
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
             # Find the chess board corners
-            ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD,
-                                                     cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE)
+            ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, None)
 
             # If found, add object points, image points (after refining them)
             if ret:
                 objpoints.append(objp)
-                cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1), subpix_criteria)
+                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), subpix_criteria)
                 imgpoints.append(corners)
+                cv2.drawChessboardCorners(img, CHECKERBOARD, corners2, ret)
 
-            ret, mtx, D, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+            else:
+                return
 
-            model.distortion_matrix = D
+            height, width, channel = img.shape
+            img_size = (img.shape[1], img.shape[0])
+            bytesPerLine = 3 * width
 
-            h, w = img.shape[:2]
-            newcameramtx, _ = cv2.getOptimalNewCameraMatrix(mtx, D, (w, h), 1, (w, h))
+            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
+
+            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), 1, (width, height))
+
+            dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+
+            self.viewer.set_image(QPixmap(QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)))
+
             # model.camera_matrix = newcameramtx
-            model.compute_camera_matrix(newcameramtx)
-            self.updateDisplays()
+            # model.compute_camera_matrix(newcameramtx)
+            # model.distortion_matrix = dist
+
+            # self.updateDisplays()
 
 
     def save_camera_properties(self):
@@ -889,7 +903,7 @@ class Window(QWidget):
 
     def updateDistortionEstimate(self):
         self.camera_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5
-        print("Updating distortion parameter:{0}".format(self.camera_model.distortion_matrix[0]))
+        print("Updating distortion parameter: {0}".format(self.camera_model.distortion_matrix[0]))
         self.updateDisplays()
 
     def updateDisplays(self):
@@ -1066,5 +1080,5 @@ if __name__ == '__main__':
     window = Window()
     window.setGeometry(500, 300, 800, 600)
     window.show()
-    window.loadSurface("tennis")
+    window.loadSurface("hockey")
     sys.exit(app.exec_())
