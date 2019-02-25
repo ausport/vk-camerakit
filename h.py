@@ -2,7 +2,7 @@ import sys, math, os
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-from PIL import Image, ImageDraw, ImageFont
+# from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
 import json
@@ -276,7 +276,12 @@ class CameraModel:
         self.image_points = np.array(j["image_points"])
         self.model_points = np.array(j["model_points"])
         self.camera_matrix = np.array(j["camera_matrix"])
-        self.optimal_camera_matrix = np.array(j["optimal_camera_matrix"])
+
+        if "optimal_camera_matrix" in j:
+            self.optimal_camera_matrix = np.array(j["optimal_camera_matrix"])
+        else:
+            self.optimal_camera_matrix = self.camera_matrix
+
         self.compute_homography()
         # self.homography = np.array(j["homography"])
         print("Imported homography:\n", self.homography)
@@ -302,8 +307,8 @@ class CameraModel:
         np.fill_diagonal(self.homography, 1)
 
         self.focal_length = 0
-        self.camera_matrix = None
-        self.optimal_camera_matrix = None
+        self.camera_matrix = np.zeros((3, 3))
+        self.optimal_camera_matrix = np.zeros((3, 3))
         self.distortion_matrix = np.zeros((4, 1))
         self.rotation_vector = None
         self.translation_vector = None
