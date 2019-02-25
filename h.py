@@ -283,8 +283,6 @@ class CameraModel:
             self.optimal_camera_matrix = self.camera_matrix
 
         self.compute_homography()
-        # self.homography = np.array(j["homography"])
-        print("Imported homography:\n", self.homography)
 
 
     def __init__(self, sport="hockey"):
@@ -299,6 +297,7 @@ class CameraModel:
         self.model_height = surface_properties["model_height"]
         self.model_offset_x = surface_properties["model_offset_x"]
         self.model_offset_y = surface_properties["model_offset_y"]
+
         #Scaling factor required to convert from real world in meters to surface pixels.
         self.model_scale = surface_properties["model_scale"]
 
@@ -315,7 +314,7 @@ class CameraModel:
 
         # Image correspondences
         self.image_points = np.empty([0, 2])    #2D coordinates system
-        self.model_points =np.empty([0, 3])     #3D coordinate system
+        self.model_points = np.empty([0, 3])     #3D coordinate system
 
         self.__sourceImage = None
         self.__image_path = os.path.abspath("./Images/{:s}.png".format(sport))
