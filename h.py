@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import *
 import cv2
 import numpy as np
 import json
+import time
+
 # https://www.learnopencv.com/homography-examples-using-opencv-python-c/
 
 # TODO Compute reprojection error - mean L2 loss between 2D homography and 3D projections on the ground plane.
@@ -14,15 +16,19 @@ import json
 class CameraModel:
 
     def compute_homography(self):
-        self.homography, mask = cv2.findHomography(self.image_points, self.model_points)
 
+        start = time.time()
+        self.homography, mask = cv2.findHomography(self.image_points, self.model_points)
+        print("compute_homography(self): --> {0}".format(time.time() - start))
 
     def inverse_homography(self):
+        start = time.time()
         if self.homography.__class__.__name__ == "NoneType":
             self.compute_homography()
 
         # Compute inverse of 2D homography
         val, H = cv2.invert(self.homography)
+        print("inverse_homography(self): --> {0}".format(time.time() - start))
         return H
 
     def identity_homography(self):
@@ -33,6 +39,7 @@ class CameraModel:
 
     def update_camera_properties(self, with_distortion_matrix = None, with_camera_matrix = None, with_optimal_camera_matrix = None):
 
+        start = time.time()
         if self.__sourceImage is None:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
@@ -54,29 +61,38 @@ class CameraModel:
                                              [0, fx * w, 0.5 * (h - 1)],
                                              [0.0, 0.0, 1.0]])
 
-        print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
-        print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
-        print("Updating Camera Distortion Matrix:\n{0}".format(self.distortion_matrix))
+        # print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
+        # print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
+        # print("Updating Camera Distortion Matrix:\n{0}".format(self.distortion_matrix))
 
+        print("update_camera_properties(...): --> {0}".format(time.time() - start))
 
     def surface_image(self):
          return QPixmap("./Surfaces/{:s}.png".format(self.sport))
 
     def set_surface_image(self, sport):
 
+        start = time.time()
         self.sport = sport
         px = QPixmap("./Surfaces/{:s}.png".format(sport))
         self.surface_dimensions = px.size()
-        print("Setting surface:", sport, self.surface_dimensions)
+        # print("Setting surface:", sport, self.surface_dimensions)
+        print("set_surface_image(...): --> {0}".format(time.time() - start))
+
         return px
 
     def surface_image_cv2(self):
-        return cv2.imread("./Surfaces/{:s}.png".format(self.sport))
+        start = time.time()
+        img = cv2.imread("./Surfaces/{:s}.png".format(self.sport))
+        print("surface_image_cv2(...): --> {0}".format(time.time() - start))
+        return img
 
     def set_camera_image_from_file(self, image_path):
         # NB We set the camera image as a cv2 image (numpy array).
+        start = time.time()
         self.__sourceImage = cv2.imread(image_path)
         self.__image_path = image_path
+        print("set_camera_image_from_file(...): --> {0}".format(time.time() - start))
 
     def set_camera_image_from_image(self, image, image_path):
         self.__sourceImage = image
@@ -89,6 +105,7 @@ class CameraModel:
 
     def undistorted_camera_image_cv2(self):
 
+        start = time.time()
         if self.__sourceImage is None:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
@@ -104,24 +121,33 @@ class CameraModel:
         # img = cv2.fisheye.undistortImage(self.__sourceImage,
         #                        self.camera_matrix,
         #                        self.distortion_matrix)
+        print("undistorted_camera_image_cv2(...): --> {0}".format(time.time() - start))
         return img
 
     def distorted_camera_image_qimage(self):
         # NB But we need to convert cv2 to QImage for display in qt widgets..
 
+        start = time.time()
         cvImg = self.distorted_camera_image_cv2()
         height, width, channel = cvImg.shape
         bytesPerLine = 3 * width
         cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
-        return QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        qimg =  QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        print("distorted_camera_image_qimage(...): --> {0}".format(time.time() - start))
+
+        return qimg
 
     def undistorted_camera_image_qimage(self):
 
+        start = time.time()
         cvImg = self.undistorted_camera_image_cv2()
         height, width, channel = cvImg.shape
         bytesPerLine = 3 * width
         cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
-        return QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        qimg = QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        print("undistorted_camera_image_qimage(...): --> {0}".format(time.time() - start))
+
+        return qimg
 
 
     def remove_correspondences(self):
@@ -287,6 +313,7 @@ class CameraModel:
 
     def __init__(self, sport="hockey"):
 
+        _start = time.time()
         self.sport = sport
         self.set_surface_image(sport)
         surface_properties = self.surface_properties(sport)
@@ -325,7 +352,8 @@ class CameraModel:
 
         # Compute the homography with the camera matrix, image points and surface points.
         self.compute_homography()
-
+        print("self.compute_homography() --> {0}".format(time.time() - start))
+        print("init_main(...): --> {0}".format(time.time() - _start))
  
 class GraphicsScene(QGraphicsScene):
     # Create signal exporting QPointF position.
@@ -349,6 +377,7 @@ class ImageViewer(QGraphicsView):
     ImageClicked = pyqtSignal(QPoint)
 
     def __init__(self, parent):
+        start = time.time()
         super(ImageViewer, self).__init__(parent)
         self.zoom = 0
         self.empty = True
@@ -365,6 +394,8 @@ class ImageViewer(QGraphicsView):
 
         # Connect the signal emitted by the GraphicsScene mousePressEvent to relay event
         self.scene.SceneClicked.connect(self.scene_clicked)
+
+        print("init_ImageViewer(...): --> {0}".format(time.time() - start))
 
     def has_image(self):
         return not self.empty
@@ -463,6 +494,8 @@ class MyPopup(QWidget):
         self.listCorrespondences = QListWidget()
         popup_Correspondences.addWidget(self.listCorrespondences)
 
+
+
     def update_items(self):
         self.listCorrespondences.clear()
 
@@ -490,6 +523,7 @@ class MyPopup(QWidget):
 
 class Window(QWidget):
     def __init__(self):
+        start = time.time()
         super(Window, self).__init__()
         self.setWindowTitle("Camera Calibration Interface")
 
@@ -596,9 +630,11 @@ class Window(QWidget):
 
         self.correspondencesWidget = MyPopup(self.camera_model)
 
-        if True:
+        if False:
             self.camera_model.set_camera_image_from_file("/Users/stuartmorgan/Dropbox/_py/qtpy/left01.jpg")
             self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
+
+        print("Window(QWidget): --> {0}".format(time.time() - start))
 
     def reset_controls(self):
         # Abort corresponances
@@ -647,9 +683,12 @@ class Window(QWidget):
         #         self.surface.toggleDragMode()
 
     def loadSurface(self, sport):
+
+        start = time.time()
         self.surface.set_image(self.camera_model.surface_image())
         self.camera_model.set_surface_image(sport)
         self.correspondencesWidget.update_items()
+        print("loadSurface(self, sport): --> {0}".format(time.time() - start))
 
     def loadImage(self):
 
@@ -931,10 +970,14 @@ class Window(QWidget):
             model = self.camera_model
 
             #Update homography
+            start = time.time()
             model.compute_homography()
+            print("model.compute_homography() --> {0}".format(time.time() - start))
 
             # Get model sample image
+            start = time.time()
             im_src = model.undistorted_camera_image_cv2()
+            print("model.undistorted_camera_image_cv2() --> {0}".format(time.time() - start))
 
             # Estimate naive camera intrinsics (camera matrix)
             camera_matrix = model.camera_matrix
@@ -943,39 +986,42 @@ class Window(QWidget):
             distortion_matrix = model.distortion_matrix
 
             # Warp source image to destination based on homography
-            print(model.surface_dimensions)
-            print(model.homography)
+            # print(model.surface_dimensions)
+            # print(model.homography)
 
             # Only update the surface overlay if there is an existing homography
             if not model.is_homography_identity():
 
+                start = time.time()
                 im_out = cv2.warpPerspective(im_src,
                                              model.homography,
                                              (model.surface_dimensions.width(),
                                               model.surface_dimensions.height()))
+                print("cv2.warpPerspective() --> {0}".format(time.time() - start))
 
-                if model.image_points.size > 0:
-                    # Render image coordinate boundaries.
-                    cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
-                             (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
-                    cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
-                             (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
-                    cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
-                             (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
-                    cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
-                             (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
-
-                if model.model_points.size > 0:
-                    # Render surface coordinate boundaries.
-                    cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
-                             (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
-                    cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
-                             (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
-                    cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
-                             (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
-                    cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
-                             (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
-
+                start = time.time()
+                # if model.image_points.size > 0:
+                #     # Render image coordinate boundaries.
+                #     cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                #              (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 255, 0), 1)
+                #     cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                #              (int(model.image_points[1][0]), int(model.image_points[1][1])), (255, 0, 255), 1)
+                #     cv2.line(im_src, (int(model.image_points[2][0]), int(model.image_points[2][1])),
+                #              (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 0), 1)
+                #     cv2.line(im_src, (int(model.image_points[0][0]), int(model.image_points[0][1])),
+                #              (int(model.image_points[3][0]), int(model.image_points[3][1])), (0, 255, 255), 1)
+                #
+                # if model.model_points.size > 0:
+                #     # Render surface coordinate boundaries.
+                #     cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                #              (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 255, 0), 2)
+                #     cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                #              (int(model.model_points[1][0]), int(model.model_points[1][1])), (255, 0, 255), 2)
+                #     cv2.line(im_out, (int(model.model_points[2][0]), int(model.model_points[2][1])),
+                #              (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 0), 2)
+                #     cv2.line(im_out, (int(model.model_points[0][0]), int(model.model_points[0][1])),
+                #              (int(model.model_points[3][0]), int(model.model_points[3][1])), (0, 255, 255), 2)
+                print("render points --> {0}".format(time.time() - start))
 
                 # Display undistored images.
                 height, width, channel = im_out.shape
@@ -984,9 +1030,11 @@ class Window(QWidget):
                 beta = (1.0 - alpha)
 
                 # Composite image
+                start = time.time()
                 cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
                 src1 = model.surface_image_cv2()
                 dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
+                print("cv2.addWeighted() --> {0}".format(time.time() - start))
 
                 # Set composite image to surface model
                 qImg = QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)
@@ -1042,11 +1090,12 @@ class Window(QWidget):
                     i = i + 1
 
                 # Solve rotation and translation matrices
+                start = time.time()
                 (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points, camera_points, camera_matrix, distortion_matrix)
+                print("cv2.solvePnP() --> {0}".format(time.time() - start))
 
 
-
-                if True:
+                if False:
                     # This code demonstrates the problem with ignoring instrinsic camera distortion.
                     # It should take the inverse homography image points (reliable), and project in the z-plane
                     # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
@@ -1095,8 +1144,18 @@ class Window(QWidget):
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
+    start = time.time()
     window = Window()
+    print("window = Window(): --> {0}".format(time.time() - start))
+
     window.setGeometry(500, 300, 800, 600)
+
+    start = time.time()
     window.show()
+    print("window.show(): --> {0}".format(time.time() - start))
+
+    start = time.time()
     window.loadSurface("hockey")
+    print("window.loadSurface(): --> {0}".format(time.time() - start))
+
     sys.exit(app.exec_())
