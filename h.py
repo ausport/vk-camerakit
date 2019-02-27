@@ -44,9 +44,6 @@ class CameraModel:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
 
-        if not with_optimal_camera_matrix is None:
-            self.optimal_camera_matrix = with_optimal_camera_matrix
-
         if not with_distortion_matrix is None:
             self.distortion_matrix = with_distortion_matrix
 
@@ -60,6 +57,11 @@ class CameraModel:
             self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
                                              [0, fx * w, 0.5 * (h - 1)],
                                              [0.0, 0.0, 1.0]])
+
+        if not with_optimal_camera_matrix is None:
+            self.optimal_camera_matrix = with_optimal_camera_matrix
+        else:
+            self.optimal_camera_matrix = self.camera_matrix
 
         # print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
         # print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
@@ -110,8 +112,6 @@ class CameraModel:
             print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
             self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
 
-        img = cv2.undistort(self.distorted_camera_image_cv2(), self.camera_matrix, self.distortion_matrix, None, self.optimal_camera_matrix)
-
         # img = cv2.undistort(self.distorted_camera_image_cv2(),
         #                     self.camera_matrix,
         #                     self.distortion_matrix,
@@ -121,8 +121,8 @@ class CameraModel:
         # img = cv2.fisheye.undistortImage(self.__sourceImage,
         #                        self.camera_matrix,
         #                        self.distortion_matrix)
-        print("undistorted_camera_image_cv2(...): --> {0}".format(time.time() - start))
-        return img
+
+        return cv2.undistort(self.distorted_camera_image_cv2(), self.camera_matrix, self.distortion_matrix, None, self.optimal_camera_matrix)
 
     def distorted_camera_image_qimage(self):
         # NB But we need to convert cv2 to QImage for display in qt widgets..
@@ -139,15 +139,11 @@ class CameraModel:
 
     def undistorted_camera_image_qimage(self):
 
-        start = time.time()
         cvImg = self.undistorted_camera_image_cv2()
         height, width, channel = cvImg.shape
         bytesPerLine = 3 * width
         cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
-        qimg = QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
-        print("undistorted_camera_image_qimage(...): --> {0}".format(time.time() - start))
-
-        return qimg
+        return QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
 
 
     def remove_correspondences(self):
@@ -692,9 +688,6 @@ class Window(QWidget):
 
     def loadImage(self):
 
-        # Loading a new image should also negate previous data entries.
-        self.camera_model.reset()
-        self.loadSurface(self.cboSurfaces.currentText())
         image_path = QFileDialog.getOpenFileName(self, "Open Image",
                                                 "/home",
                                                 "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
@@ -709,7 +702,7 @@ class Window(QWidget):
             self.camera_model.set_camera_image_from_file(image_path[0])
 
         self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
-
+        self.updateDisplays()
 
 
     def setCameraModel(self):
@@ -1133,6 +1126,10 @@ class Window(QWidget):
             # Convert to RGB for QImage.
             cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
             qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
+
+            print(im_src)
+            print("Setting viewer image: {0}".format(im_src.shape))
+
             self.viewer.set_image(QPixmap(qImg))
 
             # self.sliderFocalLength.setValue(int(model.focal_length))
