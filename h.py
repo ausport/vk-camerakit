@@ -161,8 +161,8 @@ class CameraModel:
         # Remove previous values
         self.remove_correspondences()
         self.focal_length = 0
-        self.camera_matrix = None
-        self.optimal_camera_matrix = None
+        self.camera_matrix = np.zeros((3, 3))
+        self.optimal_camera_matrix = np.zeros((3, 3))
         self.distortion_matrix = np.zeros((4, 1))
         self.rotation_vector = None
         self.translation_vector = None
@@ -692,6 +692,9 @@ class Window(QWidget):
 
     def loadImage(self):
 
+        # Loading a new image should also negate previous data entries.
+        self.camera_model.reset()
+        self.loadSurface(self.cboSurfaces.currentText())
         image_path = QFileDialog.getOpenFileName(self, "Open Image",
                                                 "/home",
                                                 "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
@@ -701,14 +704,12 @@ class Window(QWidget):
 
         if success:
             self.camera_model.set_camera_image_from_image(image, image_path[0])
+            print("Loaded image: {0}".format(image_path[0]))
         else:
             self.camera_model.set_camera_image_from_file(image_path[0])
 
         self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
 
-        # Loading a new image should also negate previous data entries.
-        self.camera_model.reset()
-        self.loadSurface(self.cboSurfaces.currentText())
 
 
     def setCameraModel(self):
