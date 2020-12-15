@@ -558,8 +558,10 @@ class Window(QWidget):
         self.btnAddCorrespondences.clicked.connect(self.addCorrespondences)
 
         # Button to initiate auto calibration with checkerboard
-        self.btnShowGridVerticals = QToolButton(self)
+        self.btnShowGridVerticals = QPushButton(self)
         self.btnShowGridVerticals.setText('Vertical Projections')
+        self.btnShowGridVerticals.setChecked(True)
+        self.btnShowGridVerticals.setCheckable(True)
         self.btnShowGridVerticals.clicked.connect(self.vertical_projections)
 
         # Serialise camera properties & transformation matrix
@@ -873,7 +875,7 @@ class Window(QWidget):
         self.updateDisplays()
 
     def vertical_projections(self):
-        self.show_vertical_projections = True
+        self.show_vertical_projections = self.btnShowGridVerticals.isChecked()
         self.updateDisplays()
 
     def doCheckerboardCalibration(self):
@@ -1135,7 +1137,6 @@ class Window(QWidget):
 
             self.viewer.set_image(QPixmap(qImg))
 
-            self.show_vertical_projections = False
             # self.sliderFocalLength.setValue(int(model.focal_length))
             # self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
         else:
