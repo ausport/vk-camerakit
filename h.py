@@ -66,7 +66,7 @@ class CameraModel:
         # print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
         # print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
         # print("Updating Camera Distortion Matrix:\n{0}".format(self.distortion_matrix))
-
+        print(self.camera_matrix)
         print("update_camera_properties(...): --> {0}".format(time.time() - start))
 
     def surface_image(self):
@@ -558,9 +558,9 @@ class Window(QWidget):
         self.btnAddCorrespondences.clicked.connect(self.addCorrespondences)
 
         # Button to initiate auto calibration with checkerboard
-        self.btnUnwarpWithCheckerboard = QToolButton(self)
-        self.btnUnwarpWithCheckerboard.setText('Checkerboard Calibration')
-        self.btnUnwarpWithCheckerboard.clicked.connect(self.doCheckerboardCalibration)
+        self.btnShowGridVerticals = QToolButton(self)
+        self.btnShowGridVerticals.setText('Vertical Projections')
+        self.btnShowGridVerticals.clicked.connect(self.vertical_projections)
 
         # Serialise camera properties & transformation matrix
         self.btnSerialiseCameraProperties = QToolButton(self)
@@ -595,6 +595,8 @@ class Window(QWidget):
         self.last_surface_pairs = {0, 0}
         self.addingCorrespondencesEnabled = False
 
+        self.show_vertical_projections = False
+
         self.camera_model = CameraModel(self.cboSurfaces.currentText())
 
         # Arrange layout
@@ -620,7 +622,7 @@ class Window(QWidget):
         HB_Correspondences.addWidget(self.btnShowCorrespondences)
         HB_Correspondences.addWidget(self.btnAddCorrespondences)
         HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
-        HB_Correspondences.addWidget(self.btnUnwarpWithCheckerboard)
+        HB_Correspondences.addWidget(self.btnShowGridVerticals)
 
         VBlayout.addLayout(HB_Correspondences)
 
@@ -870,6 +872,10 @@ class Window(QWidget):
         self.correspondencesWidget.update_items()
         self.updateDisplays()
 
+    def vertical_projections(self):
+        self.show_vertical_projections = True
+        self.updateDisplays()
+
     def doCheckerboardCalibration(self):
 
         import numpy as np
@@ -942,7 +948,6 @@ class Window(QWidget):
         img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
         img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
         return img
-
 
     def updateFocalLength(self):
         self.camera_model.focal_length = self.sliderFocalLength.value()
@@ -1089,7 +1094,7 @@ class Window(QWidget):
                 print("cv2.solvePnP() --> {0}".format(time.time() - start))
 
 
-                if False:
+                if True:
                     # This code demonstrates the problem with ignoring instrinsic camera distortion.
                     # It should take the inverse homography image points (reliable), and project in the z-plane
                     # using the camera extrinsics (rotation/translation) solved above using cv2.solvePnP().
@@ -1106,18 +1111,19 @@ class Window(QWidget):
                     world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
                     # camera_points = np.zeros((model.model_width*model.model_height,2), np.float32)
 
-                    for world_point in model.model_points:
+                    if self.show_vertical_projections is False:
+                        world_points = model.model_points
+
+                    for world_point in world_points:
                         ground_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
                         (ground_point, jacobian) = cv2.projectPoints(ground_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-                        # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-                        # ground_point = cv2.perspectiveTransform(ground_point, inverse_homography)
-                        ref_point = np.array([[[world_point[0], world_point[1], -model.model_scale]]], dtype='float32')
+                        ref_point = np.array([[[world_point[0], world_point[1], -model.model_scale*2]]], dtype='float32')
                         (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
                         # Render vertical
-                        im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
+                        im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 1)
 
-                    if not cv2.imwrite('output.png',im_src):
-                        print("Writing failed")
+                    # if not cv2.imwrite('output.png',im_src):
+                    #     print("Writing failed")
 
             # Display images
             height, width, channel = im_src.shape
@@ -1127,11 +1133,9 @@ class Window(QWidget):
             cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
             qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
 
-            print(im_src)
-            print("Setting viewer image: {0}".format(im_src.shape))
-
             self.viewer.set_image(QPixmap(qImg))
 
+            self.show_vertical_projections = False
             # self.sliderFocalLength.setValue(int(model.focal_length))
             # self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
         else:
