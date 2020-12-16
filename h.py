@@ -117,6 +117,18 @@ class CameraModel:
 		print("Camera Point ==> {0}\n*******".format(self.camera_point))
 		return self.camera_point
 
+	def projected_image_point_for_3d_world_point(self, world_point):
+
+		if self.translation_vector is None:
+			self.estimate_camera_extrinsics()
+
+		(projected_point, jacobian) = cv2.projectPoints(world_point,
+														self.rotation_vector,
+														self.translation_vector,
+														self.camera_matrix,
+														self.distortion_matrix)
+		return projected_point
+
 	def update_camera_properties(self, with_distortion_matrix = None, with_camera_matrix = None, with_optimal_camera_matrix = None):
 
 		start = time.time()
@@ -655,6 +667,13 @@ class Window(QWidget):
 		self.btnOMBmode.setCheckable(True)
 		self.btnOMBmode.clicked.connect(self.enable_OMB)
 
+		# Show 3d world calibration
+		self.show_cal_markers = True
+		self.chkShow3dCal = QCheckBox(self)
+		self.chkShow3dCal.setChecked(self.show_cal_markers)
+		self.chkShow3dCal.setText('Show Calibration Markers')
+		self.chkShow3dCal.clicked.connect(self.set_cal_markers)
+
 		# Serialise camera properties & transformation matrix
 		self.btnSerialiseCameraProperties = QToolButton(self)
 		self.btnSerialiseCameraProperties.setText('Save Camera Properties')
@@ -718,6 +737,7 @@ class Window(QWidget):
 		HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
 		HB_Correspondences.addWidget(self.btnShowGridVerticals)
 		HB_Correspondences.addWidget(self.btnOMBmode)
+		HB_Correspondences.addWidget(self.chkShow3dCal)
 
 		VBlayout.addLayout(HB_Correspondences)
 
@@ -895,6 +915,8 @@ class Window(QWidget):
 
 
 
+
+
 	def SurfaceClicked(self, pos):
 		print("SurfaceClicked", pos)
 		if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
@@ -975,6 +997,10 @@ class Window(QWidget):
 
 	def enable_OMB(self):
 		self.OMB_mode = self.btnOMBmode.isChecked()
+		self.updateDisplays()
+
+	def set_cal_markers(self):
+		self.show_cal_markers = self.chkShow3dCal.isChecked()
 		self.updateDisplays()
 
 	def doCheckerboardCalibration(self):
@@ -1063,7 +1089,7 @@ class Window(QWidget):
 		print("Updating distortion parameter: {0}".format(self.camera_model.distortion_matrix[0]))
 		self.updateDisplays()
 
-	def updateDisplays(self):
+	def updateDisplays(self, crop=None):
 
 		if self.camera_model:
 
@@ -1121,36 +1147,53 @@ class Window(QWidget):
 
 				# Solve camera extrinsics - rotation and translation matrices
 				start = time.time()
-				_, rotation_vector, translation_vector, camera_point = model.estimate_camera_extrinsics()
+				# _, rotation_vector, translation_vector, camera_point = model.estimate_camera_extrinsics()
 
 				print("cv2.solvePnP() --> {0}".format(time.time() - start))
 
-				if True:
-					world_points = np.zeros((model.model_width*model.model_height,3), np.float32)
-					world_points[:,:2] = np.mgrid[model.model_offset_x:model.model_width+model.model_offset_x,model.model_offset_y:model.model_height+model.model_offset_y].T.reshape(-1,2)*model.model_scale #convert to meters (scale is 1:10)
+				if self.show_cal_markers:
 
-					if self.show_vertical_projections is False:
-						world_points = model.model_points
+					if self.show_vertical_projections:
+						thickness = 1
 
-					for world_point in world_points:
-						model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-						(projected_ground_point, jacobian) = cv2.projectPoints(model_point,
-																	 rotation_vector,
-																	 translation_vector,
-																	 camera_matrix,
-																	 distortion_matrix)
+						world_points = np.zeros((model.model_width * model.model_height, 3), np.float32)
+						world_points[:, :2] = np.mgrid[model.model_offset_x:model.model_width + model.model_offset_x,
+											  model.model_offset_y:model.model_height + model.model_offset_y].T.reshape(
+							-1, 2) * model.model_scale
 
-						theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], -model.model_scale*2]]], dtype='float32')
-						(projected_vertical_point, jacobian) = cv2.projectPoints(theoretical_3d_model_point,
-																  rotation_vector,
-																  translation_vector,
-																  camera_matrix,
-																  distortion_matrix)
+						for world_point in world_points:
+							# Render vertical
+							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], -model.model_scale*2]]], dtype='float32')
+							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0,255,255), thickness)
+					else:
+						thickness = 3
 
-						# Render vertical
-						im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()),
-										  tuple(projected_vertical_point.ravel()),
-										  (0,0,255), 1)
+						for world_point in model.model_points:
+							unit_vector = -model.model_scale * 1.8
+
+							# Render y-axis
+							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1]+unit_vector, 0]]], dtype='float32')
+							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0, 255, 0), thickness)
+
+							# Render x-axis
+							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+							theoretical_3d_model_point = np.array([[[world_point[0]+unit_vector, world_point[1], 0]]], dtype='float32')
+							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0, 0, 255), thickness)
+
+							# Render vertical
+							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], unit_vector]]], dtype='float32')
+							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (255, 0, 0), thickness)
 
 					# if not cv2.imwrite('output.png',im_src):
 					#     print("Writing failed")
