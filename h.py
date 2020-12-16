@@ -143,18 +143,18 @@ class CameraModel:
 
 		# Convert tracking location to world coordinates - using camera-specific model
 		__x, __y = self.world_point_for_image_point({"x": _x, "y": _y})
-		print(_x, _y, "-->", __x, __y)
+		# print(_x, _y, "-->", __x, __y)
 
-		print("******** Compute FOV ********")
-		print("Selected Image Space Point: 	({0}, {1})".format(_x, _y))
-		print("Selected World Space Point: 	({0}, {1})".format(__x, __y))
-		print("Camera Image Space Estimate: 	{0}".format(self.camera_point))
+		# print("******** Compute FOV ********")
+		# print("Selected Image Space Point: 	({0}, {1})".format(_x, _y))
+		# print("Selected World Space Point: 	({0}, {1})".format(__x, __y))
+		# print("Camera Image Space Estimate: 	{0}".format(self.camera_point))
 		c = self.world_point_for_image_point({"x": self.camera_point[0], "y": self.camera_point[1]})
-		print("Camera World Space Estimate: 	{0}".format(c))
+		# print("Camera World Space Estimate: 	{0}".format(c))
 		dy = (c[1] - __y)
 		dx = (c[0] - __x)
 		h = math.sqrt(pow(dx, 2) + pow(dy, 2))
-		print("Projections Props (dx, dy, h): 	{0}, {1}, {2}".format(dx, dy, h))
+		# print("Projections Props (dx, dy, h): 	{0}, {1}, {2}".format(dx, dy, h))
 
 		# Angle from user point to camera location radians
 		camera_angle_rad = math.atan2(dy, dx)  # radians
@@ -174,28 +174,28 @@ class CameraModel:
 		fov_1_theta_deg = 90 - fov_1_adj_deg
 		fov_1_adj_rad = fov_1_theta_deg * (math.pi / 180.)
 
-		print("Camera Angle (A): 	{0}".format(camera_angle_deg))
-		print("FOV Half (B):		{0}".format((fov / 2)))
-		print("fov_1_deg (C):		{0}".format(fov_1_deg))
-		print("fov_remain_deg (D):	{0}".format(fov_remain_deg))
-		print("fov_1_deg (E):		{0}".format(fov_1_deg))
-		print("fov_remain_deg (F):	{0}".format(fov_remain_deg))
-		print("fov_1_opp_deg (G):	{0}".format(fov_1_opp_deg))
-		print("fov_1_adj_deg (H):	{0}".format(fov_1_adj_deg))
-		print("fov_1_theta_deg (I):	{0}".format(fov_1_theta_deg))
+		# print("Camera Angle (A): 	{0}".format(camera_angle_deg))
+		# print("FOV Half (B):		{0}".format((fov / 2)))
+		# print("fov_1_deg (C):		{0}".format(fov_1_deg))
+		# print("fov_remain_deg (D):	{0}".format(fov_remain_deg))
+		# print("fov_1_deg (E):		{0}".format(fov_1_deg))
+		# print("fov_remain_deg (F):	{0}".format(fov_remain_deg))
+		# print("fov_1_opp_deg (G):	{0}".format(fov_1_opp_deg))
+		# print("fov_1_adj_deg (H):	{0}".format(fov_1_adj_deg))
+		# print("fov_1_theta_deg (I):	{0}".format(fov_1_theta_deg))
 
 		a = h
 		b = math.tan((fov * (math.pi / 180.))) * a
 		h = math.sqrt(pow(a, 2) + pow(b, 2))
-		print("Projections Right Ray (a, b, h): 	{0}, {1}, {2}".format(a, b, h))
+		# print("Projections Right Ray (a, b, h): 	{0}, {1}, {2}".format(a, b, h))
 
 		x2 = __x + math.cos(fov_1_adj_rad) * (b+offset)
 		y2 = __y - math.sin(fov_1_adj_rad) * (b+0)
 
-		print("Model Ray Point dx, dy: 	({0}, {1})".format(math.cos(fov_1_adj_rad) * b, math.sin(fov_1_adj_rad) * b))
-		print("Model Ray Point 1: 	({0}, {1})".format(x2, y2))
+		# print("Model Ray Point dx, dy: 	({0}, {1})".format(math.cos(fov_1_adj_rad) * b, math.sin(fov_1_adj_rad) * b))
+		# print("Model Ray Point 1: 	({0}, {1})".format(x2, y2))
 		_x2, _y2 = self.projected_image_point_for_2d_world_point({"x": x2, "y": y2})
-		print("World Ray Point 1: 	({0}, {1})".format(_x2, _y2))
+		# print("World Ray Point 1: 	({0}, {1})".format(_x2, _y2))
 
 		return _x2, _y2
 
@@ -755,6 +755,16 @@ class Window(QWidget):
 		self.btnOMBmode.setChecked(self.OMB_mode)
 		self.btnOMBmode.clicked.connect(self.enable_OMB)
 
+		# Crop FOV slider
+		self.cropFOV = 5
+		self.sliderCropFOV = QSlider(Qt.Horizontal)
+		self.sliderCropFOV.setMinimum(3)
+		self.sliderCropFOV.setMaximum(30)
+		self.sliderCropFOV.setValue(self.cropFOV)
+		self.sliderCropFOV.setTickPosition(QSlider.TicksBelow)
+		self.sliderCropFOV.setTickInterval(1)
+		self.sliderCropFOV.valueChanged.connect(self.updateCropFOV)
+
 		# Show 3d world calibration
 		self.show_cal_markers = True
 		self.chkShow3dCal = QCheckBox(self)
@@ -826,6 +836,7 @@ class Window(QWidget):
 		HB_Correspondences.addWidget(self.btnShowGridVerticals)
 		HB_Correspondences.addWidget(self.btnOMBmode)
 		HB_Correspondences.addWidget(self.chkShow3dCal)
+		HB_Correspondences.addWidget(self.sliderCropFOV)
 
 		VBlayout.addLayout(HB_Correspondences)
 
@@ -1174,6 +1185,9 @@ class Window(QWidget):
 
 		self.updateDisplays()
 
+	def updateCropFOV(self):
+		self.cropFOV = self.sliderCropFOV.value()
+
 	def updateDistortionEstimate(self):
 		self.camera_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5
 		print("Updating distortion parameter: {0}".format(self.camera_model.distortion_matrix[0]))
@@ -1225,24 +1239,24 @@ class Window(QWidget):
 				self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
 				if crop is not None:
-					print(crop)
+					# print(crop)
 					_x, _y = crop["image_point"]
 					__x, __y = model.camera_point
 
-					print(_x, _y)
-					fov = 20
+					# print(_x, _y)
+					fov = self.cropFOV
 					_x1, _y1 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=-fov)
 					_x2, _y2 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=fov)
 
 					width = math.sqrt(pow(_x2 - _x1, 2) + pow(_y2 - _y1, 2))
-					print(width)
+					# print(width)
 					from numpy import ones, vstack
 					from numpy.linalg import lstsq
 					points = [(__x, __y), (_x, _y)]
 					x_coords, y_coords = zip(*points)
 					A = vstack([x_coords, ones(len(x_coords))]).T
 					m, c = lstsq(A, y_coords)[0]
-					print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
+					# print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
 
 					# Extrapolate
 					y = _y - int(width*0.75) # 4:3 format
@@ -1251,14 +1265,6 @@ class Window(QWidget):
 
 					_x3, _y3 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=-fov)
 					_x4, _y4 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=fov)
-
-					im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
-									  (int(_x1), int(_y1)),
-									  (0, 0, 255), 3)
-
-					im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
-									  (int(_x2),int(_y2)),
-									  (255, 0, 255), 3)
 
 					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
 									  (int(_x2), int(_y2)),
@@ -1276,8 +1282,22 @@ class Window(QWidget):
 									  (int(_x3), int(_y3)),
 									  (255, 0, 0), 3)
 
-					# print("Projections Right Ray (a, b, c): 	{0}, {1}, {2}".format(a, b, c))
+					image_points = np.float32([[_x1, _y1], [_x2, _y2], [_x3, _y3], [_x4, _y4]])
+					model_points = np.float32([[0,480], [720,480], [0,0], [720,0]])
 
+					homography, mask = cv2.findHomography(image_points, model_points)
+
+					im_crop = cv2.warpPerspective(im_src, homography, (720, 480))
+
+					# Display undistored images.
+					height, width, channel = im_crop.shape
+					bytesPerLine = 3 * width
+
+					cv2.cvtColor(im_crop, cv2.COLOR_BGR2RGB, im_crop)
+
+					# Set composite image to surface model
+					qImg = QImage(im_crop.data, width, height, bytesPerLine, QImage.Format_RGB888)
+					self.surface.set_image(QPixmap(qImg))
 
 				if self.show_cal_markers:
 
