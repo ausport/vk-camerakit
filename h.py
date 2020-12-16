@@ -1105,12 +1105,6 @@ class Window(QWidget):
 			im_src = model.undistorted_camera_image_cv2()
 			print("model.undistorted_camera_image_cv2() --> {0}".format(time.time() - start))
 
-			# Estimate naive camera intrinsics (camera matrix)
-			camera_matrix = model.camera_matrix
-
-			# Distortion matrix
-			distortion_matrix = model.distortion_matrix
-
 			# Only update the surface overlay if there is an existing homography
 			if not model.is_homography_identity():
 
@@ -1147,7 +1141,6 @@ class Window(QWidget):
 
 				# Solve camera extrinsics - rotation and translation matrices
 				start = time.time()
-				# _, rotation_vector, translation_vector, camera_point = model.estimate_camera_extrinsics()
 
 				print("cv2.solvePnP() --> {0}".format(time.time() - start))
 
