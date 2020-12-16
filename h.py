@@ -117,6 +117,14 @@ class CameraModel:
 		print("Camera Point ==> {0}\n*******".format(self.camera_point))
 		return self.camera_point
 
+	def world_point_for_image_point(self, image_point):
+		world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), self.homography)
+		return world_point.item(0), world_point.item(1)
+
+	def projected_image_point_for_2d_world_point(self, world_point):
+		projected_point = cv2.perspectiveTransform(np.array([[[world_point['x'], world_point['y']]]], dtype='float32'), self.inverse_homography())
+		return projected_point.item(0), projected_point.item(1)
+
 	def projected_image_point_for_3d_world_point(self, world_point):
 
 		if self.translation_vector is None:
@@ -128,6 +136,68 @@ class CameraModel:
 														self.camera_matrix,
 														self.distortion_matrix)
 		return projected_point
+
+	def perspective_aware_crop_for_image_point(self, image_point, fov = 5, offset = 0):
+
+		_x, _y = image_point
+
+		# Convert tracking location to world coordinates - using camera-specific model
+		__x, __y = self.world_point_for_image_point({"x": _x, "y": _y})
+		print(_x, _y, "-->", __x, __y)
+
+		print("******** Compute FOV ********")
+		print("Selected Image Space Point: 	({0}, {1})".format(_x, _y))
+		print("Selected World Space Point: 	({0}, {1})".format(__x, __y))
+		print("Camera Image Space Estimate: 	{0}".format(self.camera_point))
+		c = self.world_point_for_image_point({"x": self.camera_point[0], "y": self.camera_point[1]})
+		print("Camera World Space Estimate: 	{0}".format(c))
+		dy = (c[1] - __y)
+		dx = (c[0] - __x)
+		h = math.sqrt(pow(dx, 2) + pow(dy, 2))
+		print("Projections Props (dx, dy, h): 	{0}, {1}, {2}".format(dx, dy, h))
+
+		# Angle from user point to camera location radians
+		camera_angle_rad = math.atan2(dy, dx)  # radians
+		camera_angle_deg = camera_angle_rad * (180. / math.pi)
+
+		# # Draw image space ray projection.
+		# im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
+		# 				  (int(_x), int(_y)),
+		# 				  (255, 255, 255), 3)
+
+		# fov = 5
+		fov_1_deg = camera_angle_deg + fov
+		fov_remain_deg = 90 - fov_1_deg
+		fov_1_opp_deg = 90 - fov
+		fov_1_adj_deg = fov_1_opp_deg - fov_remain_deg
+
+		fov_1_theta_deg = 90 - fov_1_adj_deg
+		fov_1_adj_rad = fov_1_theta_deg * (math.pi / 180.)
+
+		print("Camera Angle (A): 	{0}".format(camera_angle_deg))
+		print("FOV Half (B):		{0}".format((fov / 2)))
+		print("fov_1_deg (C):		{0}".format(fov_1_deg))
+		print("fov_remain_deg (D):	{0}".format(fov_remain_deg))
+		print("fov_1_deg (E):		{0}".format(fov_1_deg))
+		print("fov_remain_deg (F):	{0}".format(fov_remain_deg))
+		print("fov_1_opp_deg (G):	{0}".format(fov_1_opp_deg))
+		print("fov_1_adj_deg (H):	{0}".format(fov_1_adj_deg))
+		print("fov_1_theta_deg (I):	{0}".format(fov_1_theta_deg))
+
+		a = h
+		b = math.tan((fov * (math.pi / 180.))) * a
+		h = math.sqrt(pow(a, 2) + pow(b, 2))
+		print("Projections Right Ray (a, b, h): 	{0}, {1}, {2}".format(a, b, h))
+
+		x2 = __x + math.cos(fov_1_adj_rad) * (b+offset)
+		y2 = __y - math.sin(fov_1_adj_rad) * (b+0)
+
+		print("Model Ray Point dx, dy: 	({0}, {1})".format(math.cos(fov_1_adj_rad) * b, math.sin(fov_1_adj_rad) * b))
+		print("Model Ray Point 1: 	({0}, {1})".format(x2, y2))
+		_x2, _y2 = self.projected_image_point_for_2d_world_point({"x": x2, "y": y2})
+		print("World Ray Point 1: 	({0}, {1})".format(_x2, _y2))
+
+		return _x2, _y2
 
 	def update_camera_properties(self, with_distortion_matrix = None, with_camera_matrix = None, with_optimal_camera_matrix = None):
 
@@ -452,15 +522,19 @@ class CameraModel:
 class GraphicsScene(QGraphicsScene):
 	# Create signal exporting QPointF position.
 	SceneClicked = pyqtSignal(QPointF)
+	MouseMoved = pyqtSignal(QPointF)
 
 	def __init__(self, parent=None):
 		QGraphicsScene.__init__(self, parent)
 
 		self.setSceneRect(-100, -100, 200, 200)
-		self.opt = ""
+		self.opt = False
 
 	def set_option(self, opt):
 		self.opt = opt
+
+	def mouseMoveEvent(self, event):
+		self.MouseMoved.emit(QPointF(event.scenePos()))
 
 	def mousePressEvent(self, event):
 		# #Emit the signal
@@ -469,6 +543,7 @@ class GraphicsScene(QGraphicsScene):
 
 class ImageViewer(QGraphicsView):
 	ImageClicked = pyqtSignal(QPoint)
+	MouseMoved = pyqtSignal(QPoint)
 
 	def __init__(self, parent):
 		start = time.time()
@@ -485,9 +560,11 @@ class ImageViewer(QGraphicsView):
 		self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 		self.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 		self.setFrameShape(QFrame.NoFrame)
+		self.should_auto_scale = True
 
 		# Connect the signal emitted by the GraphicsScene mousePressEvent to relay event
 		self.scene.SceneClicked.connect(self.scene_clicked)
+		self.scene.MouseMoved.connect(self.mouse_moved)
 
 		print("init_ImageViewer(...): --> {0}".format(time.time() - start))
 
@@ -525,7 +602,11 @@ class ImageViewer(QGraphicsView):
 			self.empty = True
 			self.setDragMode(QGraphicsView.NoDrag)
 			self.image.setPixmap(QPixmap())
-		self.fitInView()
+
+		# Avoid recursion...
+		if self.should_auto_scale:
+			self.fitInView()
+			self.should_auto_scale = False
 
 	def wheelEvent(self, event):
 		if self.has_image():
@@ -539,7 +620,8 @@ class ImageViewer(QGraphicsView):
 			if self.zoom > 0:
 				self.scale(factor, factor)
 			elif self.zoom == 0:
-				self.fitInView()
+				pass
+				# self.fitInView()
 			else:
 				self.zoom = 0
 
@@ -561,6 +643,9 @@ class ImageViewer(QGraphicsView):
 	#     else:
 	#         self.setDragMode(QGraphicsView.CrossCursor)
 
+	def mouseMoveEvent(self, event):
+		super(ImageViewer, self).mouseMoveEvent(event)
+
 	def mousePressEvent(self, event):
 		# if event.key() == Qt.Key_Space:
 		#   super(ImageViewer, self).mousePressEvent(event)
@@ -570,6 +655,9 @@ class ImageViewer(QGraphicsView):
 	def mouseReleaseEvent(self, event):
 		self.toggleDragMode(forceNoDrag=True)
 		super(ImageViewer, self).mouseReleaseEvent(event)
+
+	def mouse_moved(self, pos):
+		self.MouseMoved.emit(pos.toPoint())
 
 	def scene_clicked(self, pos):
 		# Pass local (scene) coordinates to ImageClicked()
@@ -587,8 +675,6 @@ class MyPopup(QWidget):
 		popup_Correspondences = QVBoxLayout(self)
 		self.listCorrespondences = QListWidget()
 		popup_Correspondences.addWidget(self.listCorrespondences)
-
-
 
 	def update_items(self):
 		self.listCorrespondences.clear()
@@ -662,9 +748,11 @@ class Window(QWidget):
 		self.btnShowGridVerticals.clicked.connect(self.vertical_projections)
 
 		# Switch to OMB mode
+		self.OMB_mode = False
 		self.btnOMBmode = QPushButton(self)
 		self.btnOMBmode.setText('OMB')
 		self.btnOMBmode.setCheckable(True)
+		self.btnOMBmode.setChecked(self.OMB_mode)
 		self.btnOMBmode.clicked.connect(self.enable_OMB)
 
 		# Show 3d world calibration
@@ -703,12 +791,12 @@ class Window(QWidget):
 
 		self.viewer.ImageClicked.connect(self.ImageClicked)
 		self.surface.ImageClicked.connect(self.SurfaceClicked)
+		self.viewer.MouseMoved.connect(self.ImageMouseMoved)
 		self.last_image_pairs = {0, 0}
 		self.last_surface_pairs = {0, 0}
 		self.addingCorrespondencesEnabled = False
 
 		self.show_vertical_projections = False
-		self.OMB_mode = False
 
 		self.camera_model = CameraModel(self.cboSurfaces.currentText())
 
@@ -910,12 +998,14 @@ class Window(QWidget):
 			self.viewer.set_cross_cursor(False)
 			self.surface.set_cross_cursor(True)
 
-		print("{0}".format(pos))
-
-
-
-
-
+	def ImageMouseMoved(self, pos):
+		if self.OMB_mode:
+			# print("{0}".format(pos))
+			crop = {"image_point": (pos.x(), pos.y())}
+			print(crop)
+			self.updateDisplays(crop)
+			# self.OMB_mode = False
+			# self.btnOMBmode.setChecked(False)
 
 	def SurfaceClicked(self, pos):
 		print("SurfaceClicked", pos)
@@ -997,7 +1087,7 @@ class Window(QWidget):
 
 	def enable_OMB(self):
 		self.OMB_mode = self.btnOMBmode.isChecked()
-		self.updateDisplays()
+		# self.updateDisplays()
 
 	def set_cal_markers(self):
 		self.show_cal_markers = self.chkShow3dCal.isChecked()
@@ -1095,11 +1185,6 @@ class Window(QWidget):
 
 			model = self.camera_model
 
-			#Update homography
-			start = time.time()
-			model.compute_homography()
-			print("model.compute_homography() --> {0}".format(time.time() - start))
-
 			# Get model sample image
 			start = time.time()
 			im_src = model.undistorted_camera_image_cv2()
@@ -1139,10 +1224,60 @@ class Window(QWidget):
 				self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 				self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
-				# Solve camera extrinsics - rotation and translation matrices
-				start = time.time()
+				if crop is not None:
+					print(crop)
+					_x, _y = crop["image_point"]
+					__x, __y = model.camera_point
 
-				print("cv2.solvePnP() --> {0}".format(time.time() - start))
+					print(_x, _y)
+					fov = 20
+					_x1, _y1 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=-fov)
+					_x2, _y2 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=fov)
+
+					width = math.sqrt(pow(_x2 - _x1, 2) + pow(_y2 - _y1, 2))
+					print(width)
+					from numpy import ones, vstack
+					from numpy.linalg import lstsq
+					points = [(__x, __y), (_x, _y)]
+					x_coords, y_coords = zip(*points)
+					A = vstack([x_coords, ones(len(x_coords))]).T
+					m, c = lstsq(A, y_coords)[0]
+					print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
+
+					# Extrapolate
+					y = _y - int(width*0.75) # 4:3 format
+					x = int((y-c)/m)
+					im_src = cv2.circle(im_src, (x, y), 5, (255, 255, 255), 2)
+
+					_x3, _y3 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=-fov)
+					_x4, _y4 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=fov)
+
+					im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
+									  (int(_x1), int(_y1)),
+									  (0, 0, 255), 3)
+
+					im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
+									  (int(_x2),int(_y2)),
+									  (255, 0, 255), 3)
+
+					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
+									  (int(_x2), int(_y2)),
+									  (255, 0, 0), 3)
+
+					im_src = cv2.line(im_src, (int(_x3), int(_y3)),
+									  (int(_x4), int(_y4)),
+									  (255, 0, 0), 3)
+
+					im_src = cv2.line(im_src, (int(_x2), int(_y2)),
+									  (int(_x4), int(_y4)),
+									  (255, 0, 0), 3)
+
+					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
+									  (int(_x3), int(_y3)),
+									  (255, 0, 0), 3)
+
+					# print("Projections Right Ray (a, b, c): 	{0}, {1}, {2}".format(a, b, c))
+
 
 				if self.show_cal_markers:
 
@@ -1198,14 +1333,10 @@ class Window(QWidget):
 			# Convert to RGB for QImage.
 			cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
 			qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
-
 			self.viewer.set_image(QPixmap(qImg))
 
-			# self.sliderFocalLength.setValue(int(model.focal_length))
-			# self.sliderDistortion.setValue(model.distortion_matrix[0] / -3e-5)
 		else:
 			print("Warning: No camera model has been initialised.")
-
 
 
 if __name__ == '__main__':
