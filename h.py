@@ -392,12 +392,12 @@ class CameraModel:
 					'model_scale': self.model_scale,
 					'homography': self.homography.tolist(),
 					'focal_length': self.focal_length,
-					'rotation_vector': self.rotation_vector,
-					'translation_vector': self.translation_vector,
+					# 'rotation_vector': self.rotation_vector,
+					# 'translation_vector': self.translation_vector,
 					'distortion_matrix': self.distortion_matrix.tolist(),
 					'image_points': self.image_points.tolist(),
 					'model_points': self.model_points.tolist(),
-					'camera_point': self.camera_point,
+					# 'camera_point': self.camera_point,
 					'camera_matrix': self.camera_matrix.tolist()
 				},
 				indent=4,
@@ -454,7 +454,7 @@ class CameraModel:
 		self.model_offset_y = j["model_offset"][1]
 		self.model_scale = j["model_scale"]
 		self.focal_length = j["focal_length"]
-		self.rotation_vector = j["rotation_vector"]
+		# self.rotation_vector = j["rotation_vector"]
 		self.homography = np.array(j["homography"])
 		self.distortion_matrix = np.array(j["distortion_matrix"])
 		self.image_points = np.array(j["image_points"])
@@ -603,11 +603,6 @@ class ImageViewer(QGraphicsView):
 			self.setDragMode(QGraphicsView.NoDrag)
 			self.image.setPixmap(QPixmap())
 
-		# Avoid recursion...
-		if self.should_auto_scale:
-			self.fitInView()
-			self.should_auto_scale = False
-
 	def wheelEvent(self, event):
 		if self.has_image():
 			if event.angleDelta().y() > 0:
@@ -621,7 +616,6 @@ class ImageViewer(QGraphicsView):
 				self.scale(factor, factor)
 			elif self.zoom == 0:
 				pass
-				# self.fitInView()
 			else:
 				self.zoom = 0
 
@@ -725,7 +719,7 @@ class Window(QWidget):
 		# Compute new homography from points.
 		self.btnComputeHomograhy = QToolButton(self)
 		self.btnComputeHomograhy.setText('Compute Homograhy')
-		self.btnComputeHomograhy.clicked.connect(self.updateDisplays)
+		self.btnComputeHomograhy.clicked.connect(self.compute_homography)
 
 		# Correspondence management
 		self.btnShowCorrespondences = QToolButton(self)
@@ -782,13 +776,18 @@ class Window(QWidget):
 		self.btnLoadCameraProperties.setText('Load Camera Properties')
 		self.btnLoadCameraProperties.clicked.connect(self.load_camera_properties)
 
+		# Re-centre viewpoints
+		self.btnFitInView = QToolButton(self)
+		self.btnFitInView.setText('Re-Center Viewpoints')
+		self.btnFitInView.clicked.connect(self.center_views)
+
 		# Focal length slider
 		self.sliderFocalLength = QSlider(Qt.Horizontal)
 		self.sliderFocalLength.setMinimum(0)
 		self.sliderFocalLength.setMaximum(200)
 		self.sliderFocalLength.setValue(10)
 		self.sliderFocalLength.setTickPosition(QSlider.TicksBelow)
-		self.sliderFocalLength.setTickInterval(1)
+		self.sliderFocalLength.setTickInterval(20)
 		self.sliderFocalLength.valueChanged.connect(self.updateFocalLength)
 		# Distortion slider
 		self.sliderDistortion = QSlider(Qt.Horizontal)
@@ -796,7 +795,7 @@ class Window(QWidget):
 		self.sliderDistortion.setMaximum(30000)
 		self.sliderDistortion.setValue(100)
 		self.sliderDistortion.setTickPosition(QSlider.TicksBelow)
-		self.sliderDistortion.setTickInterval(1)
+		self.sliderDistortion.setTickInterval(3000)
 		self.sliderDistortion.valueChanged.connect(self.updateDistortionEstimate)
 
 		self.viewer.ImageClicked.connect(self.ImageClicked)
@@ -833,6 +832,7 @@ class Window(QWidget):
 		HB_Correspondences.addWidget(self.btnShowCorrespondences)
 		HB_Correspondences.addWidget(self.btnAddCorrespondences)
 		HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
+		HB_Correspondences.addWidget(self.btnFitInView)
 		HB_Correspondences.addWidget(self.btnShowGridVerticals)
 		HB_Correspondences.addWidget(self.btnOMBmode)
 		HB_Correspondences.addWidget(self.chkShow3dCal)
@@ -1092,6 +1092,10 @@ class Window(QWidget):
 		self.correspondencesWidget.update_items()
 		self.updateDisplays()
 
+	def compute_homography(self):
+		self.camera_model.compute_homography()
+		self.updateDisplays()
+
 	def vertical_projections(self):
 		self.show_vertical_projections = self.btnShowGridVerticals.isChecked()
 		self.updateDisplays()
@@ -1153,7 +1157,6 @@ class Window(QWidget):
 
 			self.updateDisplays()
 
-
 	def save_camera_properties(self):
 
 		if self.camera_model:
@@ -1169,6 +1172,12 @@ class Window(QWidget):
 			# self.cboSurfaces.setCurrentText(self.camera_model.sport)
 			self.updateDisplays()
 			self.correspondencesWidget.update_items()
+
+		self.center_views()
+
+	def center_views(self):
+		self.surface.fitInView()
+		self.viewer.fitInView()
 
 	def draw(self, img, corners, imgpts):
 		corner = tuple(corners[0].ravel())
@@ -1268,19 +1277,19 @@ class Window(QWidget):
 
 					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
 									  (int(_x2), int(_y2)),
-									  (255, 0, 0), 3)
+									  (0, 0, 255), 3)
 
 					im_src = cv2.line(im_src, (int(_x3), int(_y3)),
 									  (int(_x4), int(_y4)),
-									  (255, 0, 0), 3)
+									  (0, 0, 255), 3)
 
 					im_src = cv2.line(im_src, (int(_x2), int(_y2)),
 									  (int(_x4), int(_y4)),
-									  (255, 0, 0), 3)
+									  (0, 0, 255), 3)
 
 					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
 									  (int(_x3), int(_y3)),
-									  (255, 0, 0), 3)
+									  (0, 0, 255), 3)
 
 					image_points = np.float32([[_x1, _y1], [_x2, _y2], [_x3, _y3], [_x4, _y4]])
 					model_points = np.float32([[0,480], [720,480], [0,0], [720,0]])
