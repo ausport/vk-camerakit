@@ -1336,21 +1336,30 @@ class Window(QWidget):
 							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
 							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1]+unit_vector, 0]]], dtype='float32')
 							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0, 255, 0), thickness)
+
+							int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+							int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+							im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 255, 0), thickness)
 
 							# Render x-axis
 							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
 							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
 							theoretical_3d_model_point = np.array([[[world_point[0]+unit_vector, world_point[1], 0]]], dtype='float32')
 							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0, 0, 255), thickness)
+
+							int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+							int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+							im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 0, 255), thickness)
 
 							# Render vertical
 							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
 							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
 							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], unit_vector]]], dtype='float32')
 							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (255, 0, 0), thickness)
+
+							int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+							int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+							im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point,  (255, 0, 0), thickness)
 
 					# if not cv2.imwrite('output.png',im_src):
 					#     print("Writing failed")
