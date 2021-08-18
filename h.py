@@ -1,8 +1,7 @@
-import sys, math, os
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-# from PIL import Image, ImageDraw, ImageFont
+import math, os
+from PyQt5 import QtCore, QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+
 import cv2
 import numpy as np
 import json
@@ -15,1383 +14,1384 @@ import time
 
 class CameraModel:
 
-	def ray_intersection(self, line1, line2):
-		xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-		ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+    def ray_intersection(self, line1, line2):
+        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
-		def det(a, b):
-			return a[0] * b[1] - a[1] * b[0]
+        def det(a, b):
+            return a[0] * b[1] - a[1] * b[0]
 
-		div = det(xdiff, ydiff)
-		if div == 0:
-			raise Exception('rays do not intersect')
+        div = det(xdiff, ydiff)
+        if div == 0:
+            raise Exception('rays do not intersect')
 
-		d = (det(*line1), det(*line2))
-		x = det(d, xdiff) / div
-		y = det(d, ydiff) / div
-		return x, y
+        d = (det(*line1), det(*line2))
+        x = det(d, xdiff) / div
+        y = det(d, ydiff) / div
+        return x, y
 
-	def compute_homography(self):
+    def compute_homography(self):
 
-		start = time.time()
-		self.homography, mask = cv2.findHomography(self.image_points, self.model_points)
-		print("compute_homography(self): --> {0}".format(time.time() - start))
+        start = time.time()
+        self.homography, mask = cv2.findHomography(self.image_points, self.model_points)
+        print("compute_homography(self): --> {0}".format(time.time() - start))
 
-	def inverse_homography(self):
-		start = time.time()
-		if self.homography.__class__.__name__ == "NoneType":
-			self.compute_homography()
+    def inverse_homography(self):
+        start = time.time()
+        if self.homography.__class__.__name__ == "NoneType":
+            self.compute_homography()
 
-		# Compute inverse of 2D homography
-		val, H = cv2.invert(self.homography)
-		print("inverse_homography(self): --> {0}".format(time.time() - start))
-		return H
+        # Compute inverse of 2D homography
+        val, H = cv2.invert(self.homography)
+        print("inverse_homography(self): --> {0}".format(time.time() - start))
+        return H
 
-	def identity_homography(self):
-		return np.fill_diagonal(np.zeros((3, 3)), 1)
+    def identity_homography(self):
+        return np.fill_diagonal(np.zeros((3, 3)), 1)
 
-	def is_homography_identity(self):
-		return np.array_equal(self.homography, self.identity_homography())
+    def is_homography_identity(self):
+        return np.array_equal(self.homography, self.identity_homography())
 
-	def estimate_camera_extrinsics(self):
+    def estimate_camera_extrinsics(self):
 
-		world_points = self.model_points
-		camera_points = self.image_points
-		(_, rotation_vector, translation_vector) = cv2.solvePnP(world_points,
-																camera_points,
-																self.camera_matrix,
-																self.distortion_matrix)
+        world_points = self.model_points
+        camera_points = self.image_points
+        (_, rotation_vector, translation_vector) = cv2.solvePnP(world_points,
+                                                                camera_points,
+                                                                self.camera_matrix,
+                                                                self.distortion_matrix)
 
-		self.rotation_vector = rotation_vector
-		self.translation_vector = translation_vector
+        self.rotation_vector = rotation_vector
+        self.translation_vector = translation_vector
 
-		return _, rotation_vector, translation_vector, self.estimate_camera_point()
+        return _, rotation_vector, translation_vector, self.estimate_camera_point()
 
-	def estimate_camera_point(self):
+    def estimate_camera_point(self):
 
-		assert len(self.model_points >= 2), "Not enough model points to estimate camera point"
+        assert len(self.model_points >= 2), "Not enough model points to estimate camera point"
 
-		world_points = self.model_points
+        world_points = self.model_points
 
-		pt1 = np.array([[[world_points[0][0], world_points[0][1], 0]]], dtype='float32')
-		pt2 = np.array([[[world_points[0][0], world_points[0][1], -self.model_scale]]], dtype='float32')
+        pt1 = np.array([[[world_points[0][0], world_points[0][1], 0]]], dtype='float32')
+        pt2 = np.array([[[world_points[0][0], world_points[0][1], -self.model_scale]]], dtype='float32')
 
-		(pt1_projection, jacobian) = cv2.projectPoints(pt1,
-													   self.rotation_vector,
-													   self.translation_vector,
-													   self.camera_matrix,
-													   self.distortion_matrix)
-
-		(pt2_projection, jacobian) = cv2.projectPoints(pt2,
-													   self.rotation_vector,
-													   self.translation_vector,
-													   self.camera_matrix,
-													   self.distortion_matrix)
-
-		line1 = [[pt1_projection[0][0][0], pt1_projection[0][0][1]],
-				 [pt2_projection[0][0][0], pt2_projection[0][0][1]]]
-
-		print("******* estimate_camera_point *******\n", pt1, pt2, line1)
-
-		pt1 = np.array([[[world_points[-1][0], world_points[-1][1], 0]]], dtype='float32')
-		pt2 = np.array([[[world_points[-1][0], world_points[-1][1], -self.model_scale]]], dtype='float32')
-
-		(pt1_projection, jacobian) = cv2.projectPoints(pt1,
-													   self.rotation_vector,
-													   self.translation_vector,
-													   self.camera_matrix,
-													   self.distortion_matrix)
+        (pt1_projection, jacobian) = cv2.projectPoints(pt1,
+                                                       self.rotation_vector,
+                                                       self.translation_vector,
+                                                       self.camera_matrix,
+                                                       self.distortion_matrix)
+
+        (pt2_projection, jacobian) = cv2.projectPoints(pt2,
+                                                       self.rotation_vector,
+                                                       self.translation_vector,
+                                                       self.camera_matrix,
+                                                       self.distortion_matrix)
+
+        line1 = [[pt1_projection[0][0][0], pt1_projection[0][0][1]],
+                 [pt2_projection[0][0][0], pt2_projection[0][0][1]]]
+
+        print("******* estimate_camera_point *******\n", pt1, pt2, line1)
+
+        pt1 = np.array([[[world_points[-1][0], world_points[-1][1], 0]]], dtype='float32')
+        pt2 = np.array([[[world_points[-1][0], world_points[-1][1], -self.model_scale]]], dtype='float32')
+
+        (pt1_projection, jacobian) = cv2.projectPoints(pt1,
+                                                       self.rotation_vector,
+                                                       self.translation_vector,
+                                                       self.camera_matrix,
+                                                       self.distortion_matrix)
 
-		(pt2_projection, jacobian) = cv2.projectPoints(pt2,
-													   self.rotation_vector,
-													   self.translation_vector,
-													   self.camera_matrix,
-													   self.distortion_matrix)
+        (pt2_projection, jacobian) = cv2.projectPoints(pt2,
+                                                       self.rotation_vector,
+                                                       self.translation_vector,
+                                                       self.camera_matrix,
+                                                       self.distortion_matrix)
 
-		line2 = [[pt1_projection[0][0][0], pt1_projection[0][0][1]],
-				 [pt2_projection[0][0][0], pt2_projection[0][0][1]]]
+        line2 = [[pt1_projection[0][0][0], pt1_projection[0][0][1]],
+                 [pt2_projection[0][0][0], pt2_projection[0][0][1]]]
 
-		print("*******\n", pt1, pt2, line2)
+        print("*******\n", pt1, pt2, line2)
 
-		self.camera_point = self.ray_intersection(line1, line2)
-		print("Camera Point ==> {0}\n*******".format(self.camera_point))
-		return self.camera_point
-
-	def world_point_for_image_point(self, image_point):
-		world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), self.homography)
-		return world_point.item(0), world_point.item(1)
-
-	def projected_image_point_for_2d_world_point(self, world_point):
-		projected_point = cv2.perspectiveTransform(np.array([[[world_point['x'], world_point['y']]]], dtype='float32'), self.inverse_homography())
-		return projected_point.item(0), projected_point.item(1)
-
-	def projected_image_point_for_3d_world_point(self, world_point):
-
-		if self.translation_vector is None:
-			self.estimate_camera_extrinsics()
-
-		(projected_point, jacobian) = cv2.projectPoints(world_point,
-														self.rotation_vector,
-														self.translation_vector,
-														self.camera_matrix,
-														self.distortion_matrix)
-		return projected_point
-
-	def perspective_aware_crop_for_image_point(self, image_point, fov = 5, offset = 0):
-
-		_x, _y = image_point
-
-		# Convert tracking location to world coordinates - using camera-specific model
-		__x, __y = self.world_point_for_image_point({"x": _x, "y": _y})
-		# print(_x, _y, "-->", __x, __y)
-
-		# print("******** Compute FOV ********")
-		# print("Selected Image Space Point: 	({0}, {1})".format(_x, _y))
-		# print("Selected World Space Point: 	({0}, {1})".format(__x, __y))
-		# print("Camera Image Space Estimate: 	{0}".format(self.camera_point))
-		c = self.world_point_for_image_point({"x": self.camera_point[0], "y": self.camera_point[1]})
-		# print("Camera World Space Estimate: 	{0}".format(c))
-		dy = (c[1] - __y)
-		dx = (c[0] - __x)
-		h = math.sqrt(pow(dx, 2) + pow(dy, 2))
-		# print("Projections Props (dx, dy, h): 	{0}, {1}, {2}".format(dx, dy, h))
-
-		# Angle from user point to camera location radians
-		camera_angle_rad = math.atan2(dy, dx)  # radians
-		camera_angle_deg = camera_angle_rad * (180. / math.pi)
-
-		# # Draw image space ray projection.
-		# im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
-		# 				  (int(_x), int(_y)),
-		# 				  (255, 255, 255), 3)
-
-		# fov = 5
-		fov_1_deg = camera_angle_deg + fov
-		fov_remain_deg = 90 - fov_1_deg
-		fov_1_opp_deg = 90 - fov
-		fov_1_adj_deg = fov_1_opp_deg - fov_remain_deg
-
-		fov_1_theta_deg = 90 - fov_1_adj_deg
-		fov_1_adj_rad = fov_1_theta_deg * (math.pi / 180.)
-
-		# print("Camera Angle (A): 	{0}".format(camera_angle_deg))
-		# print("FOV Half (B):		{0}".format((fov / 2)))
-		# print("fov_1_deg (C):		{0}".format(fov_1_deg))
-		# print("fov_remain_deg (D):	{0}".format(fov_remain_deg))
-		# print("fov_1_deg (E):		{0}".format(fov_1_deg))
-		# print("fov_remain_deg (F):	{0}".format(fov_remain_deg))
-		# print("fov_1_opp_deg (G):	{0}".format(fov_1_opp_deg))
-		# print("fov_1_adj_deg (H):	{0}".format(fov_1_adj_deg))
-		# print("fov_1_theta_deg (I):	{0}".format(fov_1_theta_deg))
-
-		a = h
-		b = math.tan((fov * (math.pi / 180.))) * a
-		h = math.sqrt(pow(a, 2) + pow(b, 2))
-		# print("Projections Right Ray (a, b, h): 	{0}, {1}, {2}".format(a, b, h))
-
-		x2 = __x + math.cos(fov_1_adj_rad) * (b+offset)
-		y2 = __y - math.sin(fov_1_adj_rad) * (b+0)
-
-		# print("Model Ray Point dx, dy: 	({0}, {1})".format(math.cos(fov_1_adj_rad) * b, math.sin(fov_1_adj_rad) * b))
-		# print("Model Ray Point 1: 	({0}, {1})".format(x2, y2))
-		_x2, _y2 = self.projected_image_point_for_2d_world_point({"x": x2, "y": y2})
-		# print("World Ray Point 1: 	({0}, {1})".format(_x2, _y2))
-
-		return _x2, _y2
-
-	def update_camera_properties(self, with_distortion_matrix = None, with_camera_matrix = None, with_optimal_camera_matrix = None):
-
-		start = time.time()
-		if self.__sourceImage is None:
-			print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
-			self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
-
-		if not with_distortion_matrix is None:
-			self.distortion_matrix = with_distortion_matrix
-
-		if not with_camera_matrix is None:
-			self.camera_matrix = with_camera_matrix
+        self.camera_point = self.ray_intersection(line1, line2)
+        print("Camera Point ==> {0}\n*******".format(self.camera_point))
+        return self.camera_point
+
+    def world_point_for_image_point(self, image_point):
+        world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), self.homography)
+        return world_point.item(0), world_point.item(1)
+
+    def projected_image_point_for_2d_world_point(self, world_point):
+        projected_point = cv2.perspectiveTransform(np.array([[[world_point['x'], world_point['y']]]], dtype='float32'), self.inverse_homography())
+        return projected_point.item(0), projected_point.item(1)
+
+    def projected_image_point_for_3d_world_point(self, world_point):
+
+        if self.translation_vector is None:
+            self.estimate_camera_extrinsics()
+
+        (projected_point, jacobian) = cv2.projectPoints(world_point,
+                                                        self.rotation_vector,
+                                                        self.translation_vector,
+                                                        self.camera_matrix,
+                                                        self.distortion_matrix)
+        return projected_point
+
+    def perspective_aware_crop_for_image_point(self, image_point, fov = 5, offset = 0):
+
+        _x, _y = image_point
+
+        # Convert tracking location to world coordinates - using camera-specific model
+        __x, __y = self.world_point_for_image_point({"x": _x, "y": _y})
+        # print(_x, _y, "-->", __x, __y)
+
+        # print("******** Compute FOV ********")
+        # print("Selected Image Space Point: 	({0}, {1})".format(_x, _y))
+        # print("Selected World Space Point: 	({0}, {1})".format(__x, __y))
+        # print("Camera Image Space Estimate: 	{0}".format(self.camera_point))
+        c = self.world_point_for_image_point({"x": self.camera_point[0], "y": self.camera_point[1]})
+        # print("Camera World Space Estimate: 	{0}".format(c))
+        dy = (c[1] - __y)
+        dx = (c[0] - __x)
+        h = math.sqrt(pow(dx, 2) + pow(dy, 2))
+        # print("Projections Props (dx, dy, h): 	{0}, {1}, {2}".format(dx, dy, h))
+
+        # Angle from user point to camera location radians
+        camera_angle_rad = math.atan2(dy, dx)  # radians
+        camera_angle_deg = camera_angle_rad * (180. / math.pi)
+
+        # # Draw image space ray projection.
+        # im_src = cv2.line(im_src, (int(model.camera_point[0]), int(model.camera_point[1])),
+        # 				  (int(_x), int(_y)),
+        # 				  (255, 255, 255), 3)
+
+        # fov = 5
+        fov_1_deg = camera_angle_deg + fov
+        fov_remain_deg = 90 - fov_1_deg
+        fov_1_opp_deg = 90 - fov
+        fov_1_adj_deg = fov_1_opp_deg - fov_remain_deg
+
+        fov_1_theta_deg = 90 - fov_1_adj_deg
+        fov_1_adj_rad = fov_1_theta_deg * (math.pi / 180.)
+
+        # print("Camera Angle (A): 	{0}".format(camera_angle_deg))
+        # print("FOV Half (B):		{0}".format((fov / 2)))
+        # print("fov_1_deg (C):		{0}".format(fov_1_deg))
+        # print("fov_remain_deg (D):	{0}".format(fov_remain_deg))
+        # print("fov_1_deg (E):		{0}".format(fov_1_deg))
+        # print("fov_remain_deg (F):	{0}".format(fov_remain_deg))
+        # print("fov_1_opp_deg (G):	{0}".format(fov_1_opp_deg))
+        # print("fov_1_adj_deg (H):	{0}".format(fov_1_adj_deg))
+        # print("fov_1_theta_deg (I):	{0}".format(fov_1_theta_deg))
+
+        a = h
+        b = math.tan((fov * (math.pi / 180.))) * a
+        h = math.sqrt(pow(a, 2) + pow(b, 2))
+        # print("Projections Right Ray (a, b, h): 	{0}, {1}, {2}".format(a, b, h))
+
+        x2 = __x + math.cos(fov_1_adj_rad) * (b+offset)
+        y2 = __y - math.sin(fov_1_adj_rad) * (b+0)
+
+        # print("Model Ray Point dx, dy: 	({0}, {1})".format(math.cos(fov_1_adj_rad) * b, math.sin(fov_1_adj_rad) * b))
+        # print("Model Ray Point 1: 	({0}, {1})".format(x2, y2))
+        _x2, _y2 = self.projected_image_point_for_2d_world_point({"x": x2, "y": y2})
+        # print("World Ray Point 1: 	({0}, {1})".format(_x2, _y2))
+
+        return _x2, _y2
+
+    def update_camera_properties(self, with_distortion_matrix = None, with_camera_matrix = None, with_optimal_camera_matrix = None):
+
+        start = time.time()
+        if self.__sourceImage is None:
+            print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
+            self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
+
+        if not with_distortion_matrix is None:
+            self.distortion_matrix = with_distortion_matrix
+
+        if not with_camera_matrix is None:
+            self.camera_matrix = with_camera_matrix
 
-		else:
-
-			h, w = self.__sourceImage.shape[:2]
-			fx = 0.5 + self.focal_length / 50.0
-			self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
-											 [0, fx * w, 0.5 * (h - 1)],
-											 [0.0, 0.0, 1.0]])
-
-		if not with_optimal_camera_matrix is None:
-			self.optimal_camera_matrix = with_optimal_camera_matrix
-		else:
-			self.optimal_camera_matrix = self.camera_matrix
-
-		# print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
-		# print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
-		# print("Updating Camera Distortion Matrix:\n{0}".format(self.distortion_matrix))
-		print(self.camera_matrix)
-		print("update_camera_properties(...): --> {0}".format(time.time() - start))
-
-	def surface_image(self):
-		 return QPixmap("./Surfaces/{:s}.png".format(self.sport))
-
-	def set_surface_image(self, sport):
-
-		start = time.time()
-		self.sport = sport
-		px = QPixmap("./Surfaces/{:s}.png".format(sport))
-		self.surface_dimensions = px.size()
-		# print("Setting surface:", sport, self.surface_dimensions)
-		print("set_surface_image(...): --> {0}".format(time.time() - start))
-
-		return px
-
-	def surface_image_cv2(self):
-		start = time.time()
-		img = cv2.imread("./Surfaces/{:s}.png".format(self.sport))
-		print("surface_image_cv2(...): --> {0}".format(time.time() - start))
-		return img
-
-	def set_camera_image_from_file(self, image_path):
-		# NB We set the camera image as a cv2 image (numpy array).
-		start = time.time()
-		self.__sourceImage = cv2.imread(image_path)
-		self.__image_path = image_path
-		print("set_camera_image_from_file(...): --> {0}".format(time.time() - start))
-
-	def set_camera_image_from_image(self, image, image_path):
-		self.__sourceImage = image
-		self.__image_path = image_path
-
-	def distorted_camera_image_cv2(self):
-
-		return self.__sourceImage
-
-
-	def undistorted_camera_image_cv2(self):
-
-		start = time.time()
-		if self.__sourceImage is None:
-			print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
-			self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
-
-		# img = cv2.undistort(self.distorted_camera_image_cv2(),
-		#                     self.camera_matrix,
-		#                     self.distortion_matrix,
-		#                     None,
-		#                     self.optimal_camera_matrix)
-
-		# img = cv2.fisheye.undistortImage(self.__sourceImage,
-		#                        self.camera_matrix,
-		#                        self.distortion_matrix)
-
-		return cv2.undistort(self.distorted_camera_image_cv2(), self.camera_matrix, self.distortion_matrix, None, self.optimal_camera_matrix)
-
-	def distorted_camera_image_qimage(self):
-		# NB But we need to convert cv2 to QImage for display in qt widgets..
-
-		start = time.time()
-		cvImg = self.distorted_camera_image_cv2()
-		height, width, channel = cvImg.shape
-		bytesPerLine = 3 * width
-		cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
-		qimg =  QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
-		print("distorted_camera_image_qimage(...): --> {0}".format(time.time() - start))
-
-		return qimg
-
-	def undistorted_camera_image_qimage(self):
-
-		cvImg = self.undistorted_camera_image_cv2()
-		height, width, channel = cvImg.shape
-		bytesPerLine = 3 * width
-		cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
-		return QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
-
-
-	def remove_correspondences(self):
-
-		self.image_points = np.empty([0, 2])  # 2D coordinates system
-		self.model_points = np.empty([0, 3])  # 3D coordinate system
-		self.homography = np.zeros((3, 3))
-		np.fill_diagonal(self.homography, 1)
-
-	def reset(self):
-		# Remove previous values
-		self.remove_correspondences()
-		self.focal_length = 0
-		self.camera_matrix = np.zeros((3, 3))
-		self.optimal_camera_matrix = np.zeros((3, 3))
-		self.distortion_matrix = np.zeros((4, 1))
-		self.rotation_vector = None
-		self.translation_vector = None
-
-	def surface_properties(self, sport):
-		# Return a dictionary of values for each sport.
-		properties = {
-			"model_width": 50,
-			"model_height": 25,
-			"model_offset_x": 1,
-			"model_offset_y": 1,
-			# Scaling factor required to convert from real world in meters to surface pixels.
-			"model_scale": 10
-		}
-
-		if sport == "pool":
-			return {
-				"model_width": 50,
-				"model_height": 25,
-				"model_offset_x": 1,
-				"model_offset_y": 1,
-				# Scaling factor required to convert from real world in meters to surface pixels.
-				"model_scale": 10
-			}
-
-		if sport == "tennis":
-			return {
-				"model_width": 30,
-				"model_height": 15,
-				"model_offset_x": 1,
-				"model_offset_y": 1,
-				# Scaling factor required to convert from real world in meters to surface pixels.
-				"model_scale": 50
-			}
-
-		if sport == "hockey":
-			return {
-				"model_width": 91,
-				"model_height": 55,
-				"model_offset_x": 5,
-				"model_offset_y": 5,
-				# Scaling factor required to convert from real world in meters to surface pixels.
-				"model_scale": 10
-			}
-
-		if sport == "netball":
-			return {
-				"model_width": 31,
-				"model_height": 15,
-				"model_offset_x": 3,
-				"model_offset_y": 3,
-				# Scaling factor required to convert from real world in meters to surface pixels.
-				"model_scale": 100
-			}
-
-		return properties
-
-	def camera_image_path(self):
-		return self.__image_path
-
-	def export_camera_model(self, json_path):
-		print("Exporting", json_path[0])
-		j = json.dumps(
-				{
-					'surface_model': self.sport,
-					'image_path' : self.__image_path,
-					'model_dimensions': [self.model_width, self.model_height],
-					'model_offset': [self.model_offset_x, self.model_offset_y],
-					'model_scale': self.model_scale,
-					'homography': self.homography.tolist(),
-					'focal_length': self.focal_length,
-					# 'rotation_vector': self.rotation_vector,
-					# 'translation_vector': self.translation_vector,
-					'distortion_matrix': self.distortion_matrix.tolist(),
-					'image_points': self.image_points.tolist(),
-					'model_points': self.model_points.tolist(),
-					# 'camera_point': self.camera_point,
-					'camera_matrix': self.camera_matrix.tolist()
-				},
-				indent=4,
-				separators=(',', ': ')
-			)
-
-		print(j)
-
-		with open(json_path[0]+".json", 'w') as data_file:
-			data_file.write(j)
-
-	def import_camera_model(self, json_path):
-		'''
-		Load the camera data from the JSON file
-		'''
-		print("Importing", json_path[0])
-
-		with open(json_path[0]) as data_file:
-			j = json.load(data_file)
-
-		# Verify path exists:
-		try:
-			image_path = j["image_path"]
-			if os.path.isfile(image_path):
-				vidcap = cv2.VideoCapture(image_path)
-				success, image = vidcap.read()
-				if success:
-					self.set_camera_image_from_image(image, image_path)
-				else:
-					self.set_camera_image_from_file(image_path)
-
-		except KeyError:
-			print(QApplication.topLevelWidgets()[0])
-			image_path = QFileDialog.getOpenFileName(QApplication.topLevelWidgets()[0], "Locate media for calibration",
-													 "/home",
-													 "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
-			if os.path.isfile(image_path[0]):
-				vidcap = cv2.VideoCapture(image_path[0])
-				success, image = vidcap.read()
-
-				if success:
-					self.set_camera_image_from_image(image, image_path[0])
-				else:
-					self.set_camera_image_from_file(image_path[0])
-			else:
-				return
-
-		self.sport = j["surface_model"]
-		self.set_surface_image(self.sport)
-
-		self.model_width = j["model_dimensions"][0]
-		self.model_height = j["model_dimensions"][1]
-		self.model_offset_x = j["model_offset"][0]
-		self.model_offset_y = j["model_offset"][1]
-		self.model_scale = j["model_scale"]
-		self.focal_length = j["focal_length"]
-		# self.rotation_vector = j["rotation_vector"]
-		self.homography = np.array(j["homography"])
-		self.distortion_matrix = np.array(j["distortion_matrix"])
-		self.image_points = np.array(j["image_points"])
-		self.model_points = np.array(j["model_points"])
-		self.camera_matrix = np.array(j["camera_matrix"])
-
-		if "optimal_camera_matrix" in j:
-			self.optimal_camera_matrix = np.array(j["optimal_camera_matrix"])
-		else:
-			self.optimal_camera_matrix = self.camera_matrix
-
-		self.compute_homography()
-		self.estimate_camera_extrinsics()
-
-	def __init__(self, sport="hockey"):
-
-		_start = time.time()
-		self.sport = sport
-		self.set_surface_image(sport)
-		surface_properties = self.surface_properties(sport)
-		print(surface_properties)
-
-		# Model properties
-		self.model_width = surface_properties["model_width"]
-		self.model_height = surface_properties["model_height"]
-		self.model_offset_x = surface_properties["model_offset_x"]
-		self.model_offset_y = surface_properties["model_offset_y"]
-
-		#Scaling factor required to convert from real world in meters to surface pixels.
-		self.model_scale = surface_properties["model_scale"]
-
-		# Camera properties
-		self.homography = np.zeros((3, 3))
-		np.fill_diagonal(self.homography, 1)
-
-		self.focal_length = 0
-		self.camera_matrix = np.zeros((3, 3))
-		self.optimal_camera_matrix = np.zeros((3, 3))
-		self.distortion_matrix = np.zeros((4, 1))
-		self.rotation_vector = None
-		self.translation_vector = None
-
-		# Image correspondences
-		self.image_points = np.empty([0, 2])    #2D coordinates system
-		self.model_points = np.empty([0, 3])     #3D coordinate system
-
-		# Camera extrinsics
-		# TODO - disambiguate this property with the image rotation prop in VK2.
-		self.rotation_vector = None
-		self.translation_vector = None
-		self.camera_point = None
-
-		self.__sourceImage = None
-		self.__image_path = os.path.abspath("./Images/{:s}.png".format(sport))
-		self.set_camera_image_from_file(self.__image_path)
-
-		# Compute the camera matrix, including focal length and distortion.
-		self.update_camera_properties()
-
-		# Compute the homography with the camera matrix, image points and surface points.
-		self.compute_homography()
-		print("self.compute_homography() --> {0}".format(time.time() - start))
-		print("init_main(...): --> {0}".format(time.time() - _start))
- 
-class GraphicsScene(QGraphicsScene):
-	# Create signal exporting QPointF position.
-	SceneClicked = pyqtSignal(QPointF)
-	MouseMoved = pyqtSignal(QPointF)
-
-	def __init__(self, parent=None):
-		QGraphicsScene.__init__(self, parent)
-
-		self.setSceneRect(-100, -100, 200, 200)
-		self.opt = False
-
-	def set_option(self, opt):
-		self.opt = opt
-
-	def mouseMoveEvent(self, event):
-		self.MouseMoved.emit(QPointF(event.scenePos()))
-
-	def mousePressEvent(self, event):
-		# #Emit the signal
-		self.SceneClicked.emit(QPointF(event.scenePos()))
-
-
-class ImageViewer(QGraphicsView):
-	ImageClicked = pyqtSignal(QPoint)
-	MouseMoved = pyqtSignal(QPoint)
-
-	def __init__(self, parent):
-		start = time.time()
-		super(ImageViewer, self).__init__(parent)
-		self.zoom = 0
-		self.empty = True
-		self.scene = GraphicsScene()
-		self.image = QGraphicsPixmapItem()
-		self.scene.addItem(self.image)
-		self.setScene(self.scene)
-		self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-		self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
-		self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-		self.setFrameShape(QFrame.NoFrame)
-		self.should_auto_scale = True
-
-		# Connect the signal emitted by the GraphicsScene mousePressEvent to relay event
-		self.scene.SceneClicked.connect(self.scene_clicked)
-		self.scene.MouseMoved.connect(self.mouse_moved)
-
-		print("init_ImageViewer(...): --> {0}".format(time.time() - start))
-
-	def has_image(self):
-		return not self.empty
-
-	def set_cross_cursor(self, state = False):
-		if state:
-			self.setCursor(Qt.CrossCursor)
-		else:
-			self.setCursor(Qt.ArrowCursor)
-
-	def fitInView(self, *__args):
-
-		rect = QRectF(self.image.pixmap().rect())
-		if not rect.isNull():
-			self.setSceneRect(rect)
-			if self.has_image():
-				unity = self.transform().mapRect(QRectF(0, 0, 1, 1))
-				self.scale(1 / unity.width(), 1 / unity.height())
-				viewrect = self.viewport().rect()
-				scenerect = self.transform().mapRect(rect)
-				factor = min(viewrect.width() / scenerect.width(),
-							 viewrect.height() / scenerect.height())
-				self.scale(factor, factor)
-			self.zoom = 0
-
-	def set_image(self, pixmap=None):
-		self.zoom = 0
-		if pixmap and not pixmap.isNull():
-			self.empty = False
-			self.setDragMode(QGraphicsView.NoDrag)
-			self.image.setPixmap(pixmap)
-		else:
-			self.empty = True
-			self.setDragMode(QGraphicsView.NoDrag)
-			self.image.setPixmap(QPixmap())
-
-	def wheelEvent(self, event):
-		if self.has_image():
-			if event.angleDelta().y() > 0:
-				factor = 1.1
-				self.zoom += 1
-			else:
-				factor = 0.9
-				self.zoom -= 1
-
-			if self.zoom > 0:
-				self.scale(factor, factor)
-			elif self.zoom == 0:
-				pass
-			else:
-				self.zoom = 0
-
-	def toggleDragMode(self, forceNoDrag = False):
-
-		if forceNoDrag:
-			self.setDragMode(QGraphicsView.NoDrag)
-
-		else:
-
-			if self.dragMode() == QGraphicsView.ScrollHandDrag:
-				self.setDragMode(QGraphicsView.NoDrag)
-			else:
-				self.setDragMode(QGraphicsView.ScrollHandDrag)
-
-	# def toggleCrossCursor(self):
-	#     if self.cursor() == QGraphicsView.CrossCursor:
-	#         self.setDragMode(QGraphicsView.NoDrag)
-	#     else:
-	#         self.setDragMode(QGraphicsView.CrossCursor)
-
-	def mouseMoveEvent(self, event):
-		super(ImageViewer, self).mouseMoveEvent(event)
-
-	def mousePressEvent(self, event):
-		# if event.key() == Qt.Key_Space:
-		#   super(ImageViewer, self).mousePressEvent(event)
-		self.toggleDragMode()
-		super(ImageViewer, self).mousePressEvent(event)
-
-	def mouseReleaseEvent(self, event):
-		self.toggleDragMode(forceNoDrag=True)
-		super(ImageViewer, self).mouseReleaseEvent(event)
-
-	def mouse_moved(self, pos):
-		self.MouseMoved.emit(pos.toPoint())
-
-	def scene_clicked(self, pos):
-		# Pass local (scene) coordinates to ImageClicked()
-		print("scene_clicked")
-		if self.image.isUnderMouse():
-			self.ImageClicked.emit(pos.toPoint())
-
-
-class MyPopup(QWidget):
-	def __init__(self, model):
-		QWidget.__init__(self)
-		self.camera_model = model
-		self.setWindowTitle("Correspondences")
-		# Arrange layout
-		popup_Correspondences = QVBoxLayout(self)
-		self.listCorrespondences = QListWidget()
-		popup_Correspondences.addWidget(self.listCorrespondences)
-
-	def update_items(self):
-		self.listCorrespondences.clear()
-
-		if self.camera_model.image_points.size > 0:
-
-			print("self.camera_model.image_points", self.camera_model.image_points)
-			print("self.camera_model.model_points", self.camera_model.model_points)
-
-			#NB: model_points includes the z-axis.  Ignore that for now..
-			two_d_model_points = self.camera_model.model_points[...,:2]
-			assert self.camera_model.image_points.size == two_d_model_points.size
-
-			print("two_d_model_points", two_d_model_points)
-
-			for idx in range(0, two_d_model_points.shape[0]):
-				print(idx)
-				s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
-					self.camera_model.image_points[idx][0],
-					self.camera_model.image_points[idx][1],
-					two_d_model_points[idx][0],
-					two_d_model_points[idx][1])
-
-				self.listCorrespondences.addItem(s)
-
-
-class Window(QWidget):
-	def __init__(self):
-		start = time.time()
-		super(Window, self).__init__()
-		self.setWindowTitle("Camera Calibration Interface")
-
-		self.viewer = ImageViewer(self)
-		self.surface = ImageViewer(self)
-		# 'Load image' button
-		self.btnLoad = QToolButton(self)
-		self.btnLoad.setText('Load image')
-		self.btnLoad.clicked.connect(self.loadImage)
-
-		self.cboSurfaces = QComboBox()
-		for s in ("issia", "ncaacourt", "ncaafield", "netball", "hockey", "rugby", "tennis", "pool"):
-			self.cboSurfaces.addItem(s)
-		self.cboSurfaces.setCurrentText("tennis")
-
-		# Apply camera model
-		self.cboSurfaces.currentIndexChanged.connect(self.setCameraModel)
-
-		# Compute new homography from points.
-		self.btnComputeHomograhy = QToolButton(self)
-		self.btnComputeHomograhy.setText('Compute Homograhy')
-		self.btnComputeHomograhy.clicked.connect(self.compute_homography)
-
-		# Correspondence management
-		self.btnShowCorrespondences = QToolButton(self)
-		self.btnShowCorrespondences.setText('Show Correspondences')
-		self.btnShowCorrespondences.clicked.connect(self.showCorrespondences)
-
-		self.btnRemoveAllCorrespondences = QToolButton(self)
-		self.btnRemoveAllCorrespondences.setText('Clear All Correspondences')
-		self.btnRemoveAllCorrespondences.clicked.connect(self.clearCorrespondences)
-
-		# Button to change from drag/pan to getting pixel info
-		self.btnAddCorrespondences = QToolButton(self)
-		self.btnAddCorrespondences.setText('Add Correspondence')
-		self.btnAddCorrespondences.clicked.connect(self.addCorrespondences)
-
-		# Checkable button to visualise vertical projections
-		self.btnShowGridVerticals = QPushButton(self)
-		self.btnShowGridVerticals.setText('Vertical Projections')
-		self.btnShowGridVerticals.setCheckable(True)
-		self.btnShowGridVerticals.clicked.connect(self.vertical_projections)
-
-		# Switch to OMB mode
-		self.OMB_mode = False
-		self.btnOMBmode = QPushButton(self)
-		self.btnOMBmode.setText('OMB')
-		self.btnOMBmode.setCheckable(True)
-		self.btnOMBmode.setChecked(self.OMB_mode)
-		self.btnOMBmode.clicked.connect(self.enable_OMB)
-
-		# Crop FOV slider
-		self.cropFOV = 5
-		self.sliderCropFOV = QSlider(Qt.Horizontal)
-		self.sliderCropFOV.setMinimum(3)
-		self.sliderCropFOV.setMaximum(30)
-		self.sliderCropFOV.setValue(self.cropFOV)
-		self.sliderCropFOV.setTickPosition(QSlider.TicksBelow)
-		self.sliderCropFOV.setTickInterval(1)
-		self.sliderCropFOV.valueChanged.connect(self.updateCropFOV)
-
-		# Show 3d world calibration
-		self.show_cal_markers = True
-		self.chkShow3dCal = QCheckBox(self)
-		self.chkShow3dCal.setChecked(self.show_cal_markers)
-		self.chkShow3dCal.setText('Show Calibration Markers')
-		self.chkShow3dCal.clicked.connect(self.set_cal_markers)
-
-		# Serialise camera properties & transformation matrix
-		self.btnSerialiseCameraProperties = QToolButton(self)
-		self.btnSerialiseCameraProperties.setText('Save Camera Properties')
-		self.btnSerialiseCameraProperties.clicked.connect(self.save_camera_properties)
-
-		# Load camera properties & transformation matrix
-		self.btnLoadCameraProperties = QToolButton(self)
-		self.btnLoadCameraProperties.setText('Load Camera Properties')
-		self.btnLoadCameraProperties.clicked.connect(self.load_camera_properties)
-
-		# Re-centre viewpoints
-		self.btnFitInView = QToolButton(self)
-		self.btnFitInView.setText('Re-Center Viewpoints')
-		self.btnFitInView.clicked.connect(self.center_views)
-
-		# Focal length slider
-		self.sliderFocalLength = QSlider(Qt.Horizontal)
-		self.sliderFocalLength.setMinimum(0)
-		self.sliderFocalLength.setMaximum(200)
-		self.sliderFocalLength.setValue(10)
-		self.sliderFocalLength.setTickPosition(QSlider.TicksBelow)
-		self.sliderFocalLength.setTickInterval(20)
-		self.sliderFocalLength.valueChanged.connect(self.updateFocalLength)
-		# Distortion slider
-		self.sliderDistortion = QSlider(Qt.Horizontal)
-		self.sliderDistortion.setMinimum(0)
-		self.sliderDistortion.setMaximum(30000)
-		self.sliderDistortion.setValue(100)
-		self.sliderDistortion.setTickPosition(QSlider.TicksBelow)
-		self.sliderDistortion.setTickInterval(3000)
-		self.sliderDistortion.valueChanged.connect(self.updateDistortionEstimate)
-
-		self.viewer.ImageClicked.connect(self.ImageClicked)
-		self.surface.ImageClicked.connect(self.SurfaceClicked)
-		self.viewer.MouseMoved.connect(self.ImageMouseMoved)
-		self.last_image_pairs = {0, 0}
-		self.last_surface_pairs = {0, 0}
-		self.addingCorrespondencesEnabled = False
-
-		self.show_vertical_projections = False
-
-		self.camera_model = CameraModel(self.cboSurfaces.currentText())
-
-		# Arrange layout
-		VBlayout = QVBoxLayout(self)
-		HB_images_layout = QHBoxLayout()
-		HB_images_layout.addWidget(self.viewer)
-		HB_images_layout.addWidget(self.surface)
-		VBlayout.addLayout(HB_images_layout)
-
-		HBlayout = QHBoxLayout()
-		HBlayout.setAlignment(Qt.AlignLeft)
-		HBlayout.addWidget(self.btnLoad)
-		HBlayout.addWidget(self.btnSerialiseCameraProperties)
-		HBlayout.addWidget(self.btnLoadCameraProperties)
-		HBlayout.addWidget(self.cboSurfaces)
-		HBlayout.addWidget(self.sliderFocalLength)
-		HBlayout.addWidget(self.sliderDistortion)
-		HBlayout.addWidget(self.btnComputeHomograhy)
-		VBlayout.addLayout(HBlayout)
-
-		HB_Correspondences = QHBoxLayout()
-		HB_Correspondences.setAlignment(Qt.AlignLeft)
-		HB_Correspondences.addWidget(self.btnShowCorrespondences)
-		HB_Correspondences.addWidget(self.btnAddCorrespondences)
-		HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
-		HB_Correspondences.addWidget(self.btnFitInView)
-		HB_Correspondences.addWidget(self.btnShowGridVerticals)
-		HB_Correspondences.addWidget(self.btnOMBmode)
-		HB_Correspondences.addWidget(self.chkShow3dCal)
-		HB_Correspondences.addWidget(self.sliderCropFOV)
-
-		VBlayout.addLayout(HB_Correspondences)
-
-		self.correspondencesWidget = MyPopup(self.camera_model)
-
-		if False:
-			self.camera_model.set_camera_image_from_file("/Users/stuartmorgan/Dropbox/_py/qtpy/left01.jpg")
-			self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
-
-		print("Window(QWidget): --> {0}".format(time.time() - start))
-
-	def reset_controls(self):
-		# Abort corresponances
-		self.last_image_pairs = {0, 0}
-		self.last_surface_pairs = {0, 0}
-		self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-		self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-		self.btnAddCorrespondences.setStyleSheet("background-color: None")
-		self.addingCorrespondencesEnabled = False
-		self.viewer.setDragMode(QGraphicsView.NoDrag)
-		self.surface.setDragMode(QGraphicsView.NoDrag)
-
-	# def mousePressEvent(self, event):
-	#     print("Windows Mouse Event")
-	#     # return event
-
-	def keyPressEvent(self, event):
-		# print("down")
-		if not event.isAutoRepeat():
-			if event.key() == Qt.Key_Escape:
-				# Abort corresponances
-				self.reset_controls()
-				return
-
-			if self.viewer.empty or self.surface.empty:
-				return
-
-		# else:
-		# if event.key() == Qt.Key_Space:
-		#     self.viewer.set_cross_cursor(True)
-		#     self.surface.set_cross_cursor(True)
-			#
-			# self.viewer.setCursor(Qt.CrossCursor)
-			# self.surface.setCursor(Qt.CrossCursor)
-
-
-	def keyReleaseEvent(self, event):
-		pass
-		# if event.key() == Qt.Key_Space:
-		#     self.viewer.set_cross_cursor(False)
-		#     self.surface.set_cross_cursor(False)
-
-		# if not event.isAutoRepeat():
-		#     if event.key() == Qt.Key_Space:
-		#         self.viewer.toggleDragMode()
-		#         self.surface.toggleDragMode()
-
-	def loadSurface(self, sport):
-
-		start = time.time()
-		self.surface.set_image(self.camera_model.surface_image())
-		self.camera_model.set_surface_image(sport)
-		self.correspondencesWidget.update_items()
-		print("loadSurface(self, sport): --> {0}".format(time.time() - start))
-
-	def loadImage(self):
-
-		image_path = QFileDialog.getOpenFileName(self, "Open Image",
-												"/home",
-												"Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
-
-		vidcap = cv2.VideoCapture(image_path[0])
-		success, image = vidcap.read()
-
-		if success:
-			self.camera_model.set_camera_image_from_image(image, image_path[0])
-			print("Loaded image: {0}".format(image_path[0]))
-		else:
-			self.camera_model.set_camera_image_from_file(image_path[0])
-
-		self.viewer.set_image(QPixmap(self.camera_model.undistorted_camera_image_qimage()))
-		self.updateDisplays()
-
-
-	def setCameraModel(self):
-
-		self.camera_model = CameraModel(sport=self.cboSurfaces.currentText())
-		self.loadSurface(self.cboSurfaces.currentText())
-
-	def pixInfo(self):
-		# self.viewer.toggleDragMode()
-		if self.addingCorrespondencesEnabled:
-			self.viewer.setBackgroundBrush(QBrush(QColor(30, 100, 30)))
-			self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-
-		def draw_image_space_detection(self, pos):
-			# Render reference point annotation.
-			r = 5
-			yellow = Qt.yellow
-			pen = QPen(Qt.red)
-			brush = QBrush(QColor(255, 255, 0, 100))
-
-			poly = QPolygonF()
-			x, y = pos.x(), pos.y()
-			poly_points = np.array([])
-
-	#         #
-	#         # # Compute inverse of 2D homography
-	#         # print("**", homography)
-	#         #
-	#         val, H = cv2.invert(self.homography)
-	#         #
-	#         for i in range(1, 33):
-	#             # These points are in world coordinates.
-	#             _x = x + (r * math.cos(2 * math.pi * i / 32))
-	#             _y = y + (r * math.sin(2 * math.pi * i / 32))
-	#
-	#                 # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-	#                 # ground_point = cv2.perspectiveTransform(ground_point, H)
-	#                 # ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
-	#                 # (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-	#                 # # Render vertical
-	#                 # im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
-	#
-	#
-	#             #Convert to image coordinates.
-	#             axis = np.float32([[_x, _y]]).reshape(-1,2)
-	#             imgpts = cv2.perspectiveTransform(axis, H)
-	#
-	#             #Draw the points in a circle in perspective.
-	#             (xx, yy) = tuple(imgpts[0].ravel())
-	#
-	#             poly_points = np.append(poly_points, [xx, yy])
-	#
-	#             _p = QPointF(xx,yy)
-	#             poly.append(QPointF(xx,yy))
-	#
-	#         self.viewer.scene.addPolygon(poly, pen, brush)
-	#
-	#         #Render image-space point
-	#         axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
-	#         (imgpts, jacobian) = cv2.projectPoints(axis,
-	#                                                self._myRotationVector,
-	#                                                self._myTranslationVector,
-	#                                                self._myCameraMatrix,
-	#                                                self._myDistortionMatrix)
-	#
-	#         (x, y) = tuple(imgpts[0].ravel())
-	#         (xx, yy) = tuple(imgpts[1].ravel())
-	#         self.viewer.scene.addLine(xx, yy, x, y, pen)
-
-	def ImageClicked(self, pos):
-
-		print("ImageClicked")
-
-		#Is the control key pressed?
-		if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
-			# self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
-			print("Image Points:", pos.x(), pos.y())
-			#Draw point
-			pen = QPen(Qt.red)
-			brush = QBrush(Qt.yellow)
-			self.viewer.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
-			# self.viewer.toggleDragMode()
-			self.last_image_pairs = (pos.x(), pos.y())
-			# self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
-			self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-			self.surface.setBackgroundBrush(QBrush(QColor(30, 100, 30)))
-
-			self.viewer.set_cross_cursor(False)
-			self.surface.set_cross_cursor(True)
-
-	def ImageMouseMoved(self, pos):
-		if self.OMB_mode:
-			# print("{0}".format(pos))
-			crop = {"image_point": (pos.x(), pos.y())}
-			print(crop)
-			self.updateDisplays(crop)
-			# self.OMB_mode = False
-			# self.btnOMBmode.setChecked(False)
-
-	def SurfaceClicked(self, pos):
-		print("SurfaceClicked", pos)
-		if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
-			# self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
-
-			#Draw point
-			pen = QPen(Qt.red)
-			brush = QBrush(Qt.yellow)
-			self.surface.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
-			# self.surface.toggleDragMode()
-			self.last_surface_pairs = (pos.x(), pos.y())    #tuple
-			# self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
-			self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-			self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-			# print("_mylastImagePairs:", self.last_image_pairs)
-			# print("_mylastSurfacePairs:", self.last_surface_pairs)
-			#
-			# s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
-			#         self.last_image_pairs[0],
-			#         self.last_image_pairs[1],
-			#         self.last_surface_pairs[0],
-			#         self.last_surface_pairs[1])
-
-			print("## EXISTING PAIRS ##")
-			print(self.camera_model.image_points)
-			print(self.camera_model.model_points)
-			print(self.camera_model.model_points.shape)
-
-			print("## LAST PAIRS ##")
-			print(self.last_surface_pairs)
-			# print(self.last_surface_pairs.shape)
-
-			self.camera_model.image_points = np.append(self.camera_model.image_points,
-													   np.array([(self.last_image_pairs[0],
-																  self.last_image_pairs[1])], dtype='float32'), axis=0)
-
-			self.camera_model.model_points = np.append(self.camera_model.model_points,
-													   np.array([(self.last_surface_pairs[0],
-																  self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
-
-		   #Save correspondences
-			self.reset_controls()
-
-			self.viewer.set_cross_cursor(False)
-			self.surface.set_cross_cursor(False)
-
-			self.correspondencesWidget.update_items()
-
-	def addCorrespondences(self):
-		#1. Highlight image space.
-		if not self.addingCorrespondencesEnabled:
-			self.addingCorrespondencesEnabled = True
-			self.btnAddCorrespondences.setStyleSheet("background-color: green")
-			self.viewer.set_cross_cursor(True)
-			self.surface.set_cross_cursor(False)
-
-	def showCorrespondences(self):
-
-		if not self.correspondencesWidget.isVisible():
-			self.correspondencesWidget = MyPopup(self.camera_model)
-			self.correspondencesWidget.setGeometry(QRect(100, 100, 400, 200))
-			self.correspondencesWidget.show()
-
-		if not self.correspondencesWidget.isActiveWindow():
-			self.correspondencesWidget.activateWindow()
-
-		self.correspondencesWidget.update_items()
-
-	def clearCorrespondences(self):
-		self.correspondencesWidget.activateWindow()
-		self.camera_model.remove_correspondences()
-		self.correspondencesWidget.update_items()
-		self.updateDisplays()
-
-	def compute_homography(self):
-		self.camera_model.compute_homography()
-		self.updateDisplays()
-
-	def vertical_projections(self):
-		self.show_vertical_projections = self.btnShowGridVerticals.isChecked()
-		self.updateDisplays()
-
-	def enable_OMB(self):
-		self.OMB_mode = self.btnOMBmode.isChecked()
-		# self.updateDisplays()
-
-	def set_cal_markers(self):
-		self.show_cal_markers = self.chkShow3dCal.isChecked()
-		self.updateDisplays()
-
-	def doCheckerboardCalibration(self):
-
-		import numpy as np
-		import cv2
-		import glob
-
-		if self.camera_model:
-
-			model = self.camera_model
-
-			CHECKERBOARD = (9, 7)
-
-			# termination criteria
-			subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
-			objp = np.zeros((CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
-			objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
-
-			# Arrays to store object points and image points from all the images.
-			objpoints = []  # 3d point in real world space
-			imgpoints = []  # 2d points in image plane.
-
-			img = model.distorted_camera_image_cv2()
-			gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-			# Find the chess board corners
-			ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, None)
-
-			# If found, add object points, image points (after refining them)
-			if ret:
-				objpoints.append(objp)
-				corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), subpix_criteria)
-				imgpoints.append(corners)
-				cv2.drawChessboardCorners(img, CHECKERBOARD, corners2, ret)
-
-			else:
-				return
-
-			height, width, channel = img.shape
-			img_size = (img.shape[1], img.shape[0])
-
-			ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
-			newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), 1, (width, height))
-
-			# Update the camera properties with updated camera intrinsics.
-			model.update_camera_properties(dist, mtx, newcameramtx)
-
-			self.updateDisplays()
-
-	def save_camera_properties(self):
-
-		if self.camera_model:
-			path = QFileDialog.getSaveFileName(self, 'Save Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
-			if path[0] != "":
-				self.camera_model.export_camera_model(path)
-
-	def load_camera_properties(self):
-
-		path = QFileDialog.getOpenFileName(self, 'Load Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
-		if path[0] != "":
-			self.camera_model.import_camera_model(path)
-			# self.cboSurfaces.setCurrentText(self.camera_model.sport)
-			self.updateDisplays()
-			self.correspondencesWidget.update_items()
-
-		self.center_views()
-
-	def center_views(self):
-		self.surface.fitInView()
-		self.viewer.fitInView()
-
-	def draw(self, img, corners, imgpts):
-		corner = tuple(corners[0].ravel())
-		img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
-		img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
-		img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
-		return img
-
-	def updateFocalLength(self):
-		self.camera_model.focal_length = self.sliderFocalLength.value()
-		print("Updating focal length:{0}".format(self.camera_model.focal_length ))
-		# Update the camera matrix with new focal length.
-		self.camera_model.update_camera_properties()
-
-		self.updateDisplays()
-
-	def updateCropFOV(self):
-		self.cropFOV = self.sliderCropFOV.value()
-
-	def updateDistortionEstimate(self):
-		self.camera_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5
-		print("Updating distortion parameter: {0}".format(self.camera_model.distortion_matrix[0]))
-		self.updateDisplays()
-
-	def updateDisplays(self, crop=None):
-
-		if self.camera_model:
-
-			model = self.camera_model
-
-			# Get model sample image
-			start = time.time()
-			im_src = model.undistorted_camera_image_cv2()
-			print("model.undistorted_camera_image_cv2() --> {0}".format(time.time() - start))
-
-			# Only update the surface overlay if there is an existing homography
-			if not model.is_homography_identity():
-
-				start = time.time()
-				im_out = cv2.warpPerspective(im_src,
-											 model.homography,
-											 (model.surface_dimensions.width(),
-											  model.surface_dimensions.height()))
-				print("cv2.warpPerspective() --> {0}".format(time.time() - start))
-
-				start = time.time()
-
-				print("render points --> {0}".format(time.time() - start))
-
-				# Display undistored images.
-				height, width, channel = im_out.shape
-				bytesPerLine = 3 * width
-				alpha = 0.5
-				beta = (1.0 - alpha)
-
-				# Composite image
-				start = time.time()
-				cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
-				src1 = model.surface_image_cv2()
-				dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
-				print("cv2.addWeighted() --> {0}".format(time.time() - start))
-
-				# Set composite image to surface model
-				qImg = QImage(dst.data, width, height, bytesPerLine, QImage.Format_RGB888)
-				self.surface.set_image(QPixmap(qImg))
-
-				self.viewer.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-				self.surface.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-
-				if crop is not None:
-					# print(crop)
-					_x, _y = crop["image_point"]
-					__x, __y = model.camera_point
-
-					# print(_x, _y)
-					fov = self.cropFOV
-					_x1, _y1 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=-fov)
-					_x2, _y2 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=fov)
-
-					width = math.sqrt(pow(_x2 - _x1, 2) + pow(_y2 - _y1, 2))
-					# print(width)
-					from numpy import ones, vstack
-					from numpy.linalg import lstsq
-					points = [(__x, __y), (_x, _y)]
-					x_coords, y_coords = zip(*points)
-					A = vstack([x_coords, ones(len(x_coords))]).T
-					m, c = lstsq(A, y_coords)[0]
-					# print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
-
-					# Extrapolate
-					y = _y - int(width*0.75) # 4:3 format
-					x = int((y-c)/m)
-					im_src = cv2.circle(im_src, (x, y), 5, (255, 255, 255), 2)
-
-					_x3, _y3 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=-fov)
-					_x4, _y4 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=fov)
-
-					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
-									  (int(_x2), int(_y2)),
-									  (0, 0, 255), 3)
-
-					im_src = cv2.line(im_src, (int(_x3), int(_y3)),
-									  (int(_x4), int(_y4)),
-									  (0, 0, 255), 3)
-
-					im_src = cv2.line(im_src, (int(_x2), int(_y2)),
-									  (int(_x4), int(_y4)),
-									  (0, 0, 255), 3)
-
-					im_src = cv2.line(im_src, (int(_x1), int(_y1)),
-									  (int(_x3), int(_y3)),
-									  (0, 0, 255), 3)
-
-					image_points = np.float32([[_x1, _y1], [_x2, _y2], [_x3, _y3], [_x4, _y4]])
-					model_points = np.float32([[0,480], [720,480], [0,0], [720,0]])
-
-					homography, mask = cv2.findHomography(image_points, model_points)
-
-					im_crop = cv2.warpPerspective(im_src, homography, (720, 480))
-
-					# Display undistored images.
-					height, width, channel = im_crop.shape
-					bytesPerLine = 3 * width
-
-					cv2.cvtColor(im_crop, cv2.COLOR_BGR2RGB, im_crop)
-
-					# Set composite image to surface model
-					qImg = QImage(im_crop.data, width, height, bytesPerLine, QImage.Format_RGB888)
-					self.surface.set_image(QPixmap(qImg))
-
-				if self.show_cal_markers:
-
-					if self.show_vertical_projections:
-						thickness = 1
-
-						world_points = np.zeros((model.model_width * model.model_height, 3), np.float32)
-						world_points[:, :2] = np.mgrid[model.model_offset_x:model.model_width + model.model_offset_x,
-											  model.model_offset_y:model.model_height + model.model_offset_y].T.reshape(
-							-1, 2) * model.model_scale
-
-						for world_point in world_points:
-							# Render vertical
-							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
-							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], -model.model_scale*2]]], dtype='float32')
-							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-							im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0,255,255), thickness)
-					else:
-						thickness = 3
-
-						for world_point in model.model_points:
-							unit_vector = -model.model_scale * 1.8
-
-							# Render y-axis
-							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
-							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1]+unit_vector, 0]]], dtype='float32')
-							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-
-							int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
-							int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
-							im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 255, 0), thickness)
-
-							# Render x-axis
-							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
-							theoretical_3d_model_point = np.array([[[world_point[0]+unit_vector, world_point[1], 0]]], dtype='float32')
-							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-
-							int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
-							int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
-							im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 0, 255), thickness)
-
-							# Render vertical
-							model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-							projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
-							theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], unit_vector]]], dtype='float32')
-							projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
-
-							int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
-							int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
-							im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point,  (255, 0, 0), thickness)
-
-					# if not cv2.imwrite('output.png',im_src):
-					#     print("Writing failed")
-
-			# Display images
-			height, width, channel = im_src.shape
-			bytesPerLine = 3 * width
-
-			# Convert to RGB for QImage.
-			cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
-			qImg = QImage(im_src.data, width, height, bytesPerLine, QImage.Format_RGB888)
-			self.viewer.set_image(QPixmap(qImg))
-
-		else:
-			print("Warning: No camera model has been initialised.")
+        else:
+
+            h, w = self.__sourceImage.shape[:2]
+            fx = 0.5 + self.focal_length / 50.0
+            self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
+                                             [0, fx * w, 0.5 * (h - 1)],
+                                             [0.0, 0.0, 1.0]])
+
+        if not with_optimal_camera_matrix is None:
+            self.optimal_camera_matrix = with_optimal_camera_matrix
+        else:
+            self.optimal_camera_matrix = self.camera_matrix
+
+        # print("Updating Camera Matrix:\n {0}".format(self.focal_length, self.camera_matrix))
+        # print("Updating Optimal Camera Matrix:\n{0}".format(self.optimal_camera_matrix))
+        # print("Updating Camera Distortion Matrix:\n{0}".format(self.distortion_matrix))
+        print(self.camera_matrix)
+        print("update_camera_properties(...): --> {0}".format(time.time() - start))
+
+    def surface_image(self):
+         return QtGui.QPixmap("./Surfaces/{:s}.png".format(self.sport))
+
+    def set_surface_image(self, sport):
+
+        start = time.time()
+        self.sport = sport
+        px = QtGui.QPixmap("./Surfaces/{:s}.png".format(sport))
+        self.surface_dimensions = px.size()
+        # print("Setting surface:", sport, self.surface_dimensions)
+        print("set_surface_image(...): --> {0}".format(time.time() - start))
+
+        return px
+
+    def surface_image_cv2(self):
+        start = time.time()
+        img = cv2.imread("./Surfaces/{:s}.png".format(self.sport))
+        print("surface_image_cv2(...): --> {0}".format(time.time() - start))
+        return img
+
+    def set_camera_image_from_file(self, image_path):
+        # NB We set the camera image as a cv2 image (numpy array).
+        start = time.time()
+        self.__sourceImage = cv2.imread(image_path)
+        self.__image_path = image_path
+        print("set_camera_image_from_file(...): --> {0}".format(time.time() - start))
+
+    def set_camera_image_from_image(self, image, image_path):
+        self.__sourceImage = image
+        self.__image_path = image_path
+
+    def distorted_camera_image_cv2(self):
+
+        return self.__sourceImage
+
+
+    def undistorted_camera_image_cv2(self):
+
+        start = time.time()
+        if self.__sourceImage is None:
+            print("WTF- WE DON'T HAVE A SOURCE IMAGE!")
+            self.__sourceImage = np.zeros((480, 640, 3), np.uint8)
+
+        # img = cv2.undistort(self.distorted_camera_image_cv2(),
+        #                     self.camera_matrix,
+        #                     self.distortion_matrix,
+        #                     None,
+        #                     self.optimal_camera_matrix)
+
+        # img = cv2.fisheye.undistortImage(self.__sourceImage,
+        #                        self.camera_matrix,
+        #                        self.distortion_matrix)
+
+        return cv2.undistort(self.distorted_camera_image_cv2(), self.camera_matrix, self.distortion_matrix, None, self.optimal_camera_matrix)
+
+    def distorted_camera_image_qimage(self):
+        # NB But we need to convert cv2 to QImage for display in qt widgets..
+
+        start = time.time()
+        cvImg = self.distorted_camera_image_cv2()
+        height, width, channel = cvImg.shape
+        bytesPerLine = 3 * width
+        cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
+        qimg =  QtGui.QImage(cvImg.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+        print("distorted_camera_image_QtGui.QImage(...): --> {0}".format(time.time() - start))
+
+        return qimg
+
+    def undistorted_camera_image_qimage(self):
+
+        cvImg = self.undistorted_camera_image_cv2()
+        height, width, channel = cvImg.shape
+        bytesPerLine = 3 * width
+        cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB, cvImg)
+        return QtGui.QImage(cvImg.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+
+
+    def remove_correspondences(self):
+
+        self.image_points = np.empty([0, 2])  # 2D coordinates system
+        self.model_points = np.empty([0, 3])  # 3D coordinate system
+        self.homography = np.zeros((3, 3))
+        np.fill_diagonal(self.homography, 1)
+
+    def reset(self):
+        # Remove previous values
+        self.remove_correspondences()
+        self.focal_length = 0
+        self.camera_matrix = np.zeros((3, 3))
+        self.optimal_camera_matrix = np.zeros((3, 3))
+        self.distortion_matrix = np.zeros((4, 1))
+        self.rotation_vector = None
+        self.translation_vector = None
+
+    def surface_properties(self, sport):
+        # Return a dictionary of values for each sport.
+        properties = {
+            "model_width": 50,
+            "model_height": 25,
+            "model_offset_x": 1,
+            "model_offset_y": 1,
+            # Scaling factor required to convert from real world in meters to surface pixels.
+            "model_scale": 10
+        }
+
+        if sport == "pool":
+            return {
+                "model_width": 50,
+                "model_height": 25,
+                "model_offset_x": 1,
+                "model_offset_y": 1,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 10
+            }
+
+        if sport == "tennis":
+            return {
+                "model_width": 30,
+                "model_height": 15,
+                "model_offset_x": 1,
+                "model_offset_y": 1,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 50
+            }
+
+        if sport == "hockey":
+            return {
+                "model_width": 91,
+                "model_height": 55,
+                "model_offset_x": 5,
+                "model_offset_y": 5,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 10
+            }
+
+        if sport == "netball":
+            return {
+                "model_width": 31,
+                "model_height": 15,
+                "model_offset_x": 3,
+                "model_offset_y": 3,
+                # Scaling factor required to convert from real world in meters to surface pixels.
+                "model_scale": 100
+            }
+
+        return properties
+
+    def camera_image_path(self):
+        return self.__image_path
+
+    def export_camera_model(self, json_path):
+        print("Exporting", json_path[0])
+        j = json.dumps(
+                {
+                    'surface_model': self.sport,
+                    'image_path' : self.__image_path,
+                    'model_dimensions': [self.model_width, self.model_height],
+                    'model_offset': [self.model_offset_x, self.model_offset_y],
+                    'model_scale': self.model_scale,
+                    'homography': self.homography.tolist(),
+                    'focal_length': self.focal_length,
+                    # 'rotation_vector': self.rotation_vector,
+                    # 'translation_vector': self.translation_vector,
+                    'distortion_matrix': self.distortion_matrix.tolist(),
+                    'image_points': self.image_points.tolist(),
+                    'model_points': self.model_points.tolist(),
+                    # 'camera_point': self.camera_point,
+                    'camera_matrix': self.camera_matrix.tolist()
+                },
+                indent=4,
+                separators=(',', ': ')
+            )
+
+        print(j)
+
+        with open(json_path[0]+".json", 'w') as data_file:
+            data_file.write(j)
+
+    def import_camera_model(self, json_path):
+        '''
+        Load the camera data from the JSON file
+        '''
+        print("Importing", json_path[0])
+
+        with open(json_path[0]) as data_file:
+            j = json.load(data_file)
+
+        # Verify path exists:
+        try:
+            image_path = j["image_path"]
+            if os.path.isfile(image_path):
+                vidcap = cv2.VideoCapture(image_path)
+                success, image = vidcap.read()
+                if success:
+                    self.set_camera_image_from_image(image, image_path)
+                else:
+                    self.set_camera_image_from_file(image_path)
+
+        except KeyError:
+            print(QtWidgets.QtWidgets.QApplication.topLevelWidgets()[0])
+            image_path = QtWidgets.QFileDialog.getOpenFileName(QtWidgets.QtWidgets.QApplication.topLevelWidgets()[0], "Locate media for calibration",
+                                                     "/home",
+                                                     "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
+            if os.path.isfile(image_path[0]):
+                vidcap = cv2.VideoCapture(image_path[0])
+                success, image = vidcap.read()
+
+                if success:
+                    self.set_camera_image_from_image(image, image_path[0])
+                else:
+                    self.set_camera_image_from_file(image_path[0])
+            else:
+                return
+
+        self.sport = j["surface_model"]
+        self.set_surface_image(self.sport)
+
+        self.model_width = j["model_dimensions"][0]
+        self.model_height = j["model_dimensions"][1]
+        self.model_offset_x = j["model_offset"][0]
+        self.model_offset_y = j["model_offset"][1]
+        self.model_scale = j["model_scale"]
+        self.focal_length = j["focal_length"]
+        # self.rotation_vector = j["rotation_vector"]
+        self.homography = np.array(j["homography"])
+        self.distortion_matrix = np.array(j["distortion_matrix"])
+        self.image_points = np.array(j["image_points"])
+        self.model_points = np.array(j["model_points"])
+        self.camera_matrix = np.array(j["camera_matrix"])
+
+        if "optimal_camera_matrix" in j:
+            self.optimal_camera_matrix = np.array(j["optimal_camera_matrix"])
+        else:
+            self.optimal_camera_matrix = self.camera_matrix
+
+        self.compute_homography()
+        self.estimate_camera_extrinsics()
+
+    def __init__(self, sport="hockey"):
+
+        _start = time.time()
+        self.sport = sport
+        self.set_surface_image(sport)
+        surface_properties = self.surface_properties(sport)
+        print(surface_properties)
+
+        # Model properties
+        self.model_width = surface_properties["model_width"]
+        self.model_height = surface_properties["model_height"]
+        self.model_offset_x = surface_properties["model_offset_x"]
+        self.model_offset_y = surface_properties["model_offset_y"]
+
+        #Scaling factor required to convert from real world in meters to surface pixels.
+        self.model_scale = surface_properties["model_scale"]
+
+        # Camera properties
+        self.homography = np.zeros((3, 3))
+        np.fill_diagonal(self.homography, 1)
+
+        self.focal_length = 0
+        self.camera_matrix = np.zeros((3, 3))
+        self.optimal_camera_matrix = np.zeros((3, 3))
+        self.distortion_matrix = np.zeros((4, 1))
+        self.rotation_vector = None
+        self.translation_vector = None
+
+        # Image correspondences
+        self.image_points = np.empty([0, 2])    #2D coordinates system
+        self.model_points = np.empty([0, 3])     #3D coordinate system
+
+        # Camera extrinsics
+        # TODO - disambiguate this property with the image rotation prop in VK2.
+        self.rotation_vector = None
+        self.translation_vector = None
+        self.camera_point = None
+
+        self.__sourceImage = None
+        self.__image_path = os.path.abspath("./Images/{:s}.png".format(sport))
+        self.set_camera_image_from_file(self.__image_path)
+
+        # Compute the camera matrix, including focal length and distortion.
+        self.update_camera_properties()
+
+        # Compute the homography with the camera matrix, image points and surface points.
+        # self.compute_homography()
+        print("self.compute_homography() --> {0}".format(time.time() - start))
+        print("init_main(...): --> {0}".format(time.time() - _start))
+
+
+class GraphicsScene(QtWidgets.QGraphicsScene):
+    # Create signal exporting QtCore.QtCore.QPointF position.
+    SceneClicked = QtCore.pyqtSignal(QtCore.QPointF)
+    MouseMoved = QtCore.pyqtSignal(QtCore.QPointF)
+
+    def __init__(self, parent=None):
+        QtWidgets.QGraphicsScene.__init__(self, parent)
+
+        self.setSceneRect(-100, -100, 200, 200)
+        self.opt = False
+
+    def set_option(self, opt):
+        self.opt = opt
+
+    def mouseMoveEvent(self, event):
+        self.MouseMoved.emit(QtCore.QPointF(event.scenePos()))
+
+    def mousePressEvent(self, event):
+        # #Emit the signal
+        self.SceneClicked.emit(QtCore.QPointF(event.scenePos()))
+
+
+class ImageViewer(QtWidgets.QGraphicsView):
+    ImageClicked = QtCore.pyqtSignal(QtCore.QPoint)
+    MouseMoved = QtCore.pyqtSignal(QtCore.QPoint)
+
+    def __init__(self, parent):
+        start = time.time()
+        super(ImageViewer, self).__init__(parent)
+        self.zoom = 0
+        self.empty = True
+        self.scene = GraphicsScene()
+        self.image = QtWidgets.QGraphicsPixmapItem()
+        self.scene.addItem(self.image)
+        self.setScene(self.scene)
+        self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+        self.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.should_auto_scale = True
+
+        # Connect the signal emitted by the GraphicsScene mousePressEvent to relay event
+        self.scene.SceneClicked.connect(self.scene_clicked)
+        self.scene.MouseMoved.connect(self.mouse_moved)
+
+        print("init_ImageViewer(...): --> {0}".format(time.time() - start))
+
+    def has_image(self):
+        return not self.empty
+
+    def set_cross_cursor(self, state = False):
+        if state:
+            self.setCursor(Qt.CrossCursor)
+        else:
+            self.setCursor(Qt.ArrowCursor)
+
+    def fitInView(self, *__args):
+
+        rect = QtCore.QRectF(self.image.pixmap().rect())
+        if not rect.isNull():
+            self.setSceneRect(rect)
+            if self.has_image():
+                unity = self.transform().mapRect(QtCore.QRectF(0, 0, 1, 1))
+                self.scale(1 / unity.width(), 1 / unity.height())
+                viewrect = self.viewport().rect()
+                scenerect = self.transform().mapRect(rect)
+                factor = min(viewrect.width() / scenerect.width(),
+                             viewrect.height() / scenerect.height())
+                self.scale(factor, factor)
+            self.zoom = 0
+
+    def set_image(self, pixmap=None):
+        self.zoom = 0
+        if pixmap and not pixmap.isNull():
+            self.empty = False
+            self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+            self.image.setPixmap(pixmap)
+        else:
+            self.empty = True
+            self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+            self.image.setPixmap(QtGui.QPixmap())
+
+    def wheelEvent(self, event):
+        if self.has_image():
+            if event.angleDelta().y() > 0:
+                factor = 1.1
+                self.zoom += 1
+            else:
+                factor = 0.9
+                self.zoom -= 1
+
+            if self.zoom > 0:
+                self.scale(factor, factor)
+            elif self.zoom == 0:
+                pass
+            else:
+                self.zoom = 0
+
+    def toggleDragMode(self, forceNoDrag = False):
+
+        if forceNoDrag:
+            self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+
+        else:
+
+            if self.dragMode() == QtWidgets.QGraphicsView.ScrollHandDrag:
+                self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+            else:
+                self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+
+    # def toggleCrossCursor(self):
+    #     if self.cursor() == QtWidgets.QGraphicsView.CrossCursor:
+    #         self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+    #     else:
+    #         self.setDragMode(QtWidgets.QGraphicsView.CrossCursor)
+
+    def mouseMoveEvent(self, event):
+        super(ImageViewer, self).mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        # if event.key() == Qt.Key_Space:
+        #   super(ImageViewer, self).mousePressEvent(event)
+        self.toggleDragMode()
+        super(ImageViewer, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.toggleDragMode(forceNoDrag=True)
+        super(ImageViewer, self).mouseReleaseEvent(event)
+
+    def mouse_moved(self, pos):
+        self.MouseMoved.emit(pos.toPoint())
+
+    def scene_clicked(self, pos):
+        # Pass local (scene) coordinates to ImageClicked()
+        print("scene_clicked")
+        if self.image.isUnderMouse():
+            self.ImageClicked.emit(pos.toPoint())
+
+
+class MyPopup(QtWidgets.QWidget):
+    def __init__(self, model):
+        QtWidgets.QWidget.__init__(self)
+        self.camera_model = model
+        self.setWindowTitle("Correspondences")
+        # Arrange layout
+        popup_Correspondences = QtWidgets.QVBoxLayout(self)
+        self.listCorrespondences = QtWidgets.QListWidget()
+        popup_Correspondences.addWidget(self.listCorrespondences)
+
+    def update_items(self):
+        self.listCorrespondences.clear()
+
+        if self.camera_model.image_points.size > 0:
+
+            print("self.camera_model.image_points", self.camera_model.image_points)
+            print("self.camera_model.model_points", self.camera_model.model_points)
+
+            #NB: model_points includes the z-axis.  Ignore that for now..
+            two_d_model_points = self.camera_model.model_points[...,:2]
+            assert self.camera_model.image_points.size == two_d_model_points.size
+
+            print("two_d_model_points", two_d_model_points)
+
+            for idx in range(0, two_d_model_points.shape[0]):
+                print(idx)
+                s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+                    self.camera_model.image_points[idx][0],
+                    self.camera_model.image_points[idx][1],
+                    two_d_model_points[idx][0],
+                    two_d_model_points[idx][1])
+
+                self.listCorrespondences.addItem(s)
+
+
+class Window(QtWidgets.QWidget):
+    def __init__(self):
+        start = time.time()
+        super(Window, self).__init__()
+        self.setWindowTitle("Camera Calibration Interface")
+
+        self.viewer = ImageViewer(self)
+        self.surface = ImageViewer(self)
+        # 'Load image' button
+        self.btnLoad = QtWidgets.QToolButton(self)
+        self.btnLoad.setText('Load image')
+        self.btnLoad.clicked.connect(self.loadImage)
+
+        self.cboSurfaces = QtWidgets.QComboBox()
+        for s in ("issia", "ncaacourt", "ncaafield", "netball", "hockey", "rugby", "tennis", "pool"):
+            self.cboSurfaces.addItem(s)
+        self.cboSurfaces.setCurrentText("tennis")
+
+        # Apply camera model
+        self.cboSurfaces.currentIndexChanged.connect(self.setCameraModel)
+
+        # Compute new homography from points.
+        self.btnComputeHomograhy = QtWidgets.QToolButton(self)
+        self.btnComputeHomograhy.setText('Compute Homograhy')
+        self.btnComputeHomograhy.clicked.connect(self.compute_homography)
+
+        # Correspondence management
+        self.btnShowCorrespondences = QtWidgets.QToolButton(self)
+        self.btnShowCorrespondences.setText('Show Correspondences')
+        self.btnShowCorrespondences.clicked.connect(self.showCorrespondences)
+
+        self.btnRemoveAllCorrespondences = QtWidgets.QToolButton(self)
+        self.btnRemoveAllCorrespondences.setText('Clear All Correspondences')
+        self.btnRemoveAllCorrespondences.clicked.connect(self.clearCorrespondences)
+
+        # Button to change from drag/pan to getting pixel info
+        self.btnAddCorrespondences = QtWidgets.QToolButton(self)
+        self.btnAddCorrespondences.setText('Add Correspondence')
+        self.btnAddCorrespondences.clicked.connect(self.addCorrespondences)
+
+        # Checkable button to visualise vertical projections
+        self.btnShowGridVerticals = QtWidgets.QPushButton(self)
+        self.btnShowGridVerticals.setText('Vertical Projections')
+        self.btnShowGridVerticals.setCheckable(True)
+        self.btnShowGridVerticals.clicked.connect(self.vertical_projections)
+
+        # Switch to OMB mode
+        self.OMB_mode = False
+        self.btnOMBmode = QtWidgets.QPushButton(self)
+        self.btnOMBmode.setText('OMB')
+        self.btnOMBmode.setCheckable(True)
+        self.btnOMBmode.setChecked(self.OMB_mode)
+        self.btnOMBmode.clicked.connect(self.enable_OMB)
+
+        # Crop FOV slider
+        self.cropFOV = 5
+        self.sliderCropFOV = QtWidgets.QSlider(Qt.Horizontal)
+        self.sliderCropFOV.setMinimum(3)
+        self.sliderCropFOV.setMaximum(30)
+        self.sliderCropFOV.setValue(self.cropFOV)
+        self.sliderCropFOV.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        self.sliderCropFOV.setTickInterval(1)
+        self.sliderCropFOV.valueChanged.connect(self.updateCropFOV)
+
+        # Show 3d world calibration
+        self.show_cal_markers = True
+        self.chkShow3dCal = QtWidgets.QCheckBox(self)
+        self.chkShow3dCal.setChecked(self.show_cal_markers)
+        self.chkShow3dCal.setText('Show Calibration Markers')
+        self.chkShow3dCal.clicked.connect(self.set_cal_markers)
+
+        # Serialise camera properties & transformation matrix
+        self.btnSerialiseCameraProperties = QtWidgets.QToolButton(self)
+        self.btnSerialiseCameraProperties.setText('Save Camera Properties')
+        self.btnSerialiseCameraProperties.clicked.connect(self.save_camera_properties)
+
+        # Load camera properties & transformation matrix
+        self.btnLoadCameraProperties = QtWidgets.QToolButton(self)
+        self.btnLoadCameraProperties.setText('Load Camera Properties')
+        self.btnLoadCameraProperties.clicked.connect(self.load_camera_properties)
+
+        # Re-centre viewpoints
+        self.btnFitInView = QtWidgets.QToolButton(self)
+        self.btnFitInView.setText('Re-Center Viewpoints')
+        self.btnFitInView.clicked.connect(self.center_views)
+
+        # Focal length slider
+        self.sliderFocalLength = QtWidgets.QSlider(Qt.Horizontal)
+        self.sliderFocalLength.setMinimum(0)
+        self.sliderFocalLength.setMaximum(200)
+        self.sliderFocalLength.setValue(10)
+        self.sliderFocalLength.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        self.sliderFocalLength.setTickInterval(20)
+        self.sliderFocalLength.valueChanged.connect(self.updateFocalLength)
+        # Distortion slider
+        self.sliderDistortion = QtWidgets.QSlider(Qt.Horizontal)
+        self.sliderDistortion.setMinimum(0)
+        self.sliderDistortion.setMaximum(30000)
+        self.sliderDistortion.setValue(100)
+        self.sliderDistortion.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        self.sliderDistortion.setTickInterval(3000)
+        self.sliderDistortion.valueChanged.connect(self.updateDistortionEstimate)
+
+        self.viewer.ImageClicked.connect(self.ImageClicked)
+        self.surface.ImageClicked.connect(self.SurfaceClicked)
+        self.viewer.MouseMoved.connect(self.ImageMouseMoved)
+        self.last_image_pairs = {0, 0}
+        self.last_surface_pairs = {0, 0}
+        self.addingCorrespondencesEnabled = False
+
+        self.show_vertical_projections = False
+
+        self.camera_model = CameraModel("tennis")
+
+        # Arrange layout
+        VBlayout = QtWidgets.QVBoxLayout(self)
+        HB_images_layout = QtWidgets.QHBoxLayout()
+        HB_images_layout.addWidget(self.viewer)
+        HB_images_layout.addWidget(self.surface)
+        VBlayout.addLayout(HB_images_layout)
+
+        HBlayout = QtWidgets.QHBoxLayout()
+        HBlayout.setAlignment(Qt.AlignLeft)
+        HBlayout.addWidget(self.btnLoad)
+        HBlayout.addWidget(self.btnSerialiseCameraProperties)
+        HBlayout.addWidget(self.btnLoadCameraProperties)
+        HBlayout.addWidget(self.cboSurfaces)
+        HBlayout.addWidget(self.sliderFocalLength)
+        HBlayout.addWidget(self.sliderDistortion)
+        HBlayout.addWidget(self.btnComputeHomograhy)
+        VBlayout.addLayout(HBlayout)
+
+        HB_Correspondences = QtWidgets.QHBoxLayout()
+        HB_Correspondences.setAlignment(Qt.AlignLeft)
+        HB_Correspondences.addWidget(self.btnShowCorrespondences)
+        HB_Correspondences.addWidget(self.btnAddCorrespondences)
+        HB_Correspondences.addWidget(self.btnRemoveAllCorrespondences)
+        HB_Correspondences.addWidget(self.btnFitInView)
+        HB_Correspondences.addWidget(self.btnShowGridVerticals)
+        HB_Correspondences.addWidget(self.btnOMBmode)
+        HB_Correspondences.addWidget(self.chkShow3dCal)
+        HB_Correspondences.addWidget(self.sliderCropFOV)
+
+        VBlayout.addLayout(HB_Correspondences)
+
+        self.correspondencesWidget = MyPopup(self.camera_model)
+
+        if False:
+            self.camera_model.set_camera_image_from_file("/Users/stuartmorgan/Dropbox/_py/qtpy/left01.jpg")
+            self.viewer.set_image(QtGui.QPixmap(self.camera_model.undistorted_camera_image_QtGui.QImage()))
+
+        print("Window(QtWidgets.QWidget): --> {0}".format(time.time() - start))
+
+    def reset_controls(self):
+        # Abort corresponances
+        self.last_image_pairs = {0, 0}
+        self.last_surface_pairs = {0, 0}
+        self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+        self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+        self.btnAddCorrespondences.setStyleSheet("background-color: None")
+        self.addingCorrespondencesEnabled = False
+        self.viewer.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+        self.surface.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+
+    # def mousePressEvent(self, event):
+    #     print("Windows Mouse Event")
+    #     # return event
+
+    def keyPressEvent(self, event):
+        # print("down")
+        if not event.isAutoRepeat():
+            if event.key() == Qt.Key_Escape:
+                # Abort corresponances
+                self.reset_controls()
+                return
+
+            if self.viewer.empty or self.surface.empty:
+                return
+
+        # else:
+        # if event.key() == Qt.Key_Space:
+        #     self.viewer.set_cross_cursor(True)
+        #     self.surface.set_cross_cursor(True)
+            #
+            # self.viewer.setCursor(Qt.CrossCursor)
+            # self.surface.setCursor(Qt.CrossCursor)
+
+
+    def keyReleaseEvent(self, event):
+        pass
+        # if event.key() == Qt.Key_Space:
+        #     self.viewer.set_cross_cursor(False)
+        #     self.surface.set_cross_cursor(False)
+
+        # if not event.isAutoRepeat():
+        #     if event.key() == Qt.Key_Space:
+        #         self.viewer.toggleDragMode()
+        #         self.surface.toggleDragMode()
+
+    def loadSurface(self, sport):
+
+        start = time.time()
+        self.surface.set_image(self.camera_model.surface_image())
+        self.camera_model.set_surface_image(sport)
+        self.correspondencesWidget.update_items()
+        print("loadSurface(self, sport): --> {0}".format(time.time() - start))
+
+    def loadImage(self):
+
+        image_path = QtWidgets.QFileDialog.getOpenFileName(self, "Open Image",
+                                                "/home",
+                                                "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
+
+        vidcap = cv2.VideoCapture(image_path[0])
+        success, image = vidcap.read()
+
+        if success:
+            self.camera_model.set_camera_image_from_image(image, image_path[0])
+            print("Loaded image: {0}".format(image_path[0]))
+        else:
+            self.camera_model.set_camera_image_from_file(image_path[0])
+
+        self.viewer.set_image(QtGui.QPixmap(self.camera_model.undistorted_camera_image_qimage()))
+        self.updateDisplays()
+
+
+    def setCameraModel(self):
+
+        self.camera_model = CameraModel(sport=self.cboSurfaces.currentText())
+        self.loadSurface(self.cboSurfaces.currentText())
+
+    def pixInfo(self):
+        # self.viewer.toggleDragMode()
+        if self.addingCorrespondencesEnabled:
+            self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 100, 30)))
+            self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+
+        def draw_image_space_detection(self, pos):
+            # Render reference point annotation.
+            r = 5
+            yellow = Qt.yellow
+            pen = QtGui.QPen(Qt.red)
+            brush = QtGui.QBrush(QtGui.QColor(255, 255, 0, 100))
+
+            poly = QtGui.QPolygonF()
+            x, y = pos.x(), pos.y()
+            poly_points = np.array([])
+
+    #         #
+    #         # # Compute inverse of 2D homography
+    #         # print("**", homography)
+    #         #
+    #         val, H = cv2.invert(self.homography)
+    #         #
+    #         for i in range(1, 33):
+    #             # These points are in world coordinates.
+    #             _x = x + (r * math.cos(2 * math.pi * i / 32))
+    #             _y = y + (r * math.sin(2 * math.pi * i / 32))
+    #
+    #                 # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
+    #                 # ground_point = cv2.perspectiveTransform(ground_point, H)
+    #                 # ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
+    #                 # (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
+    #                 # # Render vertical
+    #                 # im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
+    #
+    #
+    #             #Convert to image coordinates.
+    #             axis = np.float32([[_x, _y]]).reshape(-1,2)
+    #             imgpts = cv2.perspectiveTransform(axis, H)
+    #
+    #             #Draw the points in a circle in perspective.
+    #             (xx, yy) = tuple(imgpts[0].ravel())
+    #
+    #             poly_points = np.append(poly_points, [xx, yy])
+    #
+    #             _p = QtCore.QtCore.QPointF(xx,yy)
+    #             poly.append(QtCore.QtCore.QPointF(xx,yy))
+    #
+    #         self.viewer.scene.addPolygon(poly, pen, brush)
+    #
+    #         #Render image-space point
+    #         axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
+    #         (imgpts, jacobian) = cv2.projectPoints(axis,
+    #                                                self._myRotationVector,
+    #                                                self._myTranslationVector,
+    #                                                self._myCameraMatrix,
+    #                                                self._myDistortionMatrix)
+    #
+    #         (x, y) = tuple(imgpts[0].ravel())
+    #         (xx, yy) = tuple(imgpts[1].ravel())
+    #         self.viewer.scene.addLine(xx, yy, x, y, pen)
+
+    def ImageClicked(self, pos):
+
+        print("ImageClicked")
+
+        #Is the control key pressed?
+        if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
+            # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
+            print("Image Points:", pos.x(), pos.y())
+            #Draw point
+            pen = QtGui.QPen(Qt.red)
+            brush = QtGui.QBrush(Qt.yellow)
+            self.viewer.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
+            # self.viewer.toggleDragMode()
+            self.last_image_pairs = (pos.x(), pos.y())
+            # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
+            self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+            self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 100, 30)))
+
+            self.viewer.set_cross_cursor(False)
+            self.surface.set_cross_cursor(True)
+
+    def ImageMouseMoved(self, pos):
+        if self.OMB_mode:
+            # print("{0}".format(pos))
+            crop = {"image_point": (pos.x(), pos.y())}
+            print(crop)
+            self.updateDisplays(crop)
+            # self.OMB_mode = False
+            # self.btnOMBmode.setChecked(False)
+
+    def SurfaceClicked(self, pos):
+        print("SurfaceClicked", pos)
+        if self.addingCorrespondencesEnabled == True and app.queryKeyboardModifiers() == Qt.ControlModifier:
+            # self.editImageCoordsInfo.setText('%d, %d' % (pos.x(), pos.y()))
+
+            #Draw point
+            pen = QtGui.QPen(Qt.red)
+            brush = QtGui.QBrush(Qt.yellow)
+            self.surface.scene.addEllipse(pos.x() - 3, pos.y() - 3, 6, 6, pen, brush)
+            # self.surface.toggleDragMode()
+            self.last_surface_pairs = (pos.x(), pos.y())    #tuple
+            # self.editModelCoords.setStyleSheet("background-color: rgb(0, 255, 0);")
+            self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+            self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+            # print("_mylastImagePairs:", self.last_image_pairs)
+            # print("_mylastSurfacePairs:", self.last_surface_pairs)
+            #
+            # s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+            #         self.last_image_pairs[0],
+            #         self.last_image_pairs[1],
+            #         self.last_surface_pairs[0],
+            #         self.last_surface_pairs[1])
+
+            print("## EXISTING PAIRS ##")
+            print(self.camera_model.image_points)
+            print(self.camera_model.model_points)
+            print(self.camera_model.model_points.shape)
+
+            print("## LAST PAIRS ##")
+            print(self.last_surface_pairs)
+            # print(self.last_surface_pairs.shape)
+
+            self.camera_model.image_points = np.append(self.camera_model.image_points,
+                                                       np.array([(self.last_image_pairs[0],
+                                                                  self.last_image_pairs[1])], dtype='float32'), axis=0)
+
+            self.camera_model.model_points = np.append(self.camera_model.model_points,
+                                                       np.array([(self.last_surface_pairs[0],
+                                                                  self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
+
+           #Save correspondences
+            self.reset_controls()
+
+            self.viewer.set_cross_cursor(False)
+            self.surface.set_cross_cursor(False)
+
+            self.correspondencesWidget.update_items()
+
+    def addCorrespondences(self):
+        #1. Highlight image space.
+        if not self.addingCorrespondencesEnabled:
+            self.addingCorrespondencesEnabled = True
+            self.btnAddCorrespondences.setStyleSheet("background-color: green")
+            self.viewer.set_cross_cursor(True)
+            self.surface.set_cross_cursor(False)
+
+    def showCorrespondences(self):
+
+        if not self.correspondencesWidget.isVisible():
+            self.correspondencesWidget = MyPopup(self.camera_model)
+            self.correspondencesWidget.setGeometry(QtCore.QRect(100, 100, 400, 200))
+            self.correspondencesWidget.show()
+
+        if not self.correspondencesWidget.isActiveWindow():
+            self.correspondencesWidget.activateWindow()
+
+        self.correspondencesWidget.update_items()
+
+    def clearCorrespondences(self):
+        self.correspondencesWidget.activateWindow()
+        self.camera_model.remove_correspondences()
+        self.correspondencesWidget.update_items()
+        self.updateDisplays()
+
+    def compute_homography(self):
+        self.camera_model.compute_homography()
+        self.updateDisplays()
+
+    def vertical_projections(self):
+        self.show_vertical_projections = self.btnShowGridVerticals.isChecked()
+        self.updateDisplays()
+
+    def enable_OMB(self):
+        self.OMB_mode = self.btnOMBmode.isChecked()
+        # self.updateDisplays()
+
+    def set_cal_markers(self):
+        self.show_cal_markers = self.chkShow3dCal.isChecked()
+        self.updateDisplays()
+
+    def doCheckerboardCalibration(self):
+
+        import numpy as np
+        import cv2
+        import glob
+
+        if self.camera_model:
+
+            model = self.camera_model
+
+            CHECKERBOARD = (9, 7)
+
+            # termination criteria
+            subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+            objp = np.zeros((CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
+            objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+
+            # Arrays to store object points and image points from all the images.
+            objpoints = []  # 3d point in real world space
+            imgpoints = []  # 2d points in image plane.
+
+            img = model.distorted_camera_image_cv2()
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            # Find the chess board corners
+            ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, None)
+
+            # If found, add object points, image points (after refining them)
+            if ret:
+                objpoints.append(objp)
+                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), subpix_criteria)
+                imgpoints.append(corners)
+                cv2.drawChessboardCorners(img, CHECKERBOARD, corners2, ret)
+
+            else:
+                return
+
+            height, width, channel = img.shape
+            img_size = (img.shape[1], img.shape[0])
+
+            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
+            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), 1, (width, height))
+
+            # Update the camera properties with updated camera intrinsics.
+            model.update_camera_properties(dist, mtx, newcameramtx)
+
+            self.updateDisplays()
+
+    def save_camera_properties(self):
+
+        if self.camera_model:
+            path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
+            if path[0] != "":
+                self.camera_model.export_camera_model(path)
+
+    def load_camera_properties(self):
+
+        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Camera Calibration', self.cboSurfaces.currentText(), "json(*.json)")
+        if path[0] != "":
+            self.camera_model.import_camera_model(path)
+            # self.cboSurfaces.setCurrentText(self.camera_model.sport)
+            self.updateDisplays()
+            self.correspondencesWidget.update_items()
+
+        self.center_views()
+
+    def center_views(self):
+        self.surface.fitInView()
+        self.viewer.fitInView()
+
+    def draw(self, img, corners, imgpts):
+        corner = tuple(corners[0].ravel())
+        img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
+        img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
+        img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
+        return img
+
+    def updateFocalLength(self):
+        self.camera_model.focal_length = self.sliderFocalLength.value()
+        print("Updating focal length:{0}".format(self.camera_model.focal_length ))
+        # Update the camera matrix with new focal length.
+        self.camera_model.update_camera_properties()
+
+        self.updateDisplays()
+
+    def updateCropFOV(self):
+        self.cropFOV = self.sliderCropFOV.value()
+
+    def updateDistortionEstimate(self):
+        self.camera_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5
+        print("Updating distortion parameter: {0}".format(self.camera_model.distortion_matrix[0]))
+        self.updateDisplays()
+
+    def updateDisplays(self, crop=None):
+
+        if self.camera_model:
+
+            model = self.camera_model
+
+            # Get model sample image
+            start = time.time()
+            im_src = model.undistorted_camera_image_cv2()
+            print("model.undistorted_camera_image_cv2() --> {0}".format(time.time() - start))
+
+            # Only update the surface overlay if there is an existing homography
+            if not model.is_homography_identity():
+
+                start = time.time()
+                im_out = cv2.warpPerspective(im_src,
+                                             model.homography,
+                                             (model.surface_dimensions.width(),
+                                              model.surface_dimensions.height()))
+                print("cv2.warpPerspective() --> {0}".format(time.time() - start))
+
+                start = time.time()
+
+                print("render points --> {0}".format(time.time() - start))
+
+                # Display undistored images.
+                height, width, channel = im_out.shape
+                bytesPerLine = 3 * width
+                alpha = 0.5
+                beta = (1.0 - alpha)
+
+                # Composite image
+                start = time.time()
+                cv2.cvtColor(im_out, cv2.COLOR_BGR2RGB, im_out)
+                src1 = model.surface_image_cv2()
+                dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
+                print("cv2.addWeighted() --> {0}".format(time.time() - start))
+
+                # Set composite image to surface model
+                qImg = QtGui.QImage(dst.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+                self.surface.set_image(QtGui.QPixmap(qImg))
+
+                self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+                self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+
+                if crop is not None:
+                    # print(crop)
+                    _x, _y = crop["image_point"]
+                    __x, __y = model.camera_point
+
+                    # print(_x, _y)
+                    fov = self.cropFOV
+                    _x1, _y1 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=-fov)
+                    _x2, _y2 = model.perspective_aware_crop_for_image_point(image_point=(_x, _y), fov=fov)
+
+                    width = math.sqrt(pow(_x2 - _x1, 2) + pow(_y2 - _y1, 2))
+                    # print(width)
+                    from numpy import ones, vstack
+                    from numpy.linalg import lstsq
+                    points = [(__x, __y), (_x, _y)]
+                    x_coords, y_coords = zip(*points)
+                    A = vstack([x_coords, ones(len(x_coords))]).T
+                    m, c = lstsq(A, y_coords)[0]
+                    # print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
+
+                    # Extrapolate
+                    y = _y - int(width*0.75) # 4:3 format
+                    x = int((y-c)/m)
+                    im_src = cv2.circle(im_src, (x, y), 5, (255, 255, 255), 2)
+
+                    _x3, _y3 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=-fov)
+                    _x4, _y4 = model.perspective_aware_crop_for_image_point(image_point=(x, y), fov=fov)
+
+                    im_src = cv2.line(im_src, (int(_x1), int(_y1)),
+                                      (int(_x2), int(_y2)),
+                                      (0, 0, 255), 3)
+
+                    im_src = cv2.line(im_src, (int(_x3), int(_y3)),
+                                      (int(_x4), int(_y4)),
+                                      (0, 0, 255), 3)
+
+                    im_src = cv2.line(im_src, (int(_x2), int(_y2)),
+                                      (int(_x4), int(_y4)),
+                                      (0, 0, 255), 3)
+
+                    im_src = cv2.line(im_src, (int(_x1), int(_y1)),
+                                      (int(_x3), int(_y3)),
+                                      (0, 0, 255), 3)
+
+                    image_points = np.float32([[_x1, _y1], [_x2, _y2], [_x3, _y3], [_x4, _y4]])
+                    model_points = np.float32([[0,480], [720,480], [0,0], [720,0]])
+
+                    homography, mask = cv2.findHomography(image_points, model_points)
+
+                    im_crop = cv2.warpPerspective(im_src, homography, (720, 480))
+
+                    # Display undistored images.
+                    height, width, channel = im_crop.shape
+                    bytesPerLine = 3 * width
+
+                    cv2.cvtColor(im_crop, cv2.COLOR_BGR2RGB, im_crop)
+
+                    # Set composite image to surface model
+                    qImg = QtGui.QImage(im_crop.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+                    self.surface.set_image(QtGui.QPixmap(qImg))
+
+                if self.show_cal_markers:
+
+                    if self.show_vertical_projections:
+                        thickness = 1
+
+                        world_points = np.zeros((model.model_width * model.model_height, 3), np.float32)
+                        world_points[:, :2] = np.mgrid[model.model_offset_x:model.model_width + model.model_offset_x,
+                                              model.model_offset_y:model.model_height + model.model_offset_y].T.reshape(
+                            -1, 2) * model.model_scale
+
+                        for world_point in world_points:
+                            # Render vertical
+                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                            projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+                            theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], -model.model_scale*2]]], dtype='float32')
+                            projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+                            im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0,255,255), thickness)
+                    else:
+                        thickness = 3
+
+                        for world_point in model.model_points:
+                            unit_vector = -model.model_scale * 1.8
+
+                            # Render y-axis
+                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                            projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+                            theoretical_3d_model_point = np.array([[[world_point[0], world_point[1]+unit_vector, 0]]], dtype='float32')
+                            projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+
+                            int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+                            int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+                            im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 255, 0), thickness)
+
+                            # Render x-axis
+                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                            projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+                            theoretical_3d_model_point = np.array([[[world_point[0]+unit_vector, world_point[1], 0]]], dtype='float32')
+                            projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+
+                            int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+                            int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+                            im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 0, 255), thickness)
+
+                            # Render vertical
+                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                            projected_ground_point = model.projected_image_point_for_3d_world_point(model_point)
+                            theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], unit_vector]]], dtype='float32')
+                            projected_vertical_point = model.projected_image_point_for_3d_world_point(theoretical_3d_model_point)
+
+                            int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+                            int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+                            im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point,  (255, 0, 0), thickness)
+
+                    # if not cv2.imwrite('output.png',im_src):
+                    #     print("Writing failed")
+
+            # Display images
+            height, width, channel = im_src.shape
+            bytesPerLine = 3 * width
+
+            # Convert to RGB for QtGui.QImage.
+            cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+            qImg = QtGui.QImage(im_src.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+            self.viewer.set_image(QtGui.QPixmap(qImg))
+
+        else:
+            print("Warning: No camera model has been initialised.")
 
 
 if __name__ == '__main__':
-	import sys
-	app = QApplication(sys.argv)
-	start = time.time()
-	window = Window()
-	print("window = Window(): --> {0}".format(time.time() - start))
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    start = time.time()
+    window = Window()
+    print("window = Window(): --> {0}".format(time.time() - start))
 
-	window.setGeometry(500, 300, 800, 600)
+    window.setGeometry(500, 300, 800, 600)
 
-	start = time.time()
-	window.show()
-	print("window.show(): --> {0}".format(time.time() - start))
+    start = time.time()
+    window.show()
+    print("window.show(): --> {0}".format(time.time() - start))
 
-	start = time.time()
-	window.loadSurface("hockey")
-	print("window.loadSurface(): --> {0}".format(time.time() - start))
+    start = time.time()
+    window.loadSurface("hockey")
+    print("window.loadSurface(): --> {0}".format(time.time() - start))
 
-	sys.exit(app.exec_())
+    sys.exit(app.exec_())
