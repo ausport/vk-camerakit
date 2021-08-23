@@ -1,56 +1,62 @@
-<mxfile host="app.diagrams.net" modified="2021-08-23T04:50:20.293Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15" etag="IaqKsu8zPKpGkxBdGCUO" version="14.9.8" type="github">
+<mxfile host="app.diagrams.net" modified="2021-08-23T04:51:22.404Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15" etag="98uk6mVeCdc-zii_UiSG" version="14.9.8" type="github">
   <diagram id="whI1iPDcKfRej9lU8eTD" name="Page-1">
     <mxGraphModel dx="1483" dy="989" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="XSHOKIhXonPKppSBipv4-7" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;CameraModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+&amp;nbsp;model_size(int)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;model_offset(int)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;model_scale(int)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;model_surface_name(str)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ image_points(list[])&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ model_points(list[])&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;camera_matrix(np_array)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;distortion_matrix(np_array)&lt;br&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ homography():&amp;nbsp;np_array&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;world_point_for_image_point(image_point): tuple&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ projected_image_point_for_2d_world_point(world_point): tuple&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;distorted_camera_image()&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ undistorted_camera_image()&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" parent="1" vertex="1">
-          <mxGeometry x="30" y="210" width="370" height="250" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-29" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="25" y="10" width="1120" height="900" as="geometry" />
         </mxCell>
-        <mxCell id="XSHOKIhXonPKppSBipv4-8" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;CameraSource&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ width: int&lt;br&gt;+ height: int&lt;/p&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ fps: float&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ get_image(): Type&lt;br&gt;+ is_alive(): bool&lt;/p&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ height(): int&lt;span style=&quot;white-space: pre&quot;&gt; &lt;span style=&quot;white-space: pre&quot;&gt; &lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" parent="1" vertex="1">
-          <mxGeometry x="460" y="240" width="190" height="190" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-16" value="" style="shape=folder;fontStyle=1;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry width="1120" height="900" as="geometry" />
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-4" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_Generic&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
-          <mxGeometry x="830" y="70" width="190" height="140" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-17" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;CameraModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+&amp;nbsp;model_size(int)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;model_offset(int)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;model_scale(int)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;model_surface_name(str)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ image_points(list[])&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ model_points(list[])&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;camera_matrix(np_array)&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;distortion_matrix(np_array)&lt;br&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ homography():&amp;nbsp;np_array&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;world_point_for_image_point(image_point): tuple&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ projected_image_point_for_2d_world_point(world_point): tuple&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+&amp;nbsp;distorted_camera_image()&lt;br style=&quot;padding: 0px ; margin: 0px&quot;&gt;+ undistorted_camera_image()&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="70" y="190" width="370" height="250" as="geometry" />
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-5" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_File&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
-          <mxGeometry x="830" y="230" width="190" height="140" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-18" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;CameraSource&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ width: int&lt;br&gt;+ height: int&lt;/p&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ fps: float&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ get_image(): Type&lt;br&gt;+ is_alive(): bool&lt;/p&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ height(): int&lt;span style=&quot;white-space: pre&quot;&gt; &lt;span style=&quot;white-space: pre&quot;&gt; &lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="500" y="220" width="190" height="190" as="geometry" />
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-6" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_Prosilica&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
-          <mxGeometry x="830" y="390" width="190" height="140" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-19" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_Generic&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="870" y="50" width="190" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-7" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_Blackmagic&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
-          <mxGeometry x="830" y="550" width="190" height="140" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-20" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_File&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="870" y="210" width="190" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-8" value="Calibration" style="shape=umlFrame;whiteSpace=wrap;html=1;width=80;height=20;" vertex="1" parent="1">
-          <mxGeometry x="80" y="530" width="200" height="90" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-21" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_Prosilica&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="870" y="370" width="190" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-9" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;entryX=0.002;entryY=0.421;entryDx=0;entryDy=0;entryPerimeter=0;curved=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="1" source="XSHOKIhXonPKppSBipv4-8" target="hctW-J4JL3ABFnvM0zSs-4">
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-22" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;CameraSource&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera_Blackmagic&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="870" y="530" width="190" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-23" value="Calibration" style="shape=umlFrame;whiteSpace=wrap;html=1;width=80;height=20;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="120" y="510" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-24" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;entryX=0.002;entryY=0.421;entryDx=0;entryDy=0;entryPerimeter=0;curved=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="hctW-J4JL3ABFnvM0zSs-29" source="hctW-J4JL3ABFnvM0zSs-18" target="hctW-J4JL3ABFnvM0zSs-19">
           <mxGeometry width="160" relative="1" as="geometry">
-            <mxPoint x="650" y="340" as="sourcePoint" />
-            <mxPoint x="810" y="340" as="targetPoint" />
+            <mxPoint x="690" y="320" as="sourcePoint" />
+            <mxPoint x="850" y="320" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-12" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;curved=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="1" source="XSHOKIhXonPKppSBipv4-8" target="hctW-J4JL3ABFnvM0zSs-5">
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-25" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;curved=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="hctW-J4JL3ABFnvM0zSs-29" source="hctW-J4JL3ABFnvM0zSs-18" target="hctW-J4JL3ABFnvM0zSs-20">
           <mxGeometry width="160" relative="1" as="geometry">
-            <mxPoint x="650" y="340" as="sourcePoint" />
-            <mxPoint x="820" y="290" as="targetPoint" />
+            <mxPoint x="690" y="320" as="sourcePoint" />
+            <mxPoint x="860" y="270" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-13" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;curved=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="1" source="XSHOKIhXonPKppSBipv4-8" target="hctW-J4JL3ABFnvM0zSs-6">
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-26" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;curved=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="hctW-J4JL3ABFnvM0zSs-29" source="hctW-J4JL3ABFnvM0zSs-18" target="hctW-J4JL3ABFnvM0zSs-21">
           <mxGeometry width="160" relative="1" as="geometry">
-            <mxPoint x="650" y="340" as="sourcePoint" />
-            <mxPoint x="850.3800000000001" y="148.94000000000005" as="targetPoint" />
+            <mxPoint x="690" y="320" as="sourcePoint" />
+            <mxPoint x="890.3800000000001" y="128.94000000000005" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-14" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;curved=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="1" source="XSHOKIhXonPKppSBipv4-8" target="hctW-J4JL3ABFnvM0zSs-7">
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-27" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;curved=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="hctW-J4JL3ABFnvM0zSs-29" source="hctW-J4JL3ABFnvM0zSs-18" target="hctW-J4JL3ABFnvM0zSs-22">
           <mxGeometry width="160" relative="1" as="geometry">
-            <mxPoint x="660" y="340" as="sourcePoint" />
-            <mxPoint x="860.3800000000001" y="158.94000000000005" as="targetPoint" />
+            <mxPoint x="700" y="320" as="sourcePoint" />
+            <mxPoint x="900.3800000000001" y="138.94000000000005" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="hctW-J4JL3ABFnvM0zSs-15" value="Streamer" style="shape=umlFrame;whiteSpace=wrap;html=1;width=80;height=20;" vertex="1" parent="1">
-          <mxGeometry x="80" y="650" width="200" height="90" as="geometry" />
+        <mxCell id="hctW-J4JL3ABFnvM0zSs-28" value="Streamer" style="shape=umlFrame;whiteSpace=wrap;html=1;width=80;height=20;" vertex="1" parent="hctW-J4JL3ABFnvM0zSs-29">
+          <mxGeometry x="120" y="630" width="200" height="90" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
