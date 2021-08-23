@@ -1,1 +1,36 @@
-<mxfile host="app.diagrams.net" modified="2021-08-23T01:23:21.087Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15" version="14.9.8" etag="QvPt1bxPqaSBY9-bNu9p" type="github"><diagram id="whI1iPDcKfRej9lU8eTD">UzV2zq1wL0osyPDNT0nNUTV2VTV2LsrPL4GwciucU3NyVI0MMlNUjV1UjYwMgFjVyA2HrCFY1qAgsSg1rwSLBiADYTaQg2Y1AA==</diagram></mxfile>
+<mxfile host="app.diagrams.net" modified="2021-08-23T03:45:48.519Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15" etag="Hn6FAUyR9IlmWhzd6dlV" version="14.9.8" type="github">
+  <diagram id="whI1iPDcKfRej9lU8eTD" name="Page-1">
+    <mxGraphModel dx="1112" dy="742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="XSHOKIhXonPKppSBipv4-1" value="CameraModel" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="340" width="390" height="350" as="geometry">
+            <mxRectangle x="340" y="340" width="110" height="26" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-2" value="+ model_size(int)&#xa;+ model_offset(int)&#xa;+ model_scale(int)&#xa;+ model_surface_name(str)&#xa;&#xa;+ image_points(list[])&#xa;+ model_points(list[])    &#xa;&#xa;+ camera_matrix(np_array)&#xa;+ distortion_matrix(np_array)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="XSHOKIhXonPKppSBipv4-1">
+          <mxGeometry y="26" width="390" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-3" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;" vertex="1" parent="XSHOKIhXonPKppSBipv4-1">
+          <mxGeometry y="230" width="390" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-4" value="+ homography(): np_array&#xa;+ world_point_for_image_point(image_point): tuple&#xa;+ projected_image_point_for_2d_world_point(world_point): tuple&#xa;+ distorted_camera_image()&#xa;+ undistorted_camera_image()" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="XSHOKIhXonPKppSBipv4-1">
+          <mxGeometry y="238" width="390" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-5" value="&amp;laquo;interface&amp;raquo;&lt;br&gt;&lt;b&gt;Name&lt;/b&gt;" style="html=1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="190" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-6" value="Calibration Interface&#xa;" style="shape=module;align=left;spacingLeft=20;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="90" y="460" width="250" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-7" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;Camera&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ method1(Type): Type&lt;br&gt;+ method2(Type, Type): Type&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="160" width="190" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="XSHOKIhXonPKppSBipv4-8" value="&lt;p style=&quot;margin: 0px ; margin-top: 4px ; text-align: center&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;VideoSource&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ field1: Type&lt;br&gt;+ field2: Type&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ get_image(): Type&lt;br&gt;+ width(): int&lt;/p&gt;&lt;p style=&quot;margin: 0px ; margin-left: 4px&quot;&gt;+ height(): int&lt;span style=&quot;white-space: pre&quot;&gt; &lt;span style=&quot;white-space: pre&quot;&gt; &lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="30" width="190" height="140" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
