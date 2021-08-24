@@ -14,7 +14,10 @@ class CameraFile(CameraSource):
     def get_frame(self, frame_number=None):
         if frame_number is not None:
             self.video_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number - 1)
+
         res, frame = self.video_object.read()
+        # Pillow assumes RGB - OpenCV reads BRG
+        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
         return frame
 
     def set_position(self, frame_number=100):

@@ -15,4 +15,6 @@ class CameraGeneric(CameraSource):
 
     def get_frame(self):
         res, frame = self.video_object.read()
+        # Pillow assumes RGB - OpenCV reads BRG
+        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
         return frame
