@@ -9,6 +9,6 @@ Interface to support:
 * Estimate camera extrinsics
 * Perspective-free image crops.
 
-![](markers.png)
+![](images/markers.png)
 
-![](verticals.png)
+![](images/verticals.png)
