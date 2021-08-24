@@ -1,9 +1,9 @@
 """Camera controller for existing image/video file resource"""
 import cv2
-from cameras import CameraSource
+from cameras import VKCamera
 
 
-class CameraFile(CameraSource):
+class VKCameraVideoFile(VKCamera):
     def __init__(self, filepath, verbose_mode=False):
         super().__init__(verbose_mode=verbose_mode)
 

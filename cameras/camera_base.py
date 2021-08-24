@@ -3,7 +3,7 @@ import cv2
 from PIL import Image
 
 
-class CameraSource:
+class VKCamera:
     def __init__(self, verbose_mode=False):
         """Constructor for generic image source class.
         Use subclassed instances of this class

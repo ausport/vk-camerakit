@@ -1,9 +1,9 @@
 """Camera controller for video capture from generic video camera (webcam)"""
 import cv2
-from cameras import CameraSource
+from cameras import VKCamera
 
 
-class CameraGeneric(CameraSource):
+class VKCameraGenericDevice(VKCamera):
 
     def __init__(self, device=0, verbose_mode=False):
         super().__init__(verbose_mode=verbose_mode)
