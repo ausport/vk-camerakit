@@ -1,5 +1,6 @@
 """Generic class for all image sources"""
 import cv2
+import filetype
 from PIL import Image
 
 
@@ -32,6 +33,14 @@ class VKCamera:
         """
         return int(self.video_object.get(cv2.CAP_PROP_FRAME_COUNT))
 
+    def frame_position(self):
+        """The current frame number in the video resource.
+
+        Returns:
+            (int): The CAP_PROP_POS_FRAMES property - zero if a live camera.
+        """
+        return int(self.video_object.get(cv2.CAP_PROP_POS_FRAMES))
+
     def width(self):
         """The pixel width of the video resource.
 
@@ -55,6 +64,27 @@ class VKCamera:
             (int): The CAP_PROP_FPS property.
         """
         return int(self.video_object.get(cv2.CAP_PROP_FPS))
+
+    def eof(self):
+        """Signals end of video file.
+
+        Returns:
+            (bool): True is end of file.
+        """
+        return int(self.video_object.get(cv2.CAP_PROP_POS_FRAMES)) >= int(self.video_object.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def file_type(self):
+        """Probe file type instance searching by MIME type or file extension.
+
+        Returns:
+            (str): file extension.
+            (str): MIME type.
+        """
+        if hasattr(self, "filepath"):
+            kind = filetype.guess(self.filepath)
+            return kind.extension, kind.MIME
+        else:
+            return None, None
 
     def save_frame(self, dest_path='./image.png'):
         """Grabs a frame and saves it to file.
@@ -95,13 +125,4 @@ class VKCamera:
         Returns:
             (str): A string summary of the object
         """
-        return "\nCamera Source:" \
-               "\n\tFilename         : {0}" \
-               "\n\tWidth            : {1}" \
-               "\n\tHeight           : {2}" \
-               "\n\tFrame Rate       : {3}" \
-               "\n\tFrame Count      : {4}".format(self.filepath,
-                                                   self.width(),
-                                                   self.height(),
-                                                   self.fps(),
-                                                   self.frame_count())
+        return self.__str__()
