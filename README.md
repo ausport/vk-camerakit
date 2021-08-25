@@ -1,5 +1,5 @@
-# qtpy
-Qt-Python: Image calibration sandpit.
+# CameraKit
+A generic toolkit for camera control and camera-world models.
 
 Essential parts of the image calibration routines used in [VisionKit 2.0](git@github.com:ausport/visionkit.git "VisionKit 2.0 Github repository").
 
