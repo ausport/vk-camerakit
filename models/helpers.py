@@ -14,6 +14,11 @@ VK_CAMERA_MODEL_NFL = 7
 
 
 def sport_name_with_constant(sport):
+    """Lookup table, returns sport name as a string for the sport id constant.
+
+    Returns:
+        (str): Sport name as string
+    """
     if sport == VK_CAMERA_MODEL_UNKNOWN:
         return "Unknown"
     elif sport == VK_CAMERA_MODEL_HOCKEY:
@@ -35,6 +40,11 @@ def sport_name_with_constant(sport):
 
 
 def sport_constant_with_name(name):
+    """Lookup table, returns sport constant as int for the sport name.
+
+    Returns:
+        (int): Sport id as constant
+    """
     if name == "Hockey":
         return VK_CAMERA_MODEL_HOCKEY
     elif name == "Basketball":
@@ -56,21 +66,31 @@ def sport_constant_with_name(name):
 
 
 def surface_image_with_sport(sport):
+    """Surface model image for current class model.
 
+    Returns:
+        (array): Returns a numpy array in RGB channel order
+    """
     _sport = sport
     if _sport.__class__.__name__ == "int":
         _sport = sport_name_with_constant(sport)
 
     _path = "./models/surfaces/{:s}.png".format(_sport)
     assert os.path.exists(_path), "WTF!!  The surface image does not exist: {0}".format(_path)
-
     img = cv2.imread(_path)
-    print("--> {0}".format(_sport))
+    cv2.cvtColor(img, cv2.COLOR_BGR2RGB, img)
     return img
 
 
 def surface_properties_for_sport(sport):
+    """Surface model properties for current class model.
 
+    Returns:
+        (dict): Returns a dictionary with model dimensions, offsets and real world scale
+            for meters-to-pixels conversion,
+            Width, Height and offsets are in meters.
+            i.e. width*scale = the width of the surface image in pixels.
+    """
     _sport = sport
     if _sport.__class__.__name__ == "str":
         _sport = sport_constant_with_name(sport)
