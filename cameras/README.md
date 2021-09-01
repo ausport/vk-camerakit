@@ -15,8 +15,8 @@ the geometric orientation of image-world correspondences
 derived from the calibrated surface models.
 
 Each camera instance (subclassed instances of [`cameras/camera_base.py`](./camera_base.py))
-should call `estimate_camera_extrinsics(camera_points, world_points)`
-where the `camera_points` correspond to calibrated `world_points`.
+should be initialised using `estimate_camera_extrinsics(camera_points, world_points)`
+where the `camera_points` and `world_points` correspondences have been manually assembled (using the linked camera calibration interface).
 
 `estimate_camera_extrinsics(camera_points, world_points)` passes the image-world correspondences
  and the camera intrinsics (e.g. focal length, and distortion) as 
@@ -33,7 +33,7 @@ location of the camera in either image or world space.
 
 | z-Plane Camera Projections             | Calibrated Camera Sample |
 :-------------------------:|:-------------------------:
-![](../images/camera_pose.png)  | ![hello](../images/Cropped.png)
+![](../images/camera_pose2.png)  | ![hello](../images/Cropped.png)
 
 
 
@@ -56,7 +56,7 @@ We want the view of our virtual camera operator to be similarly free of this dis
 
 Using the location of our camera pose (known in both image and model space),
 we can transform the shape of the crop such that:
-* The verticals align with the raypoints from the edge of the ROI to the theoretcial 
+* The verticals align with the ray-points from the edge of the ROI to the theoretcial 
 camera location,
 * The horizontals are scaled by the user or by the algorithm to a span that 
 includes all relevant playing features.
