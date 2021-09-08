@@ -214,7 +214,7 @@ class VKWorldModel:
             fov (int): desired field of view angle from camera location.
 
         Returns:
-            (x,y): Returns world coordinates.
+            (rect): Returns crop coordinates in lr, tr, bl, br order.
         """
         # Image point in camera space
         _x, _y = image_target
