@@ -16,7 +16,7 @@ class VKCameraPanorama(VKCamera):
 
         super().__init__(verbose_mode=verbose_mode)
 
-        self._input_files = _file_list
+        self._input_files = input_files
         _input_images = []
 
         for file in self._input_files:
