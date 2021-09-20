@@ -242,6 +242,14 @@ class Window(QtWidgets.QWidget):
         self.btnOMBmode.setChecked(self.OMB_mode)
         self.btnOMBmode.clicked.connect(self.enable_omb)
 
+        # Enable panorama mode
+        self.Panorama_mode = False
+        self.btnPanoramaMode = QtWidgets.QPushButton(self)
+        self.btnPanoramaMode.setText('Create Panorama')
+        # self.btnPanoramaMode.setCheckable(True)
+        # self.btnPanoramaMode.setChecked(self.OMB_mode)
+        self.btnPanoramaMode.clicked.connect(self.enable_panorama_mode)
+
         # Crop FOV slider
         self.cropFOV = 10
         self.sliderCropFOV = QtWidgets.QSlider(Qt.Horizontal)
@@ -329,6 +337,7 @@ class Window(QtWidgets.QWidget):
         hb_correspondences.addWidget(self.btnFitInView)
         hb_correspondences.addWidget(self.btnShowGridVerticals)
         hb_correspondences.addWidget(self.btnOMBmode)
+        hb_correspondences.addWidget(self.btnPanoramaMode)
         hb_correspondences.addWidget(self.chkShow3dCal)
         hb_correspondences.addWidget(self.sliderCropFOV)
 
@@ -609,6 +618,52 @@ class Window(QtWidgets.QWidget):
         self.OMB_mode = self.btnOMBmode.isChecked()
         # self.updateDisplays()
 
+    def enable_panorama_mode(self):
+        """ Enables panoramic camera mode by requesting a set of image/video files.
+
+        Returns:
+            None
+        """
+        self.cboSurfaces.setCurrentText("Basketball")
+        self.set_world_model()
+
+        if self.world_model is not None:
+
+            # paths = QtWidgets.QFileDialog.getOpenFileNames(self,
+            #                                                "Select Multiple Video Inputs",
+            #                                                "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
+            # _cameras = []
+            #
+            # for path in paths[0]:
+            #     _cameras.append(cameras.VKCameraVideoFile(filepath=path))
+
+            _file_list = [
+                "/Users/stuartmorgan2/Dropbox/_Microwork/Multiview/2_view/Basketball/BBall_2_A.mp4",
+                "/Users/stuartmorgan2/Dropbox/_Microwork/Multiview/2_view/Basketball/BBall_2_B.mp4"
+            ]
+
+            _cameras = []
+            for file in _file_list:
+                _cameras.append(cameras.VKCameraVideoFile(filepath=file))
+
+            self.image_model = cameras.VKCameraPanorama(_cameras)
+
+            while True:
+                im_src = self.image_model.get_frame()
+
+                height, width, channel = im_src.shape
+                bytes_per_line = 3 * width
+
+                q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+
+                self.viewer.set_image(QtGui.QPixmap(q_img))
+                self.correspondencesWidget.update_items()
+                self.center_views()
+                self.image_model.update_camera_properties()
+                self.update_displays()
+                app.processEvents()
+                break
+
     def set_cal_markers(self):
         self.show_cal_markers = self.chkShow3dCal.isChecked()
         self.update_displays()
@@ -630,13 +685,15 @@ class Window(QtWidgets.QWidget):
         if path[0] != "":
             with open(path[0]) as data_file:
                 j = json.load(data_file)
-                print(j)
 
                 # Load the surface model first
                 _surface_model = j["surface_model"]
                 self.world_model = models.VKWorldModel(sport=_surface_model)
                 self.load_surface_image()
                 self.cboSurfaces.setCurrentText(_surface_model)
+
+                # Dict in json that is "world_model"
+                # Pass dict to
 
                 if "homography" in j:
                     self.world_model.homography = np.asarray(j["homography"])
@@ -660,17 +717,7 @@ class Window(QtWidgets.QWidget):
                 if "image_path" in j:
                     self.load_camera_image(image_path=j["image_path"])
 
-                # print(self.world_model.model_width, self.world_model.model_height)
-
-        #         _image_path = j["image_path"]
-        #
-        #     #     print(_image_path)
-        #     #     exit(1)
-        #     # self.world_model.import_camera_model(path)
-        #     # self.cboSurfaces.setCurrentText(self.camera_model.sport)
         self.update_displays()
-        #     self.correspondencesWidget.update_items()
-        #
         self.center_views()
 
     def center_views(self):
