@@ -39,7 +39,7 @@ class VKCameraVideoFile(VKCamera):
         Returns:
             (str): A string summary of the object
         """
-        return "\nCamera Source:" \
+        return "Camera Source:" \
                "\n\tFilename         : {0}" \
                "\n\tWidth            : {1}" \
                "\n\tHeight           : {2}" \
