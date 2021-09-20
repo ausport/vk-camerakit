@@ -1,29 +1,35 @@
 """Camera controller for multiple camera view stitching"""
-import cv2
 from cameras import VKCamera
 from cameras.helpers.panorama import *
 
 
 class VKCameraPanorama(VKCamera):
 
-    def __init__(self, input_files, stitch_params=None, verbose_mode=False):
-        """Constructor for panoramic image class.
+    def __init__(self, input_cameras, stitch_params=None, verbose_mode=False):
+        """Constructor for panoramic image class.  Rather than dealing explicitly with
+        images, this class handles camera models that should be instantiated by the
+        owner of this class.
+
+        NB: No camera-wise calibration is required.  Generally, we would calibrate
+        the panoramic composite with respect to world coordinates.
 
         Args:
-            input_files (list): Requires a list of string paths.
+            input_cameras (list): Requires a list of string paths.
+            stitch_params (dict): Overrides default stitching params.
             verbose_mode (bool): Additional class detail logging.
         """
 
         super().__init__(verbose_mode=verbose_mode)
 
-        self._input_files = input_files
+        self.input_cameras = input_cameras
+        self.input_names = []
+
         _input_images = []
 
-        for file in self._input_files:
-            _capture = cv2.VideoCapture(file)
-            success, img = _capture.read()
-            assert success, "Couldn't open {0}".format(file)
-            _input_images.append(img)
+        for idx, camera in enumerate(input_cameras):
+            _img = camera.get_frame()
+            _input_images.append(_img)
+            self.input_names.append("Camera {0}".format(idx))
 
         # Default parameters.
         params = stitch_params or {"work_megapix": 0.6,
@@ -39,32 +45,23 @@ class VKCameraPanorama(VKCamera):
         # Compile the input-wise panoramic projection matrices.
         # This can take a few seconds for large composites, so we do it here once only and retain the matrices
         # for future use.
-        _composite_image, self._panorama_projection_models = self._stitching.compute_transforms(input_images=_input_images, input_names=self._input_files)
+        _composite_image, self._panorama_projection_models = self._stitching.compute_transforms(input_images=_input_images, input_names=self.input_names)
 
         # Composite image properties.
         self._width = _composite_image.shape[1]
         self._height = _composite_image.shape[0]
 
-    def get_frame(self, frame_number=None):
-
-        # if frame_number is not None:
-        #     self.video_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number - 1)
+    def get_frame(self):
 
         _input_images = []
         # Now we have a working stitcher, it should be faster.
-        for file in self._input_files:
-            _capture = cv2.VideoCapture(file)
-            _, img = _capture.read()
-            assert _, "Couldn't open {0}".format(file)
-            _input_images.append(img)
+        for idx, camera in enumerate(self.input_cameras):
+            _img = camera.get_frame()
+            _input_images.append(_img)
 
         # TODO - any annotations should be added at this stage..  Add annotations dict as parameter to be parsed.
         # that = list((item for item in annotations if item[0] == '{0}'.format(frame_number)))
         frame = self._stitching.stitch(camera_models=self._panorama_projection_models, input_images=_input_images, annotations=None)
-
-        if frame is not None:
-            # Pillow assumes RGB - OpenCV reads BRG
-            cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
 
         return frame
 
