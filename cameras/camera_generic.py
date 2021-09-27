@@ -5,8 +5,8 @@ from cameras import VKCamera
 
 class VKCameraGenericDevice(VKCamera):
 
-    def __init__(self, device=0, verbose_mode=False):
-        super().__init__(verbose_mode=verbose_mode)
+    def __init__(self, device=0, verbose_mode=False, surface_name=None):
+        super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         self.video_object = cv2.VideoCapture(device)
         if self.video_object.isOpened():
