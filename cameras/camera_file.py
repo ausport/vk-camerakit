@@ -4,8 +4,8 @@ from cameras import VKCamera
 
 
 class VKCameraVideoFile(VKCamera):
-    def __init__(self, filepath, verbose_mode=False):
-        super().__init__(verbose_mode=verbose_mode)
+    def __init__(self, filepath, verbose_mode=False, surface_name=None):
+        super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         self.video_object = cv2.VideoCapture(filepath)
         if self.video_object.isOpened():
