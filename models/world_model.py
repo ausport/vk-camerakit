@@ -47,7 +47,9 @@ class VKWorldModel:
         Returns:
             (str): A string summary of the object
         """
-        return sport_name_with_constant(self.sport)
+        return "World Model for {0}:\nImage-World Homography:\n{1}".format(
+            sport_name_with_constant(self.sport),
+            self.homography)
 
     @classmethod
     def model_with_sport(cls, sport):
@@ -259,38 +261,3 @@ class VKWorldModel:
         self.homography = np.zeros((3, 3))
         np.fill_diagonal(self.homography, 1)
 
-    def export_camera_model(self, json_path):
-        """Serialise the existing model parameters.
-
-        Args:
-            json_path (str): destination path.
-
-        Returns:
-            None
-        """
-        print("Exporting", json_path[0])
-        j = json.dumps(
-                {
-                    'surface_model': self.sport,
-                    'image_path' : self.__image_path,
-                    'model_dimensions': [self.model_width, self.model_height],
-                    'model_offset': [self.model_offset_x, self.model_offset_y],
-                    'model_scale': self.model_scale,
-                    'homography': self.homography.tolist(),
-                    'focal_length': self.focal_length,
-                    # 'rotation_vector': self.rotation_vector,
-                    # 'translation_vector': self.translation_vector,
-                    'distortion_matrix': self.distortion_matrix.tolist(),
-                    'image_points': self.image_points.tolist(),
-                    'model_points': self.model_points.tolist(),
-                    # 'camera_point': self.camera_point,
-                    'camera_matrix': self.camera_matrix.tolist()
-                },
-                indent=4,
-                separators=(',', ': ')
-            )
-
-        print(j)
-
-        with open(json_path[0]+".json", 'w') as data_file:
-            data_file.write(j)
