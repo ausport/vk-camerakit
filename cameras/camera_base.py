@@ -1,19 +1,35 @@
 """Generic class for all image sources"""
 import cv2
 import filetype
+import json
 import numpy as np
 from PIL import Image
 
 from models.geometry import ray_intersection
+from models import world_model as surface
 
 
 class VKCamera:
-    def __init__(self, verbose_mode=False):
+    def __init__(self, surface_name=None, verbose_mode=False):
         """Constructor for generic image source class.
         Use subclassed instances of this class
 
         Args:
             verbose_mode (bool): Additional class detail logging.
+
+        Usage:
+            Subclass VKCamera with optional world surface:
+                e.g. camera = VKCameraVideoFile(filepath, surface_name)
+                e.g. camera = VKCameraGenericDevice(device, surface_name)
+
+            Alternately, pre-configured json format camera files may include
+            camera intrinsics and extrinsics, world homographies,
+            camera capture properties, world-image correspondences, and a class type.
+
+            In the case of file-based objects (e.g. VKCameraVideoFile), the filename
+            can be either a video/image resource, or a json-formatted configuration.
+            If the former, default camera properties are assumed.
+
         """
 
         self.verbose_mode = verbose_mode
@@ -26,10 +42,14 @@ class VKCamera:
         self.distortion_matrix = np.zeros((4, 1))
 
         # Camera extrinsic properties
-        # TODO - disambiguate this property with the image rotation prop in VK2.
         self.rotation_vector = None
         self.translation_vector = None
         self.camera_2d_image_space_location = None
+
+        # Surface model
+        self.surface_model = None
+        if surface_name is not None:
+            self.surface_model = surface.VKWorldModel(sport=surface_name)
 
         if verbose_mode:
             print(self)
@@ -263,6 +283,58 @@ class VKCamera:
 
         if self.verbose_mode:
             print("Saved frame {0} to {1}".format(frame, dest_path))
+
+    def serialise_camera_model(self, json_path):
+        """Serialise the existing model parameters.
+        Note that we store all of the world model parameters here too.
+        Deserialisation should return a configured surface model.
+
+        Args:
+            json_path (str): destination path.
+
+        Returns:
+            None
+        """
+
+        if self.surface_model is not None:
+
+            _camera_parameters = {'class': self.__class__.__name__}
+
+            # Camera-specific parameters
+            if hasattr(self, "filepath"):
+                _camera_parameters.update({'image_path': self.filepath})
+            if hasattr(self, "surface_model"):
+                _camera_parameters.update({'surface_model': self.surface_model.surface_model_name()})
+            if hasattr(self, "focal_length"):
+                _camera_parameters.update({'focal_length': self.focal_length})
+            if hasattr(self, "camera_matrix"):
+                _camera_parameters.update({'camera_matrix': self.camera_matrix.tolist()})
+            if hasattr(self, "distortion_matrix"):
+                _camera_parameters.update({'distortion_matrix': self.distortion_matrix.tolist()})
+            if hasattr(self, "rotation_vector"):
+                _camera_parameters.update({'rotation_vector': self.rotation_vector.tolist()})
+            if hasattr(self, "translation_vector"):
+                _camera_parameters.update({'translation_vector': self.translation_vector.tolist()})
+
+            # World model parameters
+            if hasattr(self.surface_model, "homography"):
+                _camera_parameters.update({'homography': self.surface_model.homography.tolist()})
+            if hasattr(self.surface_model, "image_points"):
+                _camera_parameters.update({'image_points': self.surface_model.image_points.tolist()})
+            if hasattr(self.surface_model, "model_points"):
+                _camera_parameters.update({'model_points': self.surface_model.model_points.tolist()})
+
+            j = json.dumps(
+                    _camera_parameters,
+                    indent=4,
+                    separators=(',', ': ')
+                )
+
+            if not json_path.endswith(".json"):
+                json_path = json_path+".json"
+
+            with open(json_path, 'w') as data_file:
+                data_file.write(j)
 
     def close(self):
         if self.video_object is not None:
