@@ -419,12 +419,10 @@ class Window(QtWidgets.QWidget):
             if self.image_model is not None:
                 self.image_model.close()
 
-            print(image_path)
             # TODO - open image device with it's own button widget.
             if image_path[0] == "":
                 self.image_model = cameras.VKCameraGenericDevice(device=0)
             else:
-                print("Will load:", image_path[0])
                 self.image_model = cameras.VKCameraVideoFile(filepath=image_path[0])
 
             while True:
@@ -441,7 +439,7 @@ class Window(QtWidgets.QWidget):
                 self.image_model.update_camera_properties()
                 self.update_displays()
                 app.processEvents()
-                break
+
                 if self.image_model.eof():
                     break
 
@@ -608,6 +606,7 @@ class Window(QtWidgets.QWidget):
     def compute_homography(self):
         self.world_model.compute_homography()
         self.world_model.compute_inverse_homography()
+        self.image_model.surface_model = self.world_model
         self.update_displays()
 
     def vertical_projections(self):
@@ -670,10 +669,11 @@ class Window(QtWidgets.QWidget):
 
     def save_camera_properties(self):
 
-        if self.world_model:
+        if self.image_model:
             path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")
             if path[0] != "":
-                self.world_model.export_camera_model(path)
+                self.image_model.surface_model = self.world_model
+                self.image_model.serialise_camera_model(path[0])
 
     def load_camera_properties(self):
         """ Opens json file containing camera and model parameters and creates new VKWorldModel and VKCamera objects.
@@ -681,42 +681,23 @@ class Window(QtWidgets.QWidget):
         Returns:
             None
         """
+
+        # Initialise camera and world models from file.
         path = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")
         if path[0] != "":
-            with open(path[0]) as data_file:
-                j = json.load(data_file)
+            self.image_model = cameras.load_camera_model_from_json(path=path[0])
+            self.cboSurfaces.setCurrentText(self.image_model.surface_model.surface_model_name())
+            self.world_model = self.image_model.surface_model
 
-                # Load the surface model first
-                _surface_model = j["surface_model"]
-                self.world_model = models.VKWorldModel(sport=_surface_model)
-                self.load_surface_image()
-                self.cboSurfaces.setCurrentText(_surface_model)
+        # Set initial image in viewer
+        im_src = self.image_model.get_frame()
+        height, width, channel = im_src.shape
+        bytes_per_line = 3 * width
+        q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+        self.viewer.set_image(QtGui.QPixmap(q_img))
 
-                # Dict in json that is "world_model"
-                # Pass dict to
-
-                if "homography" in j:
-                    self.world_model.homography = np.asarray(j["homography"])
-                    self.world_model.compute_inverse_homography()
-
-                if "distortion_matrix" in j:
-                    self.world_model.distortion_matrix = np.asarray(j["distortion_matrix"])
-
-                if "camera_matrix" in j:
-                    self.world_model.camera_matrix = np.asarray(j["camera_matrix"])
-
-                if "focal_length" in j:
-                    self.world_model.focal_length = j["distortion_matrix"]
-
-                if "image_points" in j:
-                    self.world_model.image_points = np.asarray(j["image_points"])
-
-                if "model_points" in j:
-                    self.world_model.model_points = np.asarray(j["model_points"])
-
-                if "image_path" in j:
-                    self.load_camera_image(image_path=j["image_path"])
-
+        # Update interface
+        self.correspondencesWidget.update_items()
         self.update_displays()
         self.center_views()
 
