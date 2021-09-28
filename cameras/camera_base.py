@@ -38,7 +38,6 @@ class VKCamera:
         # Camera intrinsics properties
         self.focal_length = 23.
         self.camera_matrix = np.zeros((3, 3))
-        self.optimal_camera_matrix = np.zeros((3, 3))
         self.distortion_matrix = np.zeros((4, 1))
 
         # Camera extrinsic properties
@@ -118,9 +117,9 @@ class VKCamera:
             (array): Distortion-corrected image.
         """
         image = image or self.get_frame()
-        return cv2.undistort(image, self.camera_matrix, self.distortion_matrix, None, self.optimal_camera_matrix)
+        return cv2.undistort(image, self.camera_matrix, self.distortion_matrix, None, None)
 
-    def update_camera_properties(self, with_distortion_matrix=None, with_camera_matrix=None, with_optimal_camera_matrix=None):
+    def update_camera_properties(self, with_distortion_matrix=None, with_camera_matrix=None):
         """Recalculates the camera intrinsics matrix.
 
         Args:
@@ -141,11 +140,6 @@ class VKCamera:
             self.camera_matrix = np.float64([[fx * w, 0, 0.5 * (w - 1)],
                                              [0, fx * w, 0.5 * (h - 1)],
                                              [0.0, 0.0, 1.0]])
-
-        if with_optimal_camera_matrix is not None:
-            self.optimal_camera_matrix = with_optimal_camera_matrix
-        else:
-            self.optimal_camera_matrix = self.camera_matrix
 
     def estimate_camera_extrinsics(self, world_model):
         """Estimates the rotation and the translation vectors for the camera using the geometric properties of a calibrated world surface.
