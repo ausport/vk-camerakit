@@ -5,7 +5,7 @@ from cameras.helpers.panorama import *
 
 class VKCameraPanorama(VKCamera):
 
-    def __init__(self, input_cameras, stitch_params=None, verbose_mode=False):
+    def __init__(self, input_cameras, stitch_params=None, panorama_projection_models=None,  surface_name=None, verbose_mode=False):
         """Constructor for panoramic image class.  Rather than dealing explicitly with
         images, this class handles camera models that should be instantiated by the
         owner of this class.
@@ -16,10 +16,14 @@ class VKCameraPanorama(VKCamera):
         Args:
             input_cameras (list): Requires a list of string paths.
             stitch_params (dict): Overrides default stitching params.
+            panorama_projection_models (list): List of camera projection models (These are
+            normally derived from the <compute_transforms> function, but since they are
+            non-detirministic, the user may have refined previously optimal set of
+            projections which should override any new set obtained at init.
             verbose_mode (bool): Additional class detail logging.
         """
 
-        super().__init__(verbose_mode=verbose_mode)
+        super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         self.input_cameras = input_cameras
         self.input_names = []
@@ -42,14 +46,30 @@ class VKCameraPanorama(VKCamera):
         # Initiate the stitching class.
         self._stitching = VKPanorama(params=params)
 
-        # Compile the input-wise panoramic projection matrices.
-        # This can take a few seconds for large composites, so we do it here once only and retain the matrices
-        # for future use.
-        _composite_image, self._panorama_projection_models = self._stitching.compute_transforms(input_images=_input_images, input_names=self.input_names)
+        # if panorama_projection_models is None:
+        # TODO - solve metric import issue where the conversion from list to ndarray seems to be discretising the element values.
+        if True:
+            # Compile the input-wise panoramic projection matrices.
+            # This can take a few seconds for large composites, so we do it here once only and retain the matrices
+            # for future use.
+            print("Building panorama for the first time...")
+            _composite_image, self.panorama_projection_models = self._stitching.compute_transforms(input_images=_input_images, input_names=self.input_names)
+        else:
+            # Alternately, if a serialised set of projection models are available, we use them.
+            print("Building panorama from json...")
+            for m in panorama_projection_models:
+                print(m)
+            _composite_image = self._stitching.stitch(camera_models=panorama_projection_models, input_images=_input_images)
+
+        # for model in self.panorama_projection_models:
+        #     print(model)
 
         # Composite image properties.
         self._width = _composite_image.shape[1]
         self._height = _composite_image.shape[0]
+
+        # Retain parameters
+        self.stitching_parameters = params
 
     def get_frame(self):
 
@@ -61,7 +81,7 @@ class VKCameraPanorama(VKCamera):
 
         # TODO - any annotations should be added at this stage..  Add annotations dict as parameter to be parsed.
         # that = list((item for item in annotations if item[0] == '{0}'.format(frame_number)))
-        frame = self._stitching.stitch(camera_models=self._panorama_projection_models, input_images=_input_images, annotations=None)
+        frame = self._stitching.stitch(camera_models=self.panorama_projection_models, input_images=_input_images, annotations=None)
 
         return frame
 
