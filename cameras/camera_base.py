@@ -41,8 +41,8 @@ class VKCamera:
         self.distortion_matrix = np.zeros((4, 1))
 
         # Camera extrinsic properties
-        self.rotation_vector = None
-        self.translation_vector = None
+        self.rotation_vector = np.zeros((3, 3))
+        self.translation_vector = np.zeros((3, 3))
         self.camera_2d_image_space_location = None
 
         # Surface model
@@ -278,10 +278,8 @@ class VKCamera:
         if self.verbose_mode:
             print("Saved frame {0} to {1}".format(frame, dest_path))
 
-    def serialise_camera_model(self, json_path):
-        """Serialise the existing model parameters.
-        Note that we store all of the world model parameters here too.
-        Deserialisation should return a configured surface model.
+    def export_json(self, json_path):
+        """Export current camera model in json format.
 
         Args:
             json_path (str): destination path.
@@ -290,45 +288,86 @@ class VKCamera:
             None
         """
 
-        if self.surface_model is not None:
+        j = json.dumps(
+            self.camera_model_json(),
+            indent=4,
+            separators=(',', ': ')
+        )
 
-            _camera_parameters = {'class': self.__class__.__name__}
+        if not json_path.endswith(".json"):
+            json_path = json_path + ".json"
 
-            # Camera-specific parameters
-            if hasattr(self, "filepath"):
-                _camera_parameters.update({'image_path': self.filepath})
-            if hasattr(self, "surface_model"):
+        with open(json_path, 'w') as data_file:
+            data_file.write(j)
+
+    def camera_model_json(self):
+        """Serialise the existing model parameters.
+        Note that we store all of the world model parameters here too.
+        Deserialisation should return a configured surface model.
+
+        Returns:
+            None
+        """
+
+        _camera_parameters = {'class': self.__class__.__name__}
+
+        # Camera-specific parameters
+        if hasattr(self, "filepath"):
+            _camera_parameters.update({'image_path': self.filepath})
+        if hasattr(self, "surface_model"):
+            if self.surface_model is not None:
                 _camera_parameters.update({'surface_model': self.surface_model.surface_model_name()})
-            if hasattr(self, "focal_length"):
-                _camera_parameters.update({'focal_length': self.focal_length})
-            if hasattr(self, "camera_matrix"):
-                _camera_parameters.update({'camera_matrix': self.camera_matrix.tolist()})
-            if hasattr(self, "distortion_matrix"):
-                _camera_parameters.update({'distortion_matrix': self.distortion_matrix.tolist()})
-            if hasattr(self, "rotation_vector"):
-                _camera_parameters.update({'rotation_vector': self.rotation_vector.tolist()})
-            if hasattr(self, "translation_vector"):
-                _camera_parameters.update({'translation_vector': self.translation_vector.tolist()})
+        if hasattr(self, "focal_length"):
+            _camera_parameters.update({'focal_length': self.focal_length})
+        if hasattr(self, "camera_matrix"):
+            _camera_parameters.update({'camera_matrix': self.camera_matrix.tolist()})
+        if hasattr(self, "distortion_matrix"):
+            _camera_parameters.update({'distortion_matrix': self.distortion_matrix.tolist()})
+        if hasattr(self, "rotation_vector"):
+            _camera_parameters.update({'rotation_vector': self.rotation_vector.tolist()})
+        if hasattr(self, "translation_vector"):
+            _camera_parameters.update({'translation_vector': self.translation_vector.tolist()})
 
-            # World model parameters
-            if hasattr(self.surface_model, "homography"):
-                _camera_parameters.update({'homography': self.surface_model.homography.tolist()})
-            if hasattr(self.surface_model, "image_points"):
-                _camera_parameters.update({'image_points': self.surface_model.image_points.tolist()})
-            if hasattr(self.surface_model, "model_points"):
-                _camera_parameters.update({'model_points': self.surface_model.model_points.tolist()})
+        # Panoramic parameters
+        if self.__class__.__name__ == "VKCameraPanorama":
+            assert hasattr(self, "input_cameras"), "Panoramic model doesn't include input camera models..."
+            assert hasattr(self, "stitching_parameters"), "Panoramic model doesn't include stitching parameters..."
+            assert hasattr(self, "panorama_projection_models"), "Panoramic model doesn't include panorama projection parameters..."
 
-            j = json.dumps(
-                    _camera_parameters,
-                    indent=4,
-                    separators=(',', ': ')
-                )
+            _camera_parameters.update({'stitching_parameters': self.stitching_parameters})
+            _pano_camerawise_models = []
 
-            if not json_path.endswith(".json"):
-                json_path = json_path+".json"
+            for idx, input_camera in enumerate(self.input_cameras):
+                assert input_camera.__class__.__name__ != "VKCameraPanorama", "This would be bad..."
+                assert len(self.input_cameras) == len(self.panorama_projection_models), "This would also be bad..."
 
-            with open(json_path, 'w') as data_file:
-                data_file.write(j)
+                projection_model = self.panorama_projection_models[idx]
+
+                projection_model_parameters = {
+                    "name": projection_model["name"],
+                    "short_name": projection_model["short_name"],
+                    "corner": projection_model["corner"],
+                    "rotation": projection_model["rotation"].tolist(),
+                    "extrinsics": projection_model["extrinsics"].tolist()
+                }
+
+                # Compile json representation of camera model and projection parameters
+                _pano_camerawise_models.append(
+                    {"input_camera": projection_model["short_name"],
+                     "input_camera_model": input_camera.camera_model_json(),
+                     "projection_model_parameters": projection_model_parameters})
+
+            _camera_parameters.update({'panorama_projection_models': _pano_camerawise_models})
+
+        # World model parameters
+        if hasattr(self.surface_model, "homography"):
+            _camera_parameters.update({'homography': self.surface_model.homography.tolist()})
+        if hasattr(self.surface_model, "image_points"):
+            _camera_parameters.update({'image_points': self.surface_model.image_points.tolist()})
+        if hasattr(self.surface_model, "model_points"):
+            _camera_parameters.update({'model_points': self.surface_model.model_points.tolist()})
+
+        return _camera_parameters
 
     def close(self):
         if self.video_object is not None:
