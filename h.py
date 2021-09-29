@@ -563,11 +563,11 @@ class Window(QtWidgets.QWidget):
 
             self.world_model.image_points = np.append(self.world_model.image_points,
                                                       np.array([(self.last_image_pairs[0],
-                                                                  self.last_image_pairs[1])], dtype='float32'), axis=0)
+                                                                 self.last_image_pairs[1])], dtype='float32'), axis=0)
 
             self.world_model.model_points = np.append(self.world_model.model_points,
                                                       np.array([(self.last_surface_pairs[0],
-                                                                  self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
+                                                                 self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
 
             # Save correspondences
             self.reset_controls()
@@ -673,7 +673,7 @@ class Window(QtWidgets.QWidget):
             path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")
             if path[0] != "":
                 self.image_model.surface_model = self.world_model
-                self.image_model.serialise_camera_model(path[0])
+                self.image_model.export_json(path[0])
 
     def load_camera_properties(self):
         """ Opens json file containing camera and model parameters and creates new VKWorldModel and VKCamera objects.
