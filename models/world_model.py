@@ -150,8 +150,10 @@ class VKWorldModel:
         """
         assert camera_model is not None, "WTF!!  You gotta give me something..."
         # TODO - verify the camera extrinsics exist.
-        if camera_model.translation_vector is None:
-            camera_model.estimate_camera_extrinsics(world_model=self)
+
+        # if np.all(camera_model.translation_vector == np.zeros((3, 3))):
+        # TODO - only update extrinsics once.
+        camera_model.estimate_camera_extrinsics(world_model=self)
 
         (projected_point, jacobian) = cv2.projectPoints(world_point,
                                                         camera_model.rotation_vector,
