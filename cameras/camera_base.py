@@ -125,7 +125,6 @@ class VKCamera:
         Args:
             with_distortion_matrix (array): (optional) 4x1 numpy array defining camera distortion.
             with_camera_matrix (array): (optional) 3x3 numpy array defining camera dimension matrix.
-            with_optimal_camera_matrix (array): (optional) 3x3 numpy array overriding default camera dimension matrix.
         """
         if with_distortion_matrix is not None:
             self.distortion_matrix = with_distortion_matrix
