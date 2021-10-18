@@ -54,15 +54,12 @@ class VKCameraPanorama(VKCamera):
             # for future use.
             print("Building panorama for the first time...")
             _composite_image, self.panorama_projection_models = self._stitching.compute_transforms(input_images=_input_images, input_names=self.input_names)
-        else:
-            # Alternately, if a serialised set of projection models are available, we use them.
-            print("Building panorama from json...")
-            for m in panorama_projection_models:
-                print(m)
-            _composite_image = self._stitching.stitch(camera_models=panorama_projection_models, input_images=_input_images)
-
-        # for model in self.panorama_projection_models:
-        #     print(model)
+        # else:
+        #     # Alternately, if a serialised set of projection models are available, we use them.
+        #     print("Building panorama from json...")
+        #     for m in panorama_projection_models:
+        #         print(m)
+        #     _composite_image = self._stitching.stitch(camera_models=panorama_projection_models, input_images=_input_images)
 
         # Composite image properties.
         self._width = _composite_image.shape[1]
@@ -111,6 +108,18 @@ class VKCameraPanorama(VKCamera):
         frame = self._stitching.stitch(camera_models=self.panorama_projection_models, input_images=_input_images, annotations=None)
 
         return frame
+
+    def eof(self):
+        """Overrides eof.
+
+        Returns:
+            (bool): True if video device is available.
+        """
+        _result = False
+        for idx, camera in enumerate(self.input_cameras):
+            if not camera.video_object.isOpened():
+                _result = True
+        return _result
 
     def width(self):
         """The pixel width of the video resource.
