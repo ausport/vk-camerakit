@@ -7,7 +7,6 @@ import sys
 import cv2
 import numpy as np
 import time
-import json
 
 import cameras
 import models
@@ -312,6 +311,8 @@ class Window(QtWidgets.QWidget):
 
         self.show_vertical_projections = False
 
+        self.is_playing = False
+
         self.world_model = None
         self.image_model = None
 
@@ -379,6 +380,11 @@ class Window(QtWidgets.QWidget):
 
     def keyPressEvent(self, event):
         # print("down")
+
+        if event.key() == Qt.Key_Space:
+            self.play()
+            return
+
         if not event.isAutoRepeat():
             if event.key() == Qt.Key_Escape:
                 # Abort correspondences
@@ -752,6 +758,12 @@ class Window(QtWidgets.QWidget):
         self.image_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5
         print("Updating distortion parameter: {0}".format(self.image_model.distortion_matrix[0]))
         self.update_displays()
+
+    def play(self):
+        self.is_playing = not self.is_playing
+        while self.is_playing:
+            self.update_displays()
+            app.processEvents()
 
     def update_displays(self, crop=None):
 
