@@ -71,8 +71,35 @@ class VKCameraPanorama(VKCamera):
         # Retain parameters
         self.stitching_parameters = params
 
-    def get_frame(self):
+    def frame_count(self):
+        """The number of frames in the video resource.
 
+        Returns:
+            (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
+        """
+        _frames = math.inf
+        for camera in self.input_cameras:
+            _frames = min(_frames, camera.frame_count())
+
+        return _frames
+
+    def set_position(self, frame_number):
+        """Seek to frame number over all input cameras
+
+        Args:
+            frame_number (int): valid frame number for assignment.
+        Returns:
+            None
+        """
+        for idx, camera in enumerate(self.input_cameras):
+            camera.set_position(frame_number=frame_number)
+
+    def get_frame(self):
+        """Panoramic camera image.
+
+        Returns:
+            (array): panoramic-scale image.
+        """
         _input_images = []
         # Now we have a working stitcher, it should be faster.
         for idx, camera in enumerate(self.input_cameras):
