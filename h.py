@@ -193,6 +193,9 @@ class MyPopup(QtWidgets.QWidget):
 class Window(QtWidgets.QWidget):
     def __init__(self, sport=None):
 
+        # TODO - clean up this interface with subclassed QGroupBox:
+        # https://doc.qt.io/qt-5/qtwidgets-widgets-sliders-example.html
+
         super(Window, self).__init__()
         self.setWindowTitle("Camera calibration Interface")
 
@@ -290,6 +293,7 @@ class Window(QtWidgets.QWidget):
         self.sliderFocalLength.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.sliderFocalLength.setTickInterval(20)
         self.sliderFocalLength.valueChanged.connect(self.update_focal_length)
+
         # Distortion slider
         self.sliderDistortion = QtWidgets.QSlider(Qt.Horizontal)
         self.sliderDistortion.setMinimum(0)
@@ -317,6 +321,16 @@ class Window(QtWidgets.QWidget):
         hb_images_layout.addWidget(self.viewer)
         hb_images_layout.addWidget(self.surface)
         vb_layout.addLayout(hb_images_layout)
+
+        # Distortion slider
+        self.sliderVideoTime = QtWidgets.QSlider(Qt.Horizontal)
+        self.sliderVideoTime.setMinimum(0)
+        self.sliderVideoTime.setMaximum(0)
+        self.sliderVideoTime.setValue(0)
+        self.sliderVideoTime.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        self.sliderVideoTime.setTickInterval(1)
+        self.sliderVideoTime.valueChanged.connect(self.update_video_time)
+        vb_layout.addWidget(self.sliderVideoTime)
 
         hb_layout = QtWidgets.QHBoxLayout()
         hb_layout.setAlignment(Qt.AlignLeft)
@@ -424,6 +438,8 @@ class Window(QtWidgets.QWidget):
                 self.image_model = cameras.VKCameraGenericDevice(device=0)
             else:
                 self.image_model = cameras.VKCameraVideoFile(filepath=image_path[0])
+
+            self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
             while True:
                 im_src = self.image_model.get_frame()
@@ -689,6 +705,8 @@ class Window(QtWidgets.QWidget):
             self.cboSurfaces.setCurrentText(self.image_model.surface_model.surface_model_name())
             self.world_model = self.image_model.surface_model
 
+        self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
+
         # Set initial image in viewer
         im_src = self.image_model.get_frame()
         height, width, channel = im_src.shape
@@ -724,6 +742,11 @@ class Window(QtWidgets.QWidget):
 
     def update_crop_fov(self):
         self.cropFOV = self.sliderCropFOV.value()
+
+    def update_video_time(self):
+        if self.image_model is not None:
+            self.image_model.set_position(frame_number=self.sliderVideoTime.value())
+            self.update_displays()
 
     def update_distortion_estimate(self):
         self.image_model.distortion_matrix[0] = self.sliderDistortion.value() * -3e-5

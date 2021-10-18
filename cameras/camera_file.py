@@ -15,8 +15,10 @@ class VKCameraVideoFile(VKCamera):
             raise NotImplementedError
 
     def get_frame(self, frame_number=None):
+        print("Getting {0}".format(frame_number))
         if frame_number is not None:
             self.video_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number - 1)
+            print("Got", self.video_object.get(cv2.CAP_PROP_POS_FRAMES))
 
         if self.is_video:
             res, frame = self.video_object.read()
@@ -30,7 +32,7 @@ class VKCameraVideoFile(VKCamera):
 
         return frame
 
-    def set_position(self, frame_number=100):
+    def set_position(self, frame_number):
         self.video_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number - 1)
 
     def __str__(self):
