@@ -3,6 +3,7 @@ import cv2
 import filetype
 import json
 import numpy as np
+import os
 from PIL import Image
 
 from models.geometry import ray_intersection
@@ -263,19 +264,46 @@ class VKCamera:
         Args:
             dest_path (str): destination for saved image.
         """
-        frame = 0
-
-        if hasattr(self, "set_position"):
-            self.set_position(frame_number=100)
-
         _frame = self.get_frame()
 
         cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
         img = Image.fromarray(_frame)
         img.save(dest_path)
 
-        if self.verbose_mode:
-            print("Saved frame {0} to {1}".format(frame, dest_path))
+    def save_video(self, video_export_path, size=(1920,1080)):
+        """Saves current camera model imagery in mp4 format.
+
+        Args:
+            video_export_path (str): destination path.
+            size(tuple): output size - default 1920 x 1080
+        Returns:
+            None
+        """
+        if os.path.exists(os.path.split(video_export_path)[0]):
+            fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+            # pad out to a 16:9 aspect ratio
+            new_image_width = self.width()
+            new_image_height = int(new_image_width / 16) * 9
+            _video_writer = cv2.VideoWriter(str(video_export_path), fourcc, self.fps(), size, True)
+
+            while True:
+                _frame = self.get_frame()
+                old_image_height, old_image_width, channels = _frame.shape
+
+                _padded = np.full((new_image_height, new_image_width, channels), (0, 0, 0), dtype=np.uint8)
+
+                # compute center offset
+                x_center = (new_image_width - old_image_width) // 2
+                y_center = (new_image_height - old_image_height) // 2
+
+                # copy img image into center of result image
+                _padded[y_center:y_center + old_image_height, x_center:x_center + old_image_width] = _frame
+                _padded = cv2.cvtColor(np.array(_padded), cv2.COLOR_RGB2BGR)
+                _padded = cv2.resize(_padded, dsize=size, interpolation=cv2.INTER_CUBIC)
+                _video_writer.write(_padded)
+
+                if self.eof():
+                    break
 
     def export_json(self, json_path):
         """Export current camera model in json format.
