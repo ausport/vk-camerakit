@@ -91,6 +91,17 @@ class VKCameraPanorama(VKCamera):
         for idx, camera in enumerate(self.input_cameras):
             camera.set_position(frame_number=frame_number)
 
+    def fps(self):
+        """The frames per second of the video resource.
+
+        Returns:
+            (float): The CAP_PROP_FPS property.
+        """
+        _fps = []
+        for idx, camera in enumerate(self.input_cameras):
+            _fps.append(camera.fps())
+        return float(np.mean(_fps))
+
     def get_frame(self):
         """Panoramic camera image.
 

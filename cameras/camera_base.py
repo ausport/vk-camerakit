@@ -95,9 +95,9 @@ class VKCamera:
         """The frames per second of the video resource.
 
         Returns:
-            (int): The CAP_PROP_FPS property.
+            (float): The CAP_PROP_FPS property.
         """
-        return int(self.video_object.get(cv2.CAP_PROP_FPS))
+        return float(self.video_object.get(cv2.CAP_PROP_FPS))
 
     def eof(self):
         """Signals end of video file.
