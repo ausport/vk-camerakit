@@ -68,6 +68,17 @@ class VKCameraPanorama(VKCamera):
         # Retain parameters
         self.stitching_parameters = params
 
+    def frame_position(self):
+        """The current frame number in the video resource.
+
+        Returns:
+            (list): The CAP_PROP_POS_FRAMES property in a list over each camera instance.
+        """
+        _positions = []
+        for camera in self.input_cameras:
+            _positions.append(camera.frame_position)
+        return _positions
+
     def frame_count(self):
         """The number of frames in the video resource.
 
