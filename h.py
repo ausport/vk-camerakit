@@ -248,9 +248,12 @@ class Window(QtWidgets.QWidget):
         self.Panorama_mode = False
         self.btnPanoramaMode = QtWidgets.QPushButton(self)
         self.btnPanoramaMode.setText('Create Panorama')
-        # self.btnPanoramaMode.setCheckable(True)
-        # self.btnPanoramaMode.setChecked(self.OMB_mode)
         self.btnPanoramaMode.clicked.connect(self.enable_panorama_mode)
+
+        # Export panorama mode output to video
+        self.btnExportPanorama = QtWidgets.QToolButton(self)
+        self.btnExportPanorama.setText('Export Panorama Output')
+        self.btnExportPanorama.clicked.connect(self.export_panorama)
 
         # Crop FOV slider
         self.cropFOV = 10
@@ -353,6 +356,7 @@ class Window(QtWidgets.QWidget):
         hb_correspondences.addWidget(self.btnShowGridVerticals)
         hb_correspondences.addWidget(self.btnOMBmode)
         hb_correspondences.addWidget(self.btnPanoramaMode)
+        hb_correspondences.addWidget(self.btnExportPanorama)
         hb_correspondences.addWidget(self.chkShow3dCal)
         hb_correspondences.addWidget(self.sliderCropFOV)
 
@@ -663,6 +667,17 @@ class Window(QtWidgets.QWidget):
             self.center_views()
             self.image_model.update_camera_properties()
             self.update_displays()
+
+    def export_panorama(self):
+
+        if self.image_model:
+            if self.image_model.__class__.__name__ != "VKCameraPanorama":
+                print("Not a VKCameraPanorama camera...")
+                return
+
+            path = QtWidgets.QFileDialog.getSaveFileName(self, 'Export Panorama Composite', self.cboSurfaces.currentText(), "mp4(*.mp4)")
+            if path[0] != "":
+                self.image_model.save_video(video_export_path=path[0])
 
     def set_cal_markers(self):
         self.show_cal_markers = self.chkShow3dCal.isChecked()
