@@ -447,23 +447,17 @@ class Window(QtWidgets.QWidget):
 
             self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
-            while True:
-                im_src = self.image_model.get_frame()
+            im_src = self.image_model.get_frame()
+            height, width, channel = im_src.shape
+            bytes_per_line = 3 * width
+            q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
 
-                height, width, channel = im_src.shape
-                bytes_per_line = 3 * width
-
-                q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-
-                self.viewer.set_image(QtGui.QPixmap(q_img))
-                self.correspondencesWidget.update_items()
-                self.center_views()
-                self.image_model.update_camera_properties()
-                self.update_displays()
-                app.processEvents()
-
-                if self.image_model.eof():
-                    break
+            self.viewer.set_image(QtGui.QPixmap(q_img))
+            self.correspondencesWidget.update_items()
+            self.center_views()
+            self.image_model.update_camera_properties()
+            self.update_displays()
+            app.processEvents()
 
     def set_world_model(self):
         print("Setting world surface model:", self.cboSurfaces.currentText())
@@ -645,45 +639,30 @@ class Window(QtWidgets.QWidget):
         Returns:
             None
         """
-        self.cboSurfaces.setCurrentText("Basketball")
-        self.set_world_model()
 
         if self.world_model is not None:
 
-            # paths = QtWidgets.QFileDialog.getOpenFileNames(self,
-            #                                                "Select Multiple Video Inputs",
-            #                                                "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
-            # _cameras = []
-            #
-            # for path in paths[0]:
-            #     _cameras.append(cameras.VKCameraVideoFile(filepath=path))
-
-            _file_list = [
-                "/Users/stuartmorgan2/Dropbox/_Microwork/Multiview/2_view/Basketball/BBall_2_A.mp4",
-                "/Users/stuartmorgan2/Dropbox/_Microwork/Multiview/2_view/Basketball/BBall_2_B.mp4"
-            ]
-
+            paths = QtWidgets.QFileDialog.getOpenFileNames(self,
+                                                           "Select Multiple Video Inputs",
+                                                           "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
             _cameras = []
-            for file in _file_list:
-                _cameras.append(cameras.VKCameraVideoFile(filepath=file))
+
+            for path in paths[0]:
+                _cameras.append(cameras.VKCameraVideoFile(filepath=path))
 
             self.image_model = cameras.VKCameraPanorama(_cameras)
+            self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
-            while True:
-                im_src = self.image_model.get_frame()
+            im_src = self.image_model.get_frame()
+            height, width, channel = im_src.shape
+            bytes_per_line = 3 * width
+            q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
 
-                height, width, channel = im_src.shape
-                bytes_per_line = 3 * width
-
-                q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-
-                self.viewer.set_image(QtGui.QPixmap(q_img))
-                self.correspondencesWidget.update_items()
-                self.center_views()
-                self.image_model.update_camera_properties()
-                self.update_displays()
-                app.processEvents()
-                break
+            self.viewer.set_image(QtGui.QPixmap(q_img))
+            self.correspondencesWidget.update_items()
+            self.center_views()
+            self.image_model.update_camera_properties()
+            self.update_displays()
 
     def set_cal_markers(self):
         self.show_cal_markers = self.chkShow3dCal.isChecked()
@@ -764,6 +743,8 @@ class Window(QtWidgets.QWidget):
         while self.is_playing:
             self.update_displays()
             app.processEvents()
+            if self.image_model.eof():
+                self.is_playing = False
 
     def update_displays(self, crop=None):
 
