@@ -132,11 +132,17 @@ def surface_properties_for_sport(sport):
             "model_scale": 100
         }
 
+    elif _sport == VK_CAMERA_MODEL_BASKETBALL:
+        return {
+            "model_width": 29.0,
+            "model_height": 15.0,
+            "model_offset_x": 1.8,
+            "model_offset_y": 1.8,
+            "model_scale": 40
+        }
+
     # TODO - populate remaining sports..
     # elif _sport == VK_CAMERA_MODEL_RUGBY:
-    #     pass
-    #
-    # elif sport == VK_CAMERA_MODEL_BASKETBALL:
     #     pass
 
     else:
