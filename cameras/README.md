@@ -70,3 +70,14 @@ perspective aware image.
 
 ![](../images/cropped_perspective_aware.png)
 
+
+### Usage:
+
+1. Instantiate a device-specific `VKCamera` class using the [`cameras/camera_base.py`](./camera_base.py)
+base class.
+2. Instantiate a sport-specific `VKWorldModel` class using the [`models/world_model.py`](./world_model.py) class.
+3. Use the built-in camera-world correspondences interface to assemble an image to model homography.
+This interface will update the `VKWorldModel` class which retains the model dimensions, parameters, with
+both image and world correspondences.
+4. Complete the camera initialisation pipeline by passing the updated `VKWorldModel` object to the `VKCamera` object using the 
+
