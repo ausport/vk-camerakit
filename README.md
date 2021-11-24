@@ -9,6 +9,25 @@ Interface to support:
 * Estimate camera extrinsics
 * Perspective-free image crops.
 
+### CameraKit Modules
+
+#### VKCamera:
+
+Cameras can be instantiated using device-specific `VKCamera` subclasses.  
+
+Details [here](cameras/README.md).
+
+
+#### VKWorldModel:
+
+World models provides the coordinate translations between image and world spaces.
+
+World models are typically used as a property of a device-specific `VKCamera` class.
+
+![](models/surfaces/hockey.png)
+
+
 ![](images/markers.png)
 
 ![](images/verticals.png)
+
