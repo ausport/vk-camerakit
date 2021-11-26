@@ -30,6 +30,20 @@ class VKCameraVimbaDevice(VKCamera):
         # Keep track of the current frame BEFORE reading from the camera
         self.current_frame = 0
 
+        # Enable auto exposure time setting if camera supports it
+        try:
+            self.video_object.ExposureAuto.set('Continuous')
+
+        except (AttributeError, VimbaFeatureError):
+            pass
+
+        # Enable white balancing if camera supports it
+        try:
+            self.video_object.BalanceWhiteAuto.set('Continuous')
+
+        except (AttributeError, VimbaFeatureError):
+            pass
+
         # Try to adjust GeV packet size. This Feature is only available for GigE - Cameras.
         try:
             self.video_object.GVSPAdjustPacketSize.run()
