@@ -1,4 +1,4 @@
-"""Camera controller for video capture from generic video camera (webcam)"""
+"""Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
 import cv2
 from vimba import Vimba, VimbaFeatureError, PixelFormat, VimbaCameraError
 from vimba.c_binding import VimbaCError
