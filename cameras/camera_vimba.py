@@ -59,17 +59,13 @@ class VKCameraVimbaDevice(VKCamera):
         self.camera_identifier = self.video_object.get_id()
         self.ip_address = ip_address
 
-        # self.video_object = cv2.VideoCapture(device)
-        # if self.video_object.isOpened():
-        #     self.device = device
-
     def eof(self):
         """Overrides eof.
 
         Returns:
-            (bool): True if video device is available.
+            (bool): True if video device is currently capturing.
         """
-        return not self.video_object.isOpened()
+        return False
 
     def fps(self):
         """The frames per second of the video resource.
@@ -95,6 +91,14 @@ class VKCameraVimbaDevice(VKCamera):
         """
         return self.video_object.Height.get()
 
+    def frame_count(self):
+        """The number of frames in the video resource.
+
+        Returns:
+            (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
+        """
+        return 1
+
     def get_camera_temperature(self):
         """Queries (and returns) the temperature of the camera"""
         return self.video_object.DeviceTemperature.get()
@@ -107,11 +111,9 @@ class VKCameraVimbaDevice(VKCamera):
         return self.video_object.ExposureTimeAbs.get() / 1e3
 
     def get_frame(self):
-        # res, frame = self.video_object.read()
-        # # Pillow assumes RGB - OpenCV reads BRG
-        # cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
-        # return frame
-        return None
+        frame = self.video_object.get_frame()
+        image = cv2.cvtColor(frame.as_numpy_ndarray(), cv2.COLOR_BAYER_RG2BGR)
+        return image
 
     def __str__(self):
         """Overriding str
