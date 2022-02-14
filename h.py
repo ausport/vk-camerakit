@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt
 
 import argparse
 import sys
+import os
 import cv2
 import numpy as np
 import time
@@ -209,7 +210,7 @@ class Window(QtWidgets.QWidget):
             self.cboSurfaces.addItem(s)
 
         # Apply camera model
-        self.cboSurfaces.currentIndexChanged.connect(self.set_world_model)
+        self.cboSurfaces.currentIndexChanged.connect(self.set_world_model_name)
 
         # Compute new homography from points.
         self.btnComputeHomograhy = QtWidgets.QToolButton(self)
@@ -463,9 +464,13 @@ class Window(QtWidgets.QWidget):
             self.update_displays()
             app.processEvents()
 
-    def set_world_model(self):
+    def set_world_model_name(self):
         print("Setting world surface model:", self.cboSurfaces.currentText())
-        self.world_model = models.VKWorldModel(sport=self.cboSurfaces.currentText())
+        self.world_model_name = self.cboSurfaces.currentText()
+        self.update_world_model(world_model_name=self.cboSurfaces.currentText())
+
+    def update_world_model(self, world_model_name):
+        self.world_model = models.VKWorldModel(sport=world_model_name)
         self.load_surface_image()
         self.center_views()
 
@@ -692,11 +697,23 @@ class Window(QtWidgets.QWidget):
                 self.image_model.export_json(path[0])
 
     def load_camera_properties(self):
+        """ Open a dialog for json camera file.
+
+        Returns:
+            None
+        """
+        config_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")[0]
+        assert os.path.exists(config_path), "Config file doesn't exist..."
+        self.update_camera_properties(config_path=config_path)
+
+    def update_camera_properties(self, config_path=None):
         """ Opens json file containing camera and model parameters and creates new VKWorldModel and VKCamera objects.
 
         Returns:
             None
         """
+
+        assert os.path.exists(config_path), "Config file doesn't exist..."
 
         # Initialise camera and world models from file.
         path = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")
@@ -908,6 +925,8 @@ def argument_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sport', type=str, required=False,
                         help="input sport type e.g. 'hockey'")
+    parser.add_argument('--config', type=str, required=False,
+                        help="input camera configuration json file.")
 
     return parser
 
@@ -921,4 +940,12 @@ if __name__ == '__main__':
     window.setGeometry(500, 300, 800, 600)
 
     window.show()
+
+    if opts.sport is not None:
+        window.update_world_model(world_model_name=opts.sport)
+
+    if opts.config is not None:
+        assert os.path.exists(opts.config), "Invalid path to config file."
+        window.update_camera_properties(config_path=opts.config)
+
     sys.exit(app.exec_())
