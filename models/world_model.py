@@ -24,12 +24,12 @@ class VKWorldModel:
         self.sport = _sport
 
         # Model properties
-        surface_properties = surface_properties_for_sport(sport=_sport)
-        self.model_width = surface_properties["model_width"]
-        self.model_height = surface_properties["model_height"]
-        self.model_offset_x = surface_properties["model_offset_x"]
-        self.model_offset_y = surface_properties["model_offset_y"]
-        self.model_scale = surface_properties["model_scale"]
+        self.surface_properties = surface_properties_for_sport(sport=_sport)
+        self.model_width = self.surface_properties["model_width"]
+        self.model_height = self.surface_properties["model_height"]
+        self.model_offset_x = self.surface_properties["model_offset_x"]
+        self.model_offset_y = self.surface_properties["model_offset_y"]
+        self.model_scale = self.surface_properties["model_scale"]
 
         # Image correspondences
         self.homography = np.zeros((3, 3))
