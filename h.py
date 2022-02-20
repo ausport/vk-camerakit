@@ -317,6 +317,7 @@ class Window(QtWidgets.QWidget):
 
         self.is_playing = False
 
+        self.world_model_name = "hockey"
         self.world_model = None
         self.image_model = None
 
@@ -653,11 +654,15 @@ class Window(QtWidgets.QWidget):
 
             paths = QtWidgets.QFileDialog.getOpenFileNames(self,
                                                            "Select Multiple Video Inputs",
-                                                           "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
+                                                           "/home", "JSON (*.json)", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
+
             _cameras = []
 
             for path in paths[0]:
-                _cameras.append(cameras.VKCameraVideoFile(filepath=path))
+                if path.endswith(".json"):
+                    _cameras.append(cameras.load_camera_model(path=path))
+                else:
+                    _cameras.append(cameras.VKCameraVideoFile(filepath=path))
 
             self.image_model = cameras.VKCameraPanorama(_cameras)
             self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
@@ -716,11 +721,9 @@ class Window(QtWidgets.QWidget):
         assert os.path.exists(config_path), "Config file doesn't exist..."
 
         # Initialise camera and world models from file.
-        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")
-        if path[0] != "":
-            self.image_model = cameras.load_camera_model_from_json(path=path[0])
-            self.cboSurfaces.setCurrentText(self.image_model.surface_model.surface_model_name())
-            self.world_model = self.image_model.surface_model
+        self.image_model = cameras.load_camera_model(path=config_path)
+        self.cboSurfaces.setCurrentText(self.image_model.surface_model.surface_model_name())
+        self.world_model = self.image_model.surface_model
 
         self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
