@@ -1,11 +1,16 @@
 """Camera controller for multiple camera view stitching"""
 from cameras import VKCamera
 from cameras.helpers.panorama import *
+# from cameras.helpers.camera_parser import load_annotations_from_json
 
 
 class VKCameraPanorama(VKCamera):
 
-    def __init__(self, input_cameras, stitch_params=None, panorama_projection_models=None,  surface_name=None, verbose_mode=False):
+    def __init__(self, input_camera_models, stitch_params=None,
+                 panorama_projection_models=None,
+                 surface_name=None,
+                 annotations=None,
+                 verbose_mode=False):
         """Constructor for panoramic image class.  Rather than dealing explicitly with
         images, this class handles camera models that should be instantiated by the
         owner of this class.
@@ -14,7 +19,7 @@ class VKCameraPanorama(VKCamera):
         the panoramic composite with respect to world coordinates.
 
         Args:
-            input_cameras (list): Requires a list of string paths.
+            input_camera_models (list): A list of core camera objects.
             stitch_params (dict): Overrides default stitching params.
             panorama_projection_models (list): List of camera projection models (These are
             normally derived from the <compute_transforms> function, but since they are
@@ -25,12 +30,12 @@ class VKCameraPanorama(VKCamera):
 
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
-        self.input_cameras = input_cameras
+        self.input_camera_models = input_camera_models
         self.input_names = []
 
         _input_images = []
 
-        for idx, camera in enumerate(input_cameras):
+        for idx, camera in enumerate(input_camera_models):
             _img = camera.get_frame()
             _input_images.append(_img)
             self.input_names.append("Camera {0}".format(idx))
@@ -46,8 +51,8 @@ class VKCameraPanorama(VKCamera):
         # Initiate the stitching class.
         self._stitching = VKPanorama(params=params)
 
-        # if panorama_projection_models is None:
         # TODO - solve metric import issue where the conversion from list to ndarray seems to be discretising the element values.
+        # if panorama_projection_models is None:
         if True:
             # Compile the input-wise panoramic projection matrices.
             # This can take a few seconds for large composites, so we do it here once only and retain the matrices
@@ -68,6 +73,9 @@ class VKCameraPanorama(VKCamera):
         # Retain parameters
         self.stitching_parameters = params
 
+        # Retain annotations for demonstration purposes.
+        self.annotations = annotations
+
     def frame_position(self):
         """The current frame number in the video resource.
 
@@ -75,7 +83,7 @@ class VKCameraPanorama(VKCamera):
             (list): The CAP_PROP_POS_FRAMES property in a list over each camera instance.
         """
         _positions = []
-        for camera in self.input_cameras:
+        for camera in self.input_camera_models:
             _positions.append(camera.frame_position)
         return _positions
 
@@ -86,7 +94,7 @@ class VKCameraPanorama(VKCamera):
             (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
         """
         _frames = math.inf
-        for camera in self.input_cameras:
+        for camera in self.input_camera_models:
             _frames = min(_frames, camera.frame_count())
 
         return _frames
@@ -99,7 +107,7 @@ class VKCameraPanorama(VKCamera):
         Returns:
             None
         """
-        for idx, camera in enumerate(self.input_cameras):
+        for idx, camera in enumerate(self.input_camera_models):
             camera.set_position(frame_number=frame_number)
 
     def fps(self):
@@ -109,7 +117,7 @@ class VKCameraPanorama(VKCamera):
             (float): The CAP_PROP_FPS property.
         """
         _fps = []
-        for idx, camera in enumerate(self.input_cameras):
+        for idx, camera in enumerate(self.input_camera_models):
             _fps.append(camera.fps())
         return float(np.mean(_fps))
 
@@ -120,14 +128,19 @@ class VKCameraPanorama(VKCamera):
             (array): panoramic-scale image.
         """
         _input_images = []
+        _frame_number = 0
+
         # Now we have a working stitcher, it should be faster.
-        for idx, camera in enumerate(self.input_cameras):
+        for idx, camera in enumerate(self.input_camera_models):
             _img = camera.get_frame()
             _input_images.append(_img)
+            _frame_number = camera.frame_position()
 
-        # TODO - any annotations should be added at this stage..  Add annotations dict as parameter to be parsed.
-        # that = list((item for item in annotations if item[0] == '{0}'.format(frame_number)))
-        frame = self._stitching.stitch(camera_models=self.panorama_projection_models, input_images=_input_images, annotations=None)
+        that = None
+        if self.annotations is not None:
+            that = list((item for item in self.annotations if item['Frame'] == _frame_number))
+
+        frame = self._stitching.stitch(panorama_projection_models=self.panorama_projection_models, input_images=_input_images, camera_models=self.input_camera_models, annotations=that)
 
         return frame
 
@@ -138,7 +151,7 @@ class VKCameraPanorama(VKCamera):
             (bool): True if video device is available.
         """
         _result = False
-        for idx, camera in enumerate(self.input_cameras):
+        for idx, camera in enumerate(self.input_camera_models):
             if not camera.video_object.isOpened():
                 _result = True
         return _result
