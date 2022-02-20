@@ -448,19 +448,22 @@ class VKPanorama:
 
         return dst, camera_models
 
-    def stitch(self, camera_models, input_images, annotations=None):
+    def stitch(self, panorama_projection_models, input_images, camera_models=None, annotations=None):
         """Compute frame-wise panoramas.
 
         Args:
-            camera_models (list): List of camera objects with extrinsics and rotation matrices.
+            panorama_projection_models (list): List of panorama projection objects with extrinsics and rotation matrices.
+            These are distinct from the core camera calibration models.
             input_images (list): A list of image arrays.
-            annotations (dict): Future property to add image annotations.
+            camera_models (list): Optional - A list of core camera objects.
+            Required for annotating from world space to camera space, then to panorama space.
+            annotations (list): Future property to add image annotations.
 
         Returns:
             dst (array): Composite image panorama.
         """
 
-        assert len(camera_models) > 0, "Camera models are required..."
+        assert len(panorama_projection_models) > 0, "Camera models are required..."
 
         blender = None
 
@@ -472,8 +475,8 @@ class VKPanorama:
 
         for idx, img in enumerate(input_images):
             _img_size = (img.shape[1], img.shape[0])
-            K = camera_models[idx]["extrinsics"].astype(np.float32)
-            R = camera_models[idx]["rotation"].astype(np.float32)
+            K = panorama_projection_models[idx]["extrinsics"].astype(np.float32)
+            R = panorama_projection_models[idx]["rotation"].astype(np.float32)
             corner, image_warped = warper.warp(img, K, R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
 
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
@@ -507,34 +510,54 @@ class VKPanorama:
         result, result_mask = blender.blend(result, result_mask)
         dst = cv.normalize(src=result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
 
-        # Draw annotations
-        dx = camera_models[1]["corner"][0]
-        dy = camera_models[1]["corner"][1]
+        if camera_models is not None:
+            # Draw annotations
+            # TODO - auto select which camera to use as the offset??
+            dx = panorama_projection_models[0]["corner"][0]
+            dy = panorama_projection_models[0]["corner"][1]
 
-        if annotations:
-            for annotation in annotations:
+            _scale = camera_models[0].surface_model.surface_properties["model_scale"]
+            _offset = camera_models[0].surface_model.surface_properties["model_offset_x"] * _scale
 
-                _player_id = "Player {0}".format(annotation[1])
-                _bbox = eval(annotation[3])
-                _camera = os.path.basename(annotation[4]).split('.')[0]
+            if annotations:
 
-                for camera in camera_models:
+                for _player_id, annotation in enumerate(annotations):
+                    # print(_player_id, annotation)
+                    # print("\n****> ANNOTATING:", annotation)
+                    x, y = annotation["unified_world_foot"]
+                    x = x * _scale
+                    y = y * _scale
 
-                    if _camera in camera["short_name"]:
-                        # print("Drawing", _player_id, _bbox, _camera)
+                    # So now we have the image point from the ground point for this camera model.
+                    # We need to project that image point into the panorama view composite.
 
-                        x, y, w, h = _bbox
-                        pts = [(x, y), (x + w, y + h)]
+                    model_point = np.array([[[x, y, 0]]], dtype='float32')
 
-                        warped_pts = []
-                        for _x, _y in pts:
-                            pt = warper.warpPoint((_x, _y), camera["extrinsics"], camera["rotation"])
-                            pt = (int(pt[0]), int(pt[1]))
-                            pt = (int(pt[0]) - dx, int(pt[1]) - dy)
-                            warped_pts.append(pt)
-                        # print(_x, _y, pt)
+                    for idx, camera_model in enumerate(camera_models):
 
-                        cv.rectangle(dst, warped_pts[0], warped_pts[1], (255, 255, 255), thickness=4)
-                        cv.putText(dst, _player_id, warped_pts[1], cv.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv.LINE_AA)
+                        # Project model point to the local camera point.
+                        camera_wise_image_point = camera_model.surface_model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=camera_model)
+
+                        x, y = camera_wise_image_point[0][0]
+                        if 0 < x < camera_model.width():
+                            if 0 < y < camera_model.height():
+                                # print("Camera {0} is IN bounds".format(idx))
+                                # What are the bounds on the image?
+                                panorama_projection = panorama_projection_models[idx]
+
+                                # Project local camera point to panoramic image point.
+                                warped_pts = []
+                                pt = warper.warpPoint((x, y), panorama_projection["extrinsics"], panorama_projection["rotation"])
+                                pt = (int(pt[0]), int(pt[1]))
+                                pt = (int(pt[0]) - dx, int(pt[1]) - dy)
+                                warped_pts.append(pt)
+                                # print("Image pt to panorama pt:", pt)
+
+                                cv.circle(dst, pt, radius=5, color=(255, 255, 200), thickness=4)
+                                cv.putText(dst, str(_player_id), warped_pts[0], cv.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv.LINE_AA)
+
+                        else:
+                            # print("Camera {0} is OUT OF bounds".format(idx))
+                            pass
 
         return dst
