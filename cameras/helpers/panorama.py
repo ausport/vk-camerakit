@@ -68,13 +68,8 @@ def get_exposure_compensator():
     return compensator
 
 
-# def world_point_for_image_point(image_point, h):
-#     world_point = cv.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), h)
-#     return world_point.item(0), world_point.item(1)
-
-
-class VKPanorama:
-    """Constructor for panoramic composite image stitching class.
+class VKPanoramaController:
+    """Constructor for panoramic composite image stitching controller class.
 
     Args:
         params (dict): Default parameters override.

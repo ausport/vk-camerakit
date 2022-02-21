@@ -48,8 +48,8 @@ class VKCameraPanorama(VKCamera):
                                    "feature_match_algorithm": VK_PANORAMA_FEATURE_BRISK,
                                    "blend_strength": 5}
 
-        # Initiate the stitching class.
-        self._stitching = VKPanorama(params=params)
+        # Initiate the stitching controller class.
+        self._stitching_controller = VKPanoramaController(params=params)
 
         # TODO - solve metric import issue where the conversion from list to ndarray seems to be discretising the element values.
         # if panorama_projection_models is None:
@@ -58,7 +58,7 @@ class VKCameraPanorama(VKCamera):
             # This can take a few seconds for large composites, so we do it here once only and retain the matrices
             # for future use.
             print("Building panorama for the first time...")
-            _composite_image, self.panorama_projection_models = self._stitching.compute_transforms(input_images=_input_images, input_names=self.input_names)
+            _composite_image, self.panorama_projection_models = self._stitching_controller.compute_transforms(input_images=_input_images, input_names=self.input_names)
         # else:
         #     # Alternately, if a serialised set of projection models are available, we use them.
         #     print("Building panorama from json...")
@@ -140,7 +140,7 @@ class VKCameraPanorama(VKCamera):
         if self.annotations is not None:
             that = list((item for item in self.annotations if item['Frame'] == _frame_number))
 
-        frame = self._stitching.stitch(panorama_projection_models=self.panorama_projection_models, input_images=_input_images, camera_models=self.input_camera_models, annotations=that)
+        frame = self._stitching_controller.stitch(panorama_projection_models=self.panorama_projection_models, input_images=_input_images, camera_models=self.input_camera_models, annotations=that)
 
         return frame
 
@@ -178,4 +178,4 @@ class VKCameraPanorama(VKCamera):
         Returns:
             (str): A string summary of the object
         """
-        return self._stitching
+        return self._stitching_controller
