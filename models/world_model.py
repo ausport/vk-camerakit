@@ -214,12 +214,15 @@ class VKWorldModel:
 
         Args:
             image_target (array): image-based coordinates for point of interest.
-            camera (VKCamera): world-based coordinates for estimated camera location.
+            camera (VKCamera): calibrated camera object.
             fov (int): desired field of view angle from camera location.
 
         Returns:
             (rect): Returns crop coordinates in lr, tr, bl, br order.
         """
+
+        assert self.is_homography_identity() is False, "WTF!  [rotated_image_crop] The camera is not calibrated.."
+
         # Image point in camera space
         _x, _y = image_target
         __x, __y = camera.camera_2d_image_space_location
