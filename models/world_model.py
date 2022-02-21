@@ -225,6 +225,8 @@ class VKWorldModel:
 
         # Image point in camera space
         _x, _y = image_target
+
+        # Estimate the 2d location of the camera in relation to the model bounds.
         __x, __y = camera.camera_2d_image_space_location
 
         # Estimate image points that are +/-fov degrees from the image target.
