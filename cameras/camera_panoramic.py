@@ -6,10 +6,11 @@ from cameras.helpers.panorama import *
 
 class VKCameraPanorama(VKCamera):
 
-    def __init__(self, input_camera_models, stitch_params=None,
+    def __init__(self, input_camera_models,
+                 stitch_params=None,
                  panorama_projection_models=None,
                  surface_name=None,
-                 annotations=None,
+                 tracking_controller=None,
                  verbose_mode=False):
         """Constructor for panoramic image class.  Rather than dealing explicitly with
         images, this class handles camera models that should be instantiated by the
@@ -25,6 +26,8 @@ class VKCameraPanorama(VKCamera):
             normally derived from the <compute_transforms> function, but since they are
             non-detirministic, the user may have refined previously optimal set of
             projections which should override any new set obtained at init.
+            surface_name (str): name of the calibrated surface model.
+            tracking_controller (VKTracking): optional tracking controller
             verbose_mode (bool): Additional class detail logging.
         """
 
@@ -73,8 +76,8 @@ class VKCameraPanorama(VKCamera):
         # Retain parameters
         self.stitching_parameters = params
 
-        # Retain annotations for demonstration purposes.
-        self.annotations = annotations
+        # Retain the tracking_controller emulator for demonstration purposes.
+        self.tracking_controller = tracking_controller
 
     def frame_position(self):
         """The current frame number in the video resource.
@@ -137,8 +140,8 @@ class VKCameraPanorama(VKCamera):
             _frame_number = camera.frame_position()
 
         that = None
-        if self.annotations is not None:
-            that = list((item for item in self.annotations if item['Frame'] == _frame_number))
+        if self.tracking_controller is not None:
+            that = self.tracking_controller.detections_for_frame(frame_number=_frame_number)
 
         frame = self._stitching_controller.stitch(panorama_projection_models=self.panorama_projection_models, input_images=_input_images, camera_models=self.input_camera_models, annotations=that)
 

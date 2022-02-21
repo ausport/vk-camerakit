@@ -2,27 +2,7 @@ import json
 import os
 import numpy as np
 from cameras import VKCameraVideoFile, VKCameraPanorama, VKCameraGenericDevice, VKCamera
-
-
-def load_annotations_from_json(path):
-    """Parse json file for VisionKit annotations.
-    Output format example:
-            "Frame": int,
-            "Player ID": int,
-            "unified_world_foot": tuple
-
-    Args:
-        path (str): location of the json file.
-
-    Returns:
-        annotations (list): list of frames.
-    """
-    assert os.path.exists(path), "JSON (camera) path does not exist: {0}".format(path)
-
-    with open(path) as data_file:
-        _data = json.load(data_file)
-
-    return _data
+from tracking import VKTrackingEmulator
 
 
 def parse_camera_model_with_dict(data):
@@ -77,7 +57,7 @@ def parse_camera_model_with_dict(data):
 
         input_camera_models = []
         panorama_projection_models = []
-        annotations = None
+        emulator = None
 
         for camera in data["panorama_projection_models"]:
 
@@ -93,13 +73,14 @@ def parse_camera_model_with_dict(data):
             panorama_projection_models.append(camera["projection_model_parameters"])
 
         if "annotations" in data:
-            annotations = load_annotations_from_json(data["annotations"])
+            # For demonstration purposes here, we are using a tracking emulator (subclass of VKTracking class).
+            emulator = VKTrackingEmulator(annotations_path=data["annotations"])
 
         camera_model = VKCameraPanorama(input_camera_models=input_camera_models,
                                         stitch_params=data["stitching_parameters"],
                                         panorama_projection_models=panorama_projection_models,
                                         surface_name=_surface_model_name,
-                                        annotations=annotations)
+                                        tracking_controller=emulator)
 
     # Load additional parameters if available
     if camera_model.surface_model is not None:

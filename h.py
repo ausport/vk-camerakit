@@ -819,7 +819,11 @@ class Window(QtWidgets.QWidget):
                 self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
                 self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
 
-                if crop is not None:
+                # if crop is not None:
+                if self.OMB_mode:
+
+                    # Get the predicted locus of action..
+
 
                     tl, tr, bl, br = model.rotated_image_crop(image_target=crop["image_point"],
                                                               camera=source,
