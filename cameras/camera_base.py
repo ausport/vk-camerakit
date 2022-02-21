@@ -333,7 +333,7 @@ class VKCamera:
         Deserialisation should return a configured surface model.
 
         Returns:
-            None
+            Serialised camera model.
         """
 
         _camera_parameters = {'class': self.__class__.__name__}
