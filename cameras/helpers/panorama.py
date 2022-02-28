@@ -506,53 +506,58 @@ class VKPanoramaController:
         dst = cv.normalize(src=result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
 
         if camera_models is not None:
-            # Draw annotations
-            # TODO - auto select which camera to use as the offset??
-            dx = panorama_projection_models[0]["corner"][0]
-            dy = panorama_projection_models[0]["corner"][1]
-
-            _scale = camera_models[0].surface_model.surface_properties["model_scale"]
-            _offset = camera_models[0].surface_model.surface_properties["model_offset_x"] * _scale
-
             if annotations:
 
                 for _player_id, annotation in enumerate(annotations):
-                    # print(_player_id, annotation)
-                    # print("\n****> ANNOTATING:", annotation)
-                    x, y = annotation["unified_world_foot"]
-                    x = x * _scale
-                    y = y * _scale
 
-                    # So now we have the image point from the ground point for this camera model.
-                    # We need to project that image point into the panorama view composite.
+                    panoramic_image_point = self.panoramic_point_for_world_point(world_point=annotation["unified_world_foot"],
+                                                                                 panorama_projection_models=panorama_projection_models,
+                                                                                 camera_models=camera_models)
 
-                    model_point = np.array([[[x, y, 0]]], dtype='float32')
-
-                    for idx, camera_model in enumerate(camera_models):
-
-                        # Project model point to the local camera point.
-                        camera_wise_image_point = camera_model.surface_model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=camera_model)
-
-                        x, y = camera_wise_image_point[0][0]
-                        if 0 < x < camera_model.width():
-                            if 0 < y < camera_model.height():
-                                # print("Camera {0} is IN bounds".format(idx))
-                                # What are the bounds on the image?
-                                panorama_projection = panorama_projection_models[idx]
-
-                                # Project local camera point to panoramic image point.
-                                warped_pts = []
-                                pt = warper.warpPoint((x, y), panorama_projection["extrinsics"], panorama_projection["rotation"])
-                                pt = (int(pt[0]), int(pt[1]))
-                                pt = (int(pt[0]) - dx, int(pt[1]) - dy)
-                                warped_pts.append(pt)
-                                # print("Image pt to panorama pt:", pt)
-
-                                cv.circle(dst, pt, radius=5, color=(255, 255, 200), thickness=4)
-                                cv.putText(dst, str(_player_id), warped_pts[0], cv.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv.LINE_AA)
-
-                        else:
-                            # print("Camera {0} is OUT OF bounds".format(idx))
-                            pass
+                    cv.circle(dst, panoramic_image_point, radius=5, color=(255, 0, 0), thickness=4)
+                    cv.putText(dst, str(_player_id), panoramic_image_point, cv.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 0), 2, cv.LINE_AA)
 
         return dst
+
+    def panoramic_point_for_world_point(self, world_point, panorama_projection_models, camera_models):
+
+        warper = cv.PyRotationWarper(self.warp_type, self.warped_image_scale)
+
+        # Draw annotations
+        # TODO - auto select which camera to use as the offset??
+        dx = panorama_projection_models[0]["corner"][0]
+        dy = panorama_projection_models[0]["corner"][1]
+
+        _scale = camera_models[0].surface_model.surface_properties["model_scale"]
+        _offset = camera_models[0].surface_model.surface_properties["model_offset_x"] * _scale
+
+        print("\n****> ANNOTATING:", world_point)
+        x, y = world_point
+        x = x * _scale
+        y = y * _scale
+
+        # So now we have the image point from the ground point for this camera model.
+        # We need to project that image point into the panorama view composite.
+
+        model_point = np.array([[[x, y, 0]]], dtype='float32')
+
+        for idx, camera_model in enumerate(camera_models):
+
+            # Project model point to the local camera point.
+            camera_wise_image_point = camera_model.surface_model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=camera_model)
+
+            x, y = camera_wise_image_point[0][0]
+            if 0 < x < camera_model.width():
+                if 0 < y < camera_model.height():
+                    # print("Camera {0} is IN bounds".format(idx))
+                    # What are the bounds on the image?
+                    panorama_projection = panorama_projection_models[idx]
+
+                    # Project local camera point to panoramic image point.
+                    pt = warper.warpPoint((x, y), panorama_projection["extrinsics"], panorama_projection["rotation"])
+                    pt = (int(pt[0]), int(pt[1]))
+                    pt = (int(pt[0]) - dx, int(pt[1]) - dy)
+                    print("Image pt to panorama pt:", pt)
+                    return pt
+
+        return None, None
