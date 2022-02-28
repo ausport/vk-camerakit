@@ -16,6 +16,7 @@ class VKCamera:
         Use subclassed instances of this class
 
         Args:
+            surface_name (str): Surface model name.
             verbose_mode (bool): Additional class detail logging.
 
         Usage:
