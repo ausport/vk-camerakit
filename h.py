@@ -9,8 +9,11 @@ import cv2
 import numpy as np
 import time
 
+# vk modules
 import cameras
 import models
+import observers
+import tracking
 
 
 class GraphicsScene(QtWidgets.QGraphicsScene):
@@ -197,6 +200,36 @@ class Window(QtWidgets.QWidget):
         # https://doc.qt.io/qt-5/qtwidgets-widgets-sliders-example.html
 
         super(Window, self).__init__()
+
+        """
+        Main VK Track and Image Utilities
+        """
+        # Each project requires a surface model, representing the world model space.
+        # The world model (VKWorldModel) defines image calibration and world-to-camera-to-world translations.
+        self.world_model_name = "hockey"
+        self.world_model = None
+
+        # Each project requires at least one image model.
+        # The image model (VKCamera) defines the image features, image capture and seek, and various camera extrinsics.
+        self.image_model = None
+
+        # A project may deploy a player tracker.
+        # The tracking objects manage the long term association of identity over frames.
+        # Local (VKLocalTracker) and Global (VKGlobalTracker) trackers may be implemented.
+        # VKTrackingEmulator is a special case of the VKGlobalTracker, which emulates the input
+        # from a live VKGlobalTracker.
+        # In most cases, a VKGlobalTracker will be implemented on the client instance, and
+        # VKLocalTracker instances will be implemented on server instances.
+        self.tracker = None
+
+        # A project may deploy an image observer.
+        # An observer implements the One Man Band features, and takes detections as input to derive
+        # a rotated image crop that imitates the behaviour of a human camera operator.
+        self.observer = None
+
+        """
+        User interface widgets, relevant for this implementation only.
+        """
         self.setWindowTitle("Camera calibration Interface")
 
         self.viewer = ImageViewer(self)
@@ -316,10 +349,6 @@ class Window(QtWidgets.QWidget):
         self.show_vertical_projections = False
 
         self.is_playing = False
-
-        self.world_model_name = "hockey"
-        self.world_model = None
-        self.image_model = None
 
         # Arrange layout
         vb_layout = QtWidgets.QVBoxLayout(self)
