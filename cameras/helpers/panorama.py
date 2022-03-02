@@ -443,7 +443,7 @@ class VKPanoramaController:
 
         return dst, camera_models
 
-    def stitch(self, panorama_projection_models, input_images, camera_models=None, annotations=None):
+    def stitch(self, panorama_projection_models, input_images):
         """Compute frame-wise panoramas.
 
         Args:
@@ -504,19 +504,6 @@ class VKPanoramaController:
         result_mask = None
         result, result_mask = blender.blend(result, result_mask)
         dst = cv.normalize(src=result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-
-        if camera_models is not None:
-            if annotations:
-
-                for _player_id, annotation in enumerate(annotations):
-
-                    panoramic_image_point = self.panoramic_point_for_world_point(world_point=annotation["unified_world_foot"],
-                                                                                 panorama_projection_models=panorama_projection_models,
-                                                                                 camera_models=camera_models)
-
-                    cv.circle(dst, panoramic_image_point, radius=5, color=(255, 0, 0), thickness=4)
-                    cv.putText(dst, str(_player_id), panoramic_image_point, cv.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 0), 2, cv.LINE_AA)
-
         return dst
 
     def panoramic_point_for_world_point(self, world_point, panorama_projection_models, camera_models):
@@ -531,8 +518,7 @@ class VKPanoramaController:
         _scale = camera_models[0].surface_model.surface_properties["model_scale"]
         _offset = camera_models[0].surface_model.surface_properties["model_offset_x"] * _scale
 
-        print("\n****> ANNOTATING:", world_point)
-        x, y = world_point
+        x, y = world_point["x"], world_point["y"]
         x = x * _scale
         y = y * _scale
 
@@ -557,7 +543,6 @@ class VKPanoramaController:
                     pt = warper.warpPoint((x, y), panorama_projection["extrinsics"], panorama_projection["rotation"])
                     pt = (int(pt[0]), int(pt[1]))
                     pt = (int(pt[0]) - dx, int(pt[1]) - dy)
-                    print("Image pt to panorama pt:", pt)
                     return pt
 
         return None, None
