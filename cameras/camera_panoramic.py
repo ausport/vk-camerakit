@@ -177,6 +177,76 @@ class VKCameraPanorama(VKCamera):
                                                                                            camera_models=self.input_camera_models)
         return panoramic_image_point
 
+    def camera_model_json(self):
+        """Serialise the existing model parameters.
+        Note that we store all of the world model parameters here too.
+        Deserialisation should return a configured surface model.
+
+        Returns:
+            Serialised camera model.
+        """
+        # TODO - add surface properties (scale and offset) to serialisation of each input camera.
+
+        _camera_parameters = {'class': self.__class__.__name__}
+
+        # Camera-specific parameters
+        if hasattr(self, "filepath"):
+            _camera_parameters.update({'image_path': self.filepath})
+        if hasattr(self, "surface_model"):
+            if self.surface_model is not None:
+                _camera_parameters.update({'surface_model': self.surface_model.surface_model_name()})
+        if hasattr(self, "focal_length"):
+            _camera_parameters.update({'focal_length': self.focal_length})
+        if hasattr(self, "camera_matrix"):
+            _camera_parameters.update({'camera_matrix': self.camera_matrix.tolist()})
+        if hasattr(self, "distortion_matrix"):
+            _camera_parameters.update({'distortion_matrix': self.distortion_matrix.tolist()})
+        if hasattr(self, "rotation_vector"):
+            _camera_parameters.update({'rotation_vector': self.rotation_vector.tolist()})
+        if hasattr(self, "translation_vector"):
+            _camera_parameters.update({'translation_vector': self.translation_vector.tolist()})
+
+        # Panoramic parameters
+        if self.__class__.__name__ == "VKCameraPanorama":
+            assert hasattr(self, "input_camera_models"), "Panoramic model doesn't include input camera models..."
+            assert hasattr(self, "stitching_parameters"), "Panoramic model doesn't include stitching parameters..."
+            assert hasattr(self, "panorama_projection_models"), "Panoramic model doesn't include panorama projection parameters..."
+
+            _camera_parameters.update({'stitching_parameters': self.stitching_parameters})
+            _pano_camerawise_models = []
+
+            for idx, input_camera in enumerate(self.input_camera_models):
+                assert input_camera.__class__.__name__ != "VKCameraPanorama", "This would be bad..."
+                assert len(self.input_camera_models) == len(self.panorama_projection_models), "This would also be bad..."
+
+                projection_model = self.panorama_projection_models[idx]
+
+                projection_model_parameters = {
+                    "name": projection_model["name"],
+                    "short_name": projection_model["short_name"],
+                    "corner": projection_model["corner"],
+                    "rotation": projection_model["rotation"].tolist(),
+                    "extrinsics": projection_model["extrinsics"].tolist()
+                }
+
+                # Compile json representation of camera model and projection parameters
+                _pano_camerawise_models.append(
+                    {"input_camera": projection_model["short_name"],
+                     "input_camera_model": input_camera.camera_model_json(),
+                     "projection_model_parameters": projection_model_parameters})
+
+            _camera_parameters.update({'panorama_projection_models': _pano_camerawise_models})
+
+        # World model parameters
+        if hasattr(self.surface_model, "homography"):
+            _camera_parameters.update({'homography': self.surface_model.homography.tolist()})
+        if hasattr(self.surface_model, "image_points"):
+            _camera_parameters.update({'image_points': self.surface_model.image_points.tolist()})
+        if hasattr(self.surface_model, "model_points"):
+            _camera_parameters.update({'model_points': self.surface_model.model_points.tolist()})
+
+        return _camera_parameters
+
     def __str__(self):
         """Overriding str
 

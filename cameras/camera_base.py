@@ -356,37 +356,6 @@ class VKCamera:
         if hasattr(self, "translation_vector"):
             _camera_parameters.update({'translation_vector': self.translation_vector.tolist()})
 
-        # Panoramic parameters
-        if self.__class__.__name__ == "VKCameraPanorama":
-            assert hasattr(self, "input_cameras"), "Panoramic model doesn't include input camera models..."
-            assert hasattr(self, "stitching_parameters"), "Panoramic model doesn't include stitching parameters..."
-            assert hasattr(self, "panorama_projection_models"), "Panoramic model doesn't include panorama projection parameters..."
-
-            _camera_parameters.update({'stitching_parameters': self.stitching_parameters})
-            _pano_camerawise_models = []
-
-            for idx, input_camera in enumerate(self.input_cameras):
-                assert input_camera.__class__.__name__ != "VKCameraPanorama", "This would be bad..."
-                assert len(self.input_cameras) == len(self.panorama_projection_models), "This would also be bad..."
-
-                projection_model = self.panorama_projection_models[idx]
-
-                projection_model_parameters = {
-                    "name": projection_model["name"],
-                    "short_name": projection_model["short_name"],
-                    "corner": projection_model["corner"],
-                    "rotation": projection_model["rotation"].tolist(),
-                    "extrinsics": projection_model["extrinsics"].tolist()
-                }
-
-                # Compile json representation of camera model and projection parameters
-                _pano_camerawise_models.append(
-                    {"input_camera": projection_model["short_name"],
-                     "input_camera_model": input_camera.camera_model_json(),
-                     "projection_model_parameters": projection_model_parameters})
-
-            _camera_parameters.update({'panorama_projection_models': _pano_camerawise_models})
-
         # World model parameters
         if hasattr(self.surface_model, "homography"):
             _camera_parameters.update({'homography': self.surface_model.homography.tolist()})
