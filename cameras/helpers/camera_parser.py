@@ -2,7 +2,6 @@ import json
 import os
 import numpy as np
 from cameras import VKCameraVideoFile, VKCameraPanorama, VKCameraGenericDevice, VKCamera
-from tracking import VKTrackingEmulator
 
 
 def parse_camera_model_with_dict(data):
@@ -57,7 +56,6 @@ def parse_camera_model_with_dict(data):
 
         input_camera_models = []
         panorama_projection_models = []
-        emulator = None
 
         for camera in data["panorama_projection_models"]:
 
@@ -72,15 +70,10 @@ def parse_camera_model_with_dict(data):
             # Retrieve the panoramic model dict
             panorama_projection_models.append(camera["projection_model_parameters"])
 
-        if "annotations" in data:
-            # For demonstration purposes here, we are using a tracking emulator (subclass of VKTracking class).
-            emulator = VKTrackingEmulator(annotations_path=data["annotations"])
-
         camera_model = VKCameraPanorama(input_camera_models=input_camera_models,
                                         stitch_params=data["stitching_parameters"],
                                         panorama_projection_models=panorama_projection_models,
-                                        surface_name=_surface_model_name,
-                                        tracking_controller=emulator)
+                                        surface_name=_surface_model_name)
 
     # Load additional parameters if available
     if camera_model.surface_model is not None:
