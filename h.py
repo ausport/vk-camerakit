@@ -913,16 +913,35 @@ class Window(QtWidgets.QWidget):
                     q_img = QtGui.QImage(un_warped_crop.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
                     self.surface.set_image(QtGui.QPixmap(q_img))
 
-                    # Draw the perspective aware cropping boundaries.
-                    # TODO - gray-scale the perimeter for viz purposes.
+                    # Prepare the perspective aware cropping boundaries.
+                    pts = np.array([tl, tr, br, bl], np.int32)
+                    mask = np.zeros(im_src.shape[:2], dtype="uint8")
+                    cv2.fillPoly(mask, [pts], 255)
+
+                    roi_mask = np.zeros_like(im_src)
+                    roi_mask[:, :, 0] = mask
+                    roi_mask[:, :, 1] = mask
+                    roi_mask[:, :, 2] = mask
+
+                    # Extract the ROI
+                    _roi = cv2.bitwise_and(im_src, roi_mask)
+                    _roi = cv2.cvtColor(_roi, cv2.COLOR_BGR2RGB)
+
+                    # Extract the background mask, and darken greyscale
+                    _background = cv2.cvtColor(im_src, cv2.COLOR_BGR2GRAY)
+                    img = cv2.cvtColor(_background, cv2.COLOR_GRAY2BGR)
+                    _background = cv2.bitwise_and(img, 255 - roi_mask)
+                    _background //= 2
+
+                    # Merge imagery
+                    im_src = _background + _roi
+                    cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+
+                    # Highlight ROI boundary
                     im_src = cv2.line(im_src, tl, tr, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, tr, br, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, br, bl, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, bl, tl, (0, 0, 255), 3)
-
-                    im_src = cv2.circle(im_src, bl, 5, (0, 255, 255), 2)
-                    im_src = cv2.circle(im_src, br, 5, (255, 0, 255), 2)
-                    im_src = cv2.circle(im_src, (int(target_view[0]), int(target_view[1])), 5, (255, 255, 255), 2)
 
                 if self.show_cal_markers:
 
@@ -979,15 +998,11 @@ class Window(QtWidgets.QWidget):
                             int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
                             im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (255, 0, 0), thickness)
 
-                    # if not cv2.imwrite('output.png',im_src):
-                    #     print("Writing failed")
-
             # Display images
             height, width, channel = im_src.shape
             bytes_per_line = 3 * width
 
-            # Convert to RGB for QtGui.QImage.
-            # cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+            # Convert to QtGui.QImage.
             q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
             self.viewer.set_image(QtGui.QPixmap(q_img))
 
