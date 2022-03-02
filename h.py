@@ -227,6 +227,14 @@ class Window(QtWidgets.QWidget):
         # a rotated image crop that imitates the behaviour of a human camera operator.
         self.observer = None
 
+        if True:
+            # TODO - this is for short-term demonstration purposes only...
+            # Normally, a tracking controller will be implemented at run time.
+            _path = "/Users/stuartmorgan2/Desktop/OMB_Tests/bball_annotations.json"
+            assert os.path.exists(_path), "Demo-mode anntotations are not valid.."
+            self.tracker = tracking.VKTrackingEmulator(annotations_path=_path)
+            self.observer = observers.VKGameObserverGeneric()
+
         """
         User interface widgets, relevant for this implementation only.
         """
@@ -290,7 +298,7 @@ class Window(QtWidgets.QWidget):
         self.btnExportPanorama.clicked.connect(self.export_panorama)
 
         # Crop FOV slider
-        self.cropFOV = 10
+        self.cropFOV = 13
         self.sliderCropFOV = QtWidgets.QSlider(Qt.Horizontal)
         self.sliderCropFOV.setMinimum(3)
         self.sliderCropFOV.setMaximum(30)
@@ -851,12 +859,41 @@ class Window(QtWidgets.QWidget):
                 # if crop is not None:
                 if self.OMB_mode:
 
+                    # Frame id
+                    _frame = self.image_model.frame_position()
+                    _world_detections = self.tracker.detections_for_frame(_frame)
+                    _camera_detections = []
+
+                    for _player_id, detection in enumerate(_world_detections):
+
+                        x, y = detection["unified_world_foot"]
+
+                        if self.image_model.__class__.__name__ == "VKCameraPanorama":
+                            # Project point through panoramic transforms (a special case coordinated by the VKCameraPanorama class).
+                            _image_detection = self.image_model.projected_panoramic_point_for_2d_world_point(world_point={"x": x, "y": y})
+                            _camera_detections.append(_image_detection)
+
+                            cv2.circle(im_src, _image_detection, radius=5, color=(255, 0, 0), thickness=4)
+                            cv2.putText(im_src, str(_player_id), _image_detection, cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 0), 2, cv2.LINE_AA)
+
+                        else:
+                            # Project point through VKWorldModel class (normally this would be a 4K VKCameraVideoFile instance).
+                            _image_detection = self.world_model.projected_image_point_for_2d_world_point(world_point={"x": x, "y": y})
+
+                    self.observer.update_detections(frame=_frame, detections=_camera_detections)
+
                     # Get the predicted locus of action..
+                    target_view, fov = self.observer.get_viewpoint_estimates_for_frame(frame=_frame)
 
-
-                    tl, tr, bl, br = model.rotated_image_crop(image_target=crop["image_point"],
+                    tl, tr, bl, br = model.rotated_image_crop(image_target=target_view,
                                                               camera=source,
                                                               fov=self.cropFOV)
+
+                    vert_span = int(abs(tl[1] - bl[1]) / 2)
+                    bl = (bl[0], bl[1]+vert_span)
+                    br = (br[0], br[1]+vert_span)
+                    tl = (tl[0], tl[1]+vert_span)
+                    tr = (tr[0], tr[1]+vert_span)
 
                     image_points = np.float32([bl, br, tl, tr])
 
@@ -877,6 +914,7 @@ class Window(QtWidgets.QWidget):
                     self.surface.set_image(QtGui.QPixmap(q_img))
 
                     # Draw the perspective aware cropping boundaries.
+                    # TODO - gray-scale the perimeter for viz purposes.
                     im_src = cv2.line(im_src, tl, tr, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, tr, br, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, br, bl, (0, 0, 255), 3)
@@ -884,7 +922,7 @@ class Window(QtWidgets.QWidget):
 
                     im_src = cv2.circle(im_src, bl, 5, (0, 255, 255), 2)
                     im_src = cv2.circle(im_src, br, 5, (255, 0, 255), 2)
-                    im_src = cv2.circle(im_src, (int(crop["image_point"][0]), int(crop["image_point"][1])), 5, (255, 255, 255), 2)
+                    im_src = cv2.circle(im_src, (int(target_view[0]), int(target_view[1])), 5, (255, 255, 255), 2)
 
                 if self.show_cal_markers:
 
