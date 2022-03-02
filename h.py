@@ -226,14 +226,16 @@ class Window(QtWidgets.QWidget):
         # An observer implements the One Man Band features, and takes detections as input to derive
         # a rotated image crop that imitates the behaviour of a human camera operator.
         self.observer = None
+        self.observer2 = None
 
         if True:
             # TODO - this is for short-term demonstration purposes only...
             # Normally, a tracking controller will be implemented at run time.
-            _path = "/Users/stuartmorgan2/Desktop/OMB_Tests/bball_annotations.json"
+            _path = "/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_annotations.json"
             assert os.path.exists(_path), "Demo-mode anntotations are not valid.."
             self.tracker = tracking.VKTrackingEmulator(annotations_path=_path)
-            self.observer = observers.VKGameObserverGeneric()
+            self.observer = observers.VKGameObserverGeneric(destination_path="/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_output.mp4")
+            self.observer2 = observers.VKGameObserverGeneric(destination_path="/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_output2.mp4")
 
         """
         User interface widgets, relevant for this implementation only.
@@ -898,14 +900,16 @@ class Window(QtWidgets.QWidget):
                     image_points = np.float32([bl, br, tl, tr])
 
                     # TODO variable crop resolution
-                    model_points = np.float32([[0, 480], [720, 480], [0, 0], [720, 0]])
+                    model_points = np.float32([[0, 1080], [1920, 1080], [0, 0], [1920, 0]])
 
                     # Estimate the homography to translate the distorted original image crop to a
                     # rectangle matching the scale of the selected output resolution.
                     homography, mask = cv2.findHomography(image_points, model_points)
 
                     # De-warp the image.
-                    un_warped_crop = cv2.warpPerspective(im_src, homography, (720, 480))
+                    un_warped_crop = cv2.warpPerspective(im_src, homography, (1920, 1080))
+                    if True:
+                        self.observer2.add_observer_image_frame(un_warped_crop)
 
                     # Apply the de-warped image to the surface model canvas.
                     height, width, channel = un_warped_crop.shape
@@ -942,6 +946,9 @@ class Window(QtWidgets.QWidget):
                     im_src = cv2.line(im_src, tr, br, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, br, bl, (0, 0, 255), 3)
                     im_src = cv2.line(im_src, bl, tl, (0, 0, 255), 3)
+
+                    if True:
+                        self.observer.add_observer_image_frame(im_src)
 
                 if self.show_cal_markers:
 
@@ -1030,11 +1037,11 @@ if __name__ == '__main__':
 
     window.show()
 
-    if opts.sport is not None:
-        window.update_world_model(world_model_name=opts.sport)
-
-    if opts.config is not None:
-        assert os.path.exists(opts.config), "Invalid path to config file."
-        window.update_camera_properties(config_path=opts.config)
+    # if opts.sport is not None:
+    #     window.update_world_model(world_model_name=opts.sport)
+    #
+    # if opts.config is not None:
+    #     assert os.path.exists(opts.config), "Invalid path to config file."
+    #     window.update_camera_properties(config_path=opts.config)
 
     sys.exit(app.exec_())
