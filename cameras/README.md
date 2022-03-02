@@ -1,5 +1,7 @@
 # One Man Band Algorithm:
 
+![](../images/OMB_crop.png)
+
 The underpinning logic for OMB depends on estimating the *pose* of the 
 camera in relation to the area of interest.
 
