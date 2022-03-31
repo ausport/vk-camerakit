@@ -1,0 +1,2 @@
+from widgets.stitching_widget import PanoramaStitcherWidget
+
