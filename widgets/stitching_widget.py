@@ -102,12 +102,5 @@ class PanoramaStitcherWidget(QWidget):
         self.keypoint_scale_label.setText("Keypoint Matching Scale: {0}%".format(self.keypoint_scale_slider.value()))
         self.blend_strength_label.setText("Blend Strength {0}".format(self.blend_strength_slider.value()))
 
-        # if self.__getattr__()
-        # self._parent.set_pano_scale(self.pano_scale_slider.value()/100.)
-        # self._parent.set_pano_keypoint_scale(self.keypoint_scale_slider.value()/100.)
-        # self._parent.set_blend_strength(self.blend_strength_slider.value())
-        # self._parent.set_pano_warping_mode(self.cboWarpingMode.currentText())
-        # self._parent.set_pano_blend_mode(self.cboBlendMode.currentText())
-
     def refresh_panorama(self):
         self._parent.update_panorama_params()
