@@ -23,17 +23,6 @@ class PanoramaStitcherWidget(QWidget):
         self.pano_scale_hb.addWidget(self.pano_scale_slider)
         self.pano_scale_hb.addWidget(self.pano_scale_label)
 
-        # Keypoint image scale
-        self.keypoint_scale_slider = QSlider(Qt.Horizontal)
-        self.keypoint_scale_slider.setValue(60)
-        self.keypoint_scale_slider.setMinimum(5)
-        self.keypoint_scale_slider.setMaximum(100)
-        self.keypoint_scale_slider.valueChanged.connect(self.refresh_parameters)
-        self.keypoint_scale_label = QLabel("Keypoint Matching Scale: {0}%".format(self.keypoint_scale_slider.value()))
-        self.keypoint_scale_hb = QHBoxLayout(self)
-        self.keypoint_scale_hb.addWidget(self.keypoint_scale_slider)
-        self.keypoint_scale_hb.addWidget(self.keypoint_scale_label)
-
         # Warping Mode
         self.cboWarpingMode = QComboBox(self)
         self.cboWarpingMode.addItem("spherical")
@@ -87,7 +76,6 @@ class PanoramaStitcherWidget(QWidget):
         self.btnMakePano.clicked.connect(self.refresh_panorama)
 
         pano_vb.addLayout(self.pano_scale_hb)
-        pano_vb.addLayout(self.keypoint_scale_hb)
         pano_vb.addLayout(self.warp_mode_hb)
         pano_vb.addLayout(self.blend_mode_hb)
         pano_vb.addLayout(self.blend_strength_hb)
@@ -99,7 +87,6 @@ class PanoramaStitcherWidget(QWidget):
     def refresh_parameters(self):
         # Update values and slider labels.
         self.pano_scale_label.setText("Output Scale: {0}%".format(self.pano_scale_slider.value()))
-        self.keypoint_scale_label.setText("Keypoint Matching Scale: {0}%".format(self.keypoint_scale_slider.value()))
         self.blend_strength_label.setText("Blend Strength {0}".format(self.blend_strength_slider.value()))
 
     def refresh_panorama(self):
