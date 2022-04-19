@@ -91,7 +91,7 @@ class VKPanoramaController:
         if "work_megapix" in params:
             self.work_megapix = params["work_megapix"]
         else:
-            self.work_megapix = 0.6
+            self.work_megapix = 0.3
 
         # Feature matching algorithm
         if "feature_match_algorithm" in params:
