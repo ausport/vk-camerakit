@@ -24,7 +24,7 @@ VK_PANORAMA_WARP_MERCATOR = "mercator"
 VK_PANORAMA_WARP_TRANSVERSE_MERCATOR = "transverseMercator"
 
 # Blend Options
-VK_PANORAMA_BLEND_MULTIBAND = "spherical"
+VK_PANORAMA_BLEND_MULTIBAND = "multiband"
 VK_PANORAMA_BLEND_FEATHER = "feather"
 
 # Blend Feature Match Algorithm
