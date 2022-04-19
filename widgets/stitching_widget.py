@@ -14,7 +14,7 @@ class PanoramaStitcherWidget(QWidget):
 
         # Resultant image scale slider
         self.pano_scale_slider = QSlider(Qt.Horizontal)
-        self.pano_scale_slider.setValue(33)
+        self.pano_scale_slider.setValue(30)
         self.pano_scale_slider.setMinimum(5)
         self.pano_scale_slider.setMaximum(100)
         self.pano_scale_slider.valueChanged.connect(self.refresh_parameters)
