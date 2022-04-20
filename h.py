@@ -14,6 +14,7 @@ import cameras
 import models
 import observers
 import tracking
+import widgets
 
 
 class GraphicsScene(QtWidgets.QGraphicsScene):
@@ -405,6 +406,8 @@ class Window(QtWidgets.QWidget):
 
         self.correspondencesWidget = MyPopup(self.world_model)
 
+        self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
+
         if sport:
             self.cboSurfaces.setCurrentText(sport)
 
@@ -717,6 +720,10 @@ class Window(QtWidgets.QWidget):
             self.image_model.update_camera_properties()
             self.update_displays()
 
+            # Enable the refinement widget.
+            self.stitching_control_widget = widgets.PanoramaStitcherWidget(self)
+            self.stitching_control_widget.show()
+
     def export_panorama(self):
 
         if self.image_model:
@@ -749,6 +756,11 @@ class Window(QtWidgets.QWidget):
         config_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Camera calibration', self.cboSurfaces.currentText(), "json(*.json)")[0]
         assert os.path.exists(config_path), "Config file doesn't exist..."
         self.update_camera_properties(config_path=config_path)
+
+        # Enable the refinement widget if a panorama image class.
+        if self.image_model.__class__.__name__ == "VKCameraPanorama":
+            self.stitching_control_widget = widgets.PanoramaStitcherWidget(self)
+            self.stitching_control_widget.show()
 
     def update_camera_properties(self, config_path=None):
         """ Opens json file containing camera and model parameters and creates new VKWorldModel and VKCamera objects.
