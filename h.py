@@ -832,6 +832,40 @@ class Window(QtWidgets.QWidget):
             if self.image_model.eof():
                 self.is_playing = False
 
+    def update_panorama_params(self):
+
+        # Triggered as parent method by widget.
+        params = {"work_megapix": self.stitching_control_widget.pano_scale_slider.value()/100.,
+                  "warp_type": self.stitching_control_widget.cboWarpingMode.currentText(),
+                  "wave_correct": "horiz",
+                  "blend_type": self.stitching_control_widget.cboBlendMode.currentText(),
+                  "feature_match_algorithm": cameras.VK_PANORAMA_FEATURE_BRISK,
+                  "blend_strength": self.stitching_control_widget.blend_strength_slider.value()/10}
+
+        print("Params to update:")
+        print(params)
+
+        # This is an update step, so we assume the existing image model is a panorama, and has cameras...
+        assert self.image_model.__class__.__name__ == "VKCameraPanorama", "WTF!  This should be a VKCameraPanorama class.."
+
+        # Camera models are VKCamera classes.
+        _cameras = self.image_model.input_camera_models
+        assert len(_cameras) > 1, "WTF!  There should be more cameras here.."
+
+        # Construct a new panorama class with updated parameters and the existing cameras.
+        self.image_model = cameras.VKCameraPanorama(input_camera_models=_cameras, stitch_params=params)
+
+        im_src = self.image_model.get_frame()
+        height, width, channel = im_src.shape
+        bytes_per_line = 3 * width
+        q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+
+        self.viewer.set_image(QtGui.QPixmap(q_img))
+        self.correspondencesWidget.update_items()
+        self.center_views()
+        self.image_model.update_camera_properties()
+        self.update_displays()
+
     def update_displays(self, crop=None):
 
         if self.world_model and self.image_model:
