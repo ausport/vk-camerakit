@@ -61,9 +61,9 @@ class PanoramaStitcherWidget(QWidget):
 
         # Blending strength
         self.blend_strength_slider = QSlider(Qt.Horizontal)
-        self.blend_strength_slider.setValue(5)
+        self.blend_strength_slider.setValue(25)
         self.blend_strength_slider.setMinimum(0)
-        self.blend_strength_slider.setMaximum(10)
+        self.blend_strength_slider.setMaximum(50)
         self.blend_strength_slider.valueChanged.connect(self.refresh_parameters)
         self.blend_strength_label = QLabel("Blend Strength {0}".format(self.blend_strength_slider.value()))
         self.blend_strength_hb = QHBoxLayout(self)
