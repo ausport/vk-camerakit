@@ -121,7 +121,7 @@ class VKPanoramaController:
         if "blend_strength" in params:
             self.blend_strength = params["blend_strength"]
         else:
-            self.blend_strength = 5
+            self.blend_strength = 0.5
 
     def __str__(self):
         """Overriding str
@@ -218,10 +218,14 @@ class VKPanoramaController:
         FIND FEATURE MATCHES AT LOW RESOLUTION
         '''
         matcher = get_feature_matcher()
+        # Find matching keypoints between images
         p = matcher.apply2(features)
+        # Clean up..
         matcher.collectGarbage()
-
+        # Set matcher confidence threshold..
         indices = cv.detail.leaveBiggestComponent(features, p, 0.3)
+
+        # Arrange images by best pair-wise confidence
         img_subset = []
         img_names_subset = []
         full_img_sizes_subset = []
@@ -241,11 +245,12 @@ class VKPanoramaController:
         Initialise Homography-based rotation estimator
         '''
         estimator = cv.detail_HomographyBasedEstimator()
-        b, cameras = estimator.apply(features, p, None)
+        b, camera_params = estimator.apply(features, p, None)
+
         if not b:
             return None, None
 
-        for idx, cam in enumerate(cameras):
+        for idx, cam in enumerate(camera_params):
             cam.R = cam.R.astype(np.float32)
 
         '''
@@ -265,7 +270,8 @@ class VKPanoramaController:
         if ba_refine_mask[4] == 'x':
             refine_mask[1, 2] = 1
         adjuster.setRefinementMask(refine_mask)
-        b, cameras = adjuster.apply(features, p, cameras)
+        b, adjusted_camera_params = adjuster.apply(features, p, camera_params)
+
         if not b:
             print("Camera parameters adjusting failed.")
             return None, None
@@ -274,7 +280,7 @@ class VKPanoramaController:
         Refine rotation estimators
         '''
         focals = []
-        for cam in cameras:
+        for cam in adjusted_camera_params:
             focals.append(cam.focal)
         sorted(focals)
         if len(focals) % 2 == 1:
@@ -283,7 +289,7 @@ class VKPanoramaController:
             self.warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
 
         rmats = []
-        for cam in cameras:
+        for cam in adjusted_camera_params:
             rmats.append(np.copy(cam.R))
 
         if self.wave_correct == "vert":
@@ -292,7 +298,7 @@ class VKPanoramaController:
             k = cv.detail.WAVE_CORRECT_HORIZ
 
         rmats = cv.detail.waveCorrect(rmats, k)
-        for idx, cam in enumerate(cameras):
+        for idx, cam in enumerate(adjusted_camera_params):
             cam.R = rmats[idx]
 
         images_warped = []
@@ -303,7 +309,7 @@ class VKPanoramaController:
 
         warper = cv.PyRotationWarper(self.warp_type, self.warped_image_scale * seam_work_aspect)  # warper could be nullptr?
         for idx in range(0, num_images):
-            K = cameras[idx].K().astype(np.float32)
+            K = adjusted_camera_params[idx].K().astype(np.float32)
             swa = seam_work_aspect
             K[0, 0] *= swa
             K[0, 2] *= swa
@@ -311,14 +317,14 @@ class VKPanoramaController:
             K[1, 2] *= swa
 
             # Rotate low-resolution images.
-            corner, image_wp = warper.warp(images[idx], K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
+            corner, image_wp = warper.warp(images[idx], K, adjusted_camera_params[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
 
             self.corners.append(corner)
             self.sizes.append((image_wp.shape[1], image_wp.shape[0]))
 
             images_warped.append(image_wp)
 
-            p, mask_wp = warper.warp(masks[idx], K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
+            p, mask_wp = warper.warp(masks[idx], K, adjusted_camera_params[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
             self.masks_warped.append(mask_wp.get())
 
         images_warped_f = []
@@ -358,12 +364,12 @@ class VKPanoramaController:
 
                 # Update all cameras with self.compose_work_aspect
                 for i in range(0, len(input_images)):
-                    cameras[i].focal *= self.compose_work_aspect
-                    cameras[i].ppx *= self.compose_work_aspect
-                    cameras[i].ppy *= self.compose_work_aspect
+                    adjusted_camera_params[i].focal *= self.compose_work_aspect
+                    adjusted_camera_params[i].ppx *= self.compose_work_aspect
+                    adjusted_camera_params[i].ppy *= self.compose_work_aspect
                     sz = (full_img_sizes[i][0] * compose_scale, full_img_sizes[i][1] * compose_scale)
-                    K = cameras[i].K().astype(np.float32)
-                    roi = warper.warpRoi(sz, K, cameras[i].R)
+                    K = adjusted_camera_params[i].K().astype(np.float32)
+                    roi = warper.warpRoi(sz, K, adjusted_camera_params[i].R)
                     self.corners.append(roi[0:2])
                     self.sizes.append(roi[2:4])
 
@@ -373,20 +379,20 @@ class VKPanoramaController:
             else:
                 img = full_img
             _img_size = (img.shape[1], img.shape[0])
-            K = cameras[idx].K().astype(np.float32)
+            K = adjusted_camera_params[idx].K().astype(np.float32)
 
-            corner, image_warped = warper.warp(img, K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
+            corner, image_warped = warper.warp(img, K, adjusted_camera_params[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
 
             short_name = os.path.splitext(os.path.splitext(os.path.basename(input_names[idx]))[0])[0]
 
             camera_models.append({"extrinsics": K,
-                                  "rotation": cameras[idx].R,
+                                  "rotation": adjusted_camera_params[idx].R,
                                   "corner": corner,
                                   "name": input_names[idx],
                                   "short_name": short_name})
 
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
-            p, mask_warped = warper.warp(mask, K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
+            p, mask_warped = warper.warp(mask, K, adjusted_camera_params[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
             self.compensator.apply(idx, self.corners[idx], image_warped, mask_warped)
             image_warped_s = image_warped.astype(np.int16)
             dilated_mask = cv.dilate(self.masks_warped[idx], None)
@@ -427,16 +433,13 @@ class VKPanoramaController:
         print("Reference Frame = {0}".format(_reference_frame))
 
         for idx, img in enumerate(input_images):
-            print("\nModel for {0}:".format(input_names[idx]))
-            for k in camera_models[idx]:
-                print("{0}:\n{1}".format(k, camera_models[idx][k]))
             dx = camera_models[_reference_frame]["corner"][0]
             dy = camera_models[_reference_frame]["corner"][1]
             K = camera_models[idx]["extrinsics"]
 
             for x in (0, img.shape[1]):
                 for y in (0, img.shape[0]):
-                    pt = warper.warpPoint((x, y), K, cameras[idx].R)
+                    pt = warper.warpPoint((x, y), K, adjusted_camera_params[idx].R)
                     pt = (int(pt[0]), int(pt[1]))
                     pt = (int(pt[0]) - dx, int(pt[1]) - dy)
                     cv.drawMarker(dst, pt, (255, 255, 255), cv.MARKER_CROSS, thickness=4)
