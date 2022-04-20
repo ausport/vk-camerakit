@@ -48,31 +48,20 @@ def parse_camera_model_with_dict(data):
         * panorama_projection_models - a list of camera parts:
             * input_camera - camera name.
             * input_camera_model - a dict, consistent with the normal VKCameraVideoFile config, including image_path, camera_matrix, surface_model, focal_length, camera_matrix, homography, image_points, model_points.
-            * projection_model_parameters - panoramic camera parameters: corner, rotation, extrinsics.
+            * projection_model_parameters - panoramic camera parameters: corner, rotation, extrinsics.  (NB: we recompute these on init).
         '''
 
         assert "stitching_parameters" in data, "Camera file doesn't include stitching parameters..."
         assert "panorama_projection_models" in data, "Camera file doesn't include panorama projection parameters..."
 
         input_camera_models = []
-        panorama_projection_models = []
 
         for camera in data["panorama_projection_models"]:
-
             # Parse an initialised camera model from the data
             input_camera_models.append(parse_camera_model_with_dict(camera["input_camera_model"]))
 
-            # Ensure matrices are in np-compliant form.
-            for part in camera["projection_model_parameters"]:
-                if part == "extrinsics" or part == "rotation":
-                    camera["projection_model_parameters"][part] = np.asarray(camera["projection_model_parameters"][part])
-
-            # Retrieve the panoramic model dict
-            panorama_projection_models.append(camera["projection_model_parameters"])
-
         camera_model = VKCameraPanorama(input_camera_models=input_camera_models,
                                         stitch_params=data["stitching_parameters"],
-                                        panorama_projection_models=panorama_projection_models,
                                         surface_name=_surface_model_name)
 
     # Load additional parameters if available
