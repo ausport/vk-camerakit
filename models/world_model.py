@@ -38,7 +38,8 @@ class VKWorldModel:
         np.fill_diagonal(self.inverse_homography, 1)
         self.image_points = np.empty([0, 2])    # 2D coordinates system
         self.model_points = np.empty([0, 3])    # 3D coordinate system
-
+        print("Initial image_points shape", self.image_points.shape)
+        print("Initial model_points shape", self.model_points.shape)
         self._surface_image = None
 
     def __str__(self):

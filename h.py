@@ -620,14 +620,18 @@ class Window(QtWidgets.QWidget):
             self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
             self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
 
-            print("## EXISTING PAIRS ##")
-            print(self.world_model.image_points)
-            print(self.world_model.model_points)
-            print(self.world_model.model_points.shape)
+            print("\n+ + + + +\nExisting image_points shape", self.world_model.image_points.shape)
+            print("Existing model_points shape", self.world_model.model_points.shape)
 
-            print("## LAST PAIRS ##")
+            print("Existing image model pairs")
+            print(self.world_model.image_points)
+            print("Existing world model pairs")
+            print(self.world_model.model_points)
+
+            print("New image model pairs")
+            print(self.last_image_pairs)
+            print("New world model pairs")
             print(self.last_surface_pairs)
-            # print(self.last_surface_pairs.shape)
 
             self.world_model.image_points = np.append(self.world_model.image_points,
                                                       np.array([(self.last_image_pairs[0],
@@ -636,6 +640,9 @@ class Window(QtWidgets.QWidget):
             self.world_model.model_points = np.append(self.world_model.model_points,
                                                       np.array([(self.last_surface_pairs[0],
                                                                  self.last_surface_pairs[1], 0)], dtype='float32'), axis=0)
+
+            print("Updated image_points shape", self.world_model.image_points.shape)
+            print("Updated model_points shape", self.world_model.model_points.shape,"\n+ + + + +")
 
             # Save correspondences
             self.reset_controls()
