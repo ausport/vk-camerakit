@@ -71,10 +71,12 @@ def parse_camera_model_with_dict(data):
             camera_model.surface_model.compute_inverse_homography()
 
         if "image_points" in data:
-            camera_model.surface_model.image_points = np.asarray(data["image_points"])
+            if len(np.asarray(data["image_points"])) > 0:
+                camera_model.surface_model.image_points = np.asarray(data["image_points"])
 
         if "model_points" in data:
-            camera_model.surface_model.model_points = np.asarray(data["model_points"])
+            if len(np.asarray(data["model_points"])) > 0:
+                camera_model.surface_model.model_points = np.asarray(data["model_points"])
 
     if "distortion_matrix" in data:
         camera_model.distortion_matrix = np.asarray(data["distortion_matrix"])
