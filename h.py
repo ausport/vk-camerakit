@@ -229,7 +229,7 @@ class Window(QtWidgets.QWidget):
         self.observer = None
         self.observer2 = None
 
-        if True:
+        if False:
             # TODO - this is for short-term demonstration purposes only...
             # Normally, a tracking controller will be implemented at run time.
             _path = "/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_annotations.json"
@@ -705,31 +705,32 @@ class Window(QtWidgets.QWidget):
                                                            "Select Multiple Video Inputs",
                                                            "/home", "JSON (*.json)", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
 
-            _cameras = []
+            if len(paths[0]) > 0:
+                _cameras = []
 
-            for path in paths[0]:
-                if path.endswith(".json"):
-                    _cameras.append(cameras.load_camera_model(path=path))
-                else:
-                    _cameras.append(cameras.VKCameraVideoFile(filepath=path))
+                for path in paths[0]:
+                    if path.endswith(".json"):
+                        _cameras.append(cameras.load_camera_model(path=path))
+                    else:
+                        _cameras.append(cameras.VKCameraVideoFile(filepath=path))
 
-            self.image_model = cameras.VKCameraPanorama(_cameras)
-            self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
+                self.image_model = cameras.VKCameraPanorama(_cameras)
+                self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
-            im_src = self.image_model.get_frame()
-            height, width, channel = im_src.shape
-            bytes_per_line = 3 * width
-            q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+                im_src = self.image_model.get_frame()
+                height, width, channel = im_src.shape
+                bytes_per_line = 3 * width
+                q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
 
-            self.viewer.set_image(QtGui.QPixmap(q_img))
-            self.correspondencesWidget.update_items()
-            self.center_views()
-            self.image_model.update_camera_properties()
-            self.update_displays()
+                self.viewer.set_image(QtGui.QPixmap(q_img))
+                self.correspondencesWidget.update_items()
+                self.center_views()
+                self.image_model.update_camera_properties()
+                self.update_displays()
 
-            # Enable the refinement widget.
-            self.stitching_control_widget = widgets.PanoramaStitcherWidget(self)
-            self.stitching_control_widget.show()
+        # Enable the refinement widget.
+        self.stitching_control_widget = widgets.PanoramaStitcherWidget(self)
+        self.stitching_control_widget.show()
 
     def export_panorama(self):
 
@@ -1090,11 +1091,11 @@ if __name__ == '__main__':
 
     window.show()
 
-    # if opts.sport is not None:
-    #     window.update_world_model(world_model_name=opts.sport)
-    #
-    # if opts.config is not None:
-    #     assert os.path.exists(opts.config), "Invalid path to config file."
-    #     window.update_camera_properties(config_path=opts.config)
+    if opts.sport is not None:
+        window.update_world_model(world_model_name=opts.sport)
+
+    if opts.config is not None:
+        assert os.path.exists(opts.config), "Invalid path to config file."
+        window.update_camera_properties(config_path=opts.config)
 
     sys.exit(app.exec_())
