@@ -15,7 +15,7 @@ Interface to support:
 
 Cameras can be instantiated using device-specific `VKCamera` subclasses.  
 
-Details [here](cameras/README.md).
+Details on usage [here](cameras/README.md).
 
 
 #### VKWorldModel:
@@ -31,3 +31,17 @@ World models are typically used as a property of a device-specific `VKCamera` cl
 
 ![](images/verticals.png)
 
+### Installation Notes:
+
+Pip install the headless `opencv-python` package (i.e. `opencv-python-headless`), since the 
+versions later than **4.2.0.34** are not compatible with Qt GUI functionality in PyQt5.
+
+Otherwise, `pip install opencv_python==4.2.0.34` still seems to be a safe option.
+
+#### VIMBA Cameras:
+
+Allied Vision (Prosilica) imaging devices are supported by the VIMBA SDK.
+
+Download the SDK [here](https://www.alliedvision.com/en/products/vimba-sdk/#c1497).
+
+Note that the installer requires Python 3.8+
