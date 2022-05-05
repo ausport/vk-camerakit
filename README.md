@@ -33,10 +33,21 @@ World models are typically used as a property of a device-specific `VKCamera` cl
 
 ### Installation Notes:
 
-Pip install the headless `opencv-python` package (i.e. `opencv-python-headless`), since the 
-versions later than **4.2.0.34** are not compatible with Qt GUI functionality in PyQt5.
+An error seems to emanate on some systems:
 
-Otherwise, `pip install opencv_python==4.2.0.34` still seems to be a safe option.
+```bash
+Failed to load platform plugin "xcb". Available platforms are:
+```
+
+This can be resolved by reinstalling the `xcb` library:
+```bash
+sudo apt-get install --reinstall libxcb-xinerama0
+```
+or, 
+
+```bash
+sudo apt-get install libqt5x11extras5
+```
 
 #### VIMBA Cameras:
 
