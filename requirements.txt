@@ -2,5 +2,5 @@ filetype==1.0.7
 numpy==1.19.2
 opencv_python==4.2.0.34
 Pillow==9.1.0
-PyQt5==5.15.6
+pyqt==5.9.2
 VimbaPython==1.1.0
