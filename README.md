@@ -33,21 +33,8 @@ World models are typically used as a property of a device-specific `VKCamera` cl
 
 ### Installation Notes:
 
-An error seems to emanate on some systems:
-
-```bash
-Failed to load platform plugin "xcb". Available platforms are:
-```
-
-This can be resolved by reinstalling the `xcb` library:
-```bash
-sudo apt-get install --reinstall libxcb-xinerama0
-```
-or, 
-
-```bash
-sudo apt-get install libqt5x11extras5
-```
+Use a conda environment to manage dependencies.  In particular, the pip version
+of PyQt5 doesn't seem to like working alongside opencv-python.
 
 #### VIMBA Cameras:
 
