@@ -230,9 +230,9 @@ class VKPanoramaController:
         img_names_subset = []
         full_img_sizes_subset = []
         for i in range(len(indices)):
-            img_names_subset.append(input_names[indices[i, 0]])
-            img_subset.append(images[indices[i, 0]])
-            full_img_sizes_subset.append(full_img_sizes[indices[i, 0]])
+            img_names_subset.append(input_names[indices[i]])
+            img_subset.append(images[indices[i]])
+            full_img_sizes_subset.append(full_img_sizes[indices[i]])
         images = img_subset
         input_names = img_names_subset
         full_img_sizes = full_img_sizes_subset
