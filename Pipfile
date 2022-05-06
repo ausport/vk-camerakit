@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+filetype = "==1.0.7"
+numpy = "==1.19.2"
+opencv-python = "==4.5.5.64"
+pyqt = "==5.9.2"
+vimbapython = "==1.1.0"
+Pillow = "==9.1.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
