@@ -52,6 +52,11 @@ class VKCameraVimbaDevice(VKCamera):
         except (AttributeError, VimbaFeatureError):
             pass
 
+        # TODO set configs
+
+        self.video_object.Width.set(720)
+        self.video_object.Height.set(480)
+
         # TODO - camera-relevant image capture features
         # Get properties of the camera
         self.camera_name = self.video_object.get_name()
