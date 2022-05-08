@@ -42,6 +42,22 @@ A further note - the pip install for `PyQt5` is not compatible with the typical 
 of the latter installs it's own Qt libraries by default (for Linux, but not for OSX).  The easiest workaround here is to
 install `opencv-python-headless`, which doesn't install Qt overheads, and avoids this conflict.
 
+On occasion, depending on the order of dependency installation, the following error can occur mixing the pip version of PyQt5, and OpenCV.
+
+```bash
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+
+This application failed to start because no Qt platform plugin could be initialized. 
+Reinstalling the application may fix this problem.
+```
+
+Resolve this by re-installing `xcb`:
+
+```bash
+sudo apt install libxcb-xinerama0 
+```
+
+
 #### Requirements:
 ```bash
 [packages]
