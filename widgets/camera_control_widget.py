@@ -3,11 +3,22 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
+# VK modules
+import cameras
+SUPPORTED_DEVICES = ["VKCameraGenericDevice", "VKCameraVimbaDevice"]
+
 
 class CameraControllerWidget(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, device):
+
+        # The camera control widget should be initialised with a known camera device.
+        # The device should be a VKCamera - either VKCameraGenericDevice, or VKCameraVimbaDevice
+        assert device.__class__.__name__ in SUPPORTED_DEVICES, "A supported VKCamera class is required."
+
         QWidget.__init__(self)
         self._parent = parent
+        self._device = device
+        print(self._device)
 
         # Arrange layout
         camera_vb = QVBoxLayout(self)
@@ -87,7 +98,7 @@ class CameraControllerWidget(QWidget):
         This method assumes that the parent class has a function <parent.update_capture_params(params)>
         """
 
-        if not hasattr(self._parent, "update_capture_params"):
+        if not hasattr(self._device, "set_capture_parameters"):
             raise NotImplementedError
 
         # Parse image resolution
@@ -95,4 +106,5 @@ class CameraControllerWidget(QWidget):
         config = {"CAP_PROP_FRAME_WIDTH": self.cboImageResolutionMode.currentText().split("x")[0],
                   "CAP_PROP_FRAME_HEIGHT": self.cboImageResolutionMode.currentText().split("x")[1]}
 
-        self._parent.update_capture_params(params=config)
+        self._device.set_capture_parameters(configs=config)
+
