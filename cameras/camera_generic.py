@@ -9,6 +9,8 @@ class VKCameraGenericDevice(VKCamera):
     def __init__(self, device=0, verbose_mode=False, surface_name=None):
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
+        print("Searching for generic OpenCV-compatible capture device at {0}")
+
         self.video_object = cv2.VideoCapture(device)
         if self.video_object.isOpened():
             self.device = device
@@ -58,7 +60,7 @@ class VKCameraGenericDevice(VKCamera):
         Returns:
             (str): A string summary of the object
         """
-        return "\nCamera Source:" \
+        return "\nGeneric OpenCV-Compatible Camera Source:" \
                "\n\tVideo Device     : {0}" \
                "\n\tWidth            : {1}" \
                "\n\tHeight           : {2}" \
