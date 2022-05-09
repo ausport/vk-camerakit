@@ -7,7 +7,7 @@ from cameras import VKCamera
 
 class VKCameraVimbaDevice(VKCamera):
 
-    def __init__(self, ip_address, verbose_mode=False, surface_name=None):
+    def __init__(self, ip_address="10.2.0.2", verbose_mode=False, surface_name=None):
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         print("Searching for Allied Vision device at {0}".format(ip_address))
@@ -52,8 +52,6 @@ class VKCameraVimbaDevice(VKCamera):
         except (AttributeError, VimbaFeatureError):
             pass
 
-        # TODO set configs
-
         self.video_object.Width.set(720)
         self.video_object.Height.set(480)
 
@@ -62,6 +60,8 @@ class VKCameraVimbaDevice(VKCamera):
         self.camera_name = self.video_object.get_name()
         self.camera_model = self.video_object.get_model()
         self.camera_identifier = self.video_object.get_id()
+        self.camera_serial = self.video_object.get_serial()
+        self.camera_interface = self.video_object.get_interface_id()
         self.ip_address = ip_address
 
     def eof(self):
@@ -120,6 +120,19 @@ class VKCameraVimbaDevice(VKCamera):
         image = cv2.cvtColor(frame.as_numpy_ndarray(), cv2.COLOR_BAYER_RG2BGR)
         return image
 
+    def is_available(self):
+        """Returns the current status of an imaging device.
+        NB: Overrides default method.
+
+        Returns:
+            (bool): True if imaging device is available.
+        """
+        try:
+            if self.video_object.get_serial() is not None:
+                return True
+        except (AttributeError, VimbaFeatureError):
+            return False
+
     def __str__(self):
         """Overriding str
 
@@ -130,13 +143,17 @@ class VKCameraVimbaDevice(VKCamera):
                "\n\tVideo Device      : {0}" \
                "\n\tIP Address        : {1}" \
                "\n\tDevice Identifier : {2}" \
-               "\n\tWidth             : {3}" \
-               "\n\tHeight            : {4}" \
-               "\n\tTemperature       : {5:.1f} deg C" \
-               "\n\tExposure Time     : {6:.1f} ms" \
-               "\n\tFrame Rate        : {7:.1f} f.p.s".format(self.camera_model,
+               "\n\tSerial Number     : {3}" \
+               "\n\tInterface ID      : {4}" \
+               "\n\tWidth             : {5}" \
+               "\n\tHeight            : {6}" \
+               "\n\tTemperature       : {7:.1f} deg C" \
+               "\n\tExposure Time     : {8:.1f} ms" \
+               "\n\tFrame Rate        : {9:.1f} f.p.s".format(self.camera_model,
                                                    self.ip_address,
                                                    self.camera_identifier,
+                                                   self.camera_serial,
+                                                   self.camera_interface,
                                                    self.width(),
                                                    self.height(),
                                                    self.get_camera_temperature(),
