@@ -383,6 +383,9 @@ class VKCamera:
             print(self.__class__, "Closing video object...")
             self.video_object.release()
 
+    def name(self):
+        return self.__repr__()
+
     def __repr__(self):
         """Overriding repr
 
