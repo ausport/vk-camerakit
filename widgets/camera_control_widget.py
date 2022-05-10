@@ -1,3 +1,5 @@
+import os
+
 # QT modules
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -86,12 +88,18 @@ class CameraControllerWidget(QWidget):
         self.btnApplySettings.setText('Apply Settings')
         self.btnApplySettings.clicked.connect(self.apply_parameters)
 
+        # Save a video from the camera
+        self.btnSaveVideo = QToolButton(self)
+        self.btnSaveVideo.setText('Save Video')
+        self.btnSaveVideo.clicked.connect(self.save_video)
+
         # Layout widgets
         camera_vb.addLayout(self.device_selection_hb)
         camera_vb.addLayout(self.image_resolution_mode_hb)
         camera_vb.addLayout(self.exposure_hb)
         camera_vb.addLayout(self.fps_hb)
         camera_vb.addWidget(self.btnApplySettings)
+        camera_vb.addWidget(self.btnSaveVideo)
 
         self.setLayout(camera_vb)
         self.setWindowTitle("Camera Control Parameters")
@@ -141,3 +149,17 @@ class CameraControllerWidget(QWidget):
         self._current_active_device.set_capture_parameters(configs=config)
         self.refresh_widget_with_camera_properties()
         self._parent.update_current_camera_device(camera=self._current_active_device)
+
+    def save_video(self):
+
+        path = QFileDialog.getSaveFileName(self, 'Export Panorama Composite',
+                                           self._current_active_device.name(),
+                                           "mp4(*.mp4)")
+
+        import threading
+        th = threading.Thread(target=self._current_active_device.save_video, args=(path[0],
+                                                                                   (self._current_active_device.width(),
+                                                                                    self._current_active_device.height()),
+                                                                                   self._current_active_device.fps()))
+
+        th.start()
