@@ -416,18 +416,7 @@ class Window(QtWidgets.QWidget):
         # Widgets
         self.correspondencesWidget = MyPopup(self.world_model)
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
-
-        _local_devices = self.scan_capture_devices()
-
-        if len(_local_devices) > 0:
-            self.image_model = _local_devices[0]
-            print("Starting up default imaging device...")
-            self.capture_device_control_widget = widgets.CameraControllerWidget(parent=self, devices=_local_devices)
-            self.capture_device_control_widget.show()
-            self.capture_device_control_widget.activateWindow()
-            self.view_current_frame()
-        else:
-            print("No default imaging devices were found...")
+        self.open_capture_devices()
 
     def reset_controls(self):
         # Abort correspondences
@@ -520,7 +509,6 @@ class Window(QtWidgets.QWidget):
         q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
 
         self.viewer.set_image(QtGui.QPixmap(q_img))
-        self.correspondencesWidget.update_items()
         self.image_model.update_camera_properties()
         self.update_displays()
         app.processEvents()
@@ -613,6 +601,19 @@ class Window(QtWidgets.QWidget):
             self.surface.set_cross_cursor(False)
 
             self.correspondencesWidget.update_items()
+
+    def open_capture_devices(self):
+        _local_devices = self.scan_capture_devices()
+
+        if len(_local_devices) > 0:
+            self.image_model = _local_devices[0]
+            print("Starting up default imaging device...")
+            self.capture_device_control_widget = widgets.CameraControllerWidget(parent=self, devices=_local_devices)
+            self.capture_device_control_widget.show()
+            self.capture_device_control_widget.activateWindow()
+            self.view_current_frame()
+        else:
+            print("No default imaging devices were found...")
 
     def show_capture_device_controller(self):
         if not self.capture_device_control_widget.isVisible():
