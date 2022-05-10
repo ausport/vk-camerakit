@@ -195,7 +195,7 @@ class MyPopup(QtWidgets.QWidget):
 
 
 class Window(QtWidgets.QWidget):
-    def __init__(self, sport=None):
+    def __init__(self):
 
         # TODO - clean up this interface with subclassed QGroupBox:
         # https://doc.qt.io/qt-5/qtwidgets-widgets-sliders-example.html
@@ -207,7 +207,7 @@ class Window(QtWidgets.QWidget):
         """
         # Each project requires a surface model, representing the world model space.
         # The world model (VKWorldModel) defines image calibration and world-to-camera-to-world translations.
-        self.world_model_name = "hockey"
+        self.world_model_name = None
         self.world_model = None
 
         # Each project requires at least one image model.
@@ -404,6 +404,10 @@ class Window(QtWidgets.QWidget):
 
         vb_layout.addLayout(hb_correspondences)
 
+        if self.world_model_name is not None:
+            self.cboSurfaces.setCurrentText(self.world_model_name)
+
+        # Widgets
         self.correspondencesWidget = MyPopup(self.world_model)
 
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
@@ -876,7 +880,7 @@ class Window(QtWidgets.QWidget):
 
     def update_displays(self, crop=None):
 
-        if self.world_model and self.image_model:
+        if self.image_model:
 
             model = self.world_model
             source = self.image_model
@@ -885,179 +889,180 @@ class Window(QtWidgets.QWidget):
             im_src = source.undistorted_image()
 
             # Only update the surface overlay if there is an existing homography
-            if not model.is_homography_identity():
+            if model:
+                if not model.is_homography_identity():
 
-                _surface_px = self.surface.image.pixmap()
+                    _surface_px = self.surface.image.pixmap()
 
-                im_out = cv2.warpPerspective(im_src,
-                                             model.homography,
-                                             (_surface_px.width(),
-                                              _surface_px.height()))
+                    im_out = cv2.warpPerspective(im_src,
+                                                 model.homography,
+                                                 (_surface_px.width(),
+                                                  _surface_px.height()))
 
-                height, width, channel = im_out.shape
-                bytes_per_line = 3 * width
-                alpha = 0.5
-                beta = (1.0 - alpha)
-
-                # Composite image
-                src1 = model.surface_image()
-
-                if src1.shape == im_out.shape:
-                    dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
-
-                    # Set composite image to surface model
-                    q_img = QtGui.QImage(dst.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-                    self.surface.set_image(QtGui.QPixmap(q_img))
-
-                self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
-                self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
-
-                # if crop is not None:
-                if self.OMB_mode:
-
-                    # Frame id
-                    _frame = self.image_model.frame_position()
-                    _world_detections = self.tracker.detections_for_frame(_frame)
-                    _camera_detections = []
-
-                    for _player_id, detection in enumerate(_world_detections):
-
-                        x, y = detection["unified_world_foot"]
-
-                        if self.image_model.__class__.__name__ == "VKCameraPanorama":
-                            # Project point through panoramic transforms (a special case coordinated by the VKCameraPanorama class).
-                            _image_detection = self.image_model.projected_panoramic_point_for_2d_world_point(world_point={"x": x, "y": y})
-                            _camera_detections.append(_image_detection)
-
-                            cv2.circle(im_src, _image_detection, radius=5, color=(255, 0, 0), thickness=4)
-                            cv2.putText(im_src, str(_player_id), _image_detection, cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 0), 2, cv2.LINE_AA)
-
-                        else:
-                            # Project point through VKWorldModel class (normally this would be a 4K VKCameraVideoFile instance).
-                            _image_detection = self.world_model.projected_image_point_for_2d_world_point(world_point={"x": x, "y": y})
-
-                    self.observer.update_detections(frame=_frame, detections=_camera_detections)
-
-                    # Get the predicted locus of action..
-                    target_view, fov = self.observer.get_viewpoint_estimates_for_frame(frame=_frame)
-
-                    tl, tr, bl, br = model.rotated_image_crop(image_target=target_view,
-                                                              camera=source,
-                                                              fov=self.cropFOV)
-
-                    vert_span = int(abs(tl[1] - bl[1]) / 2)
-                    bl = (bl[0], bl[1]+vert_span)
-                    br = (br[0], br[1]+vert_span)
-                    tl = (tl[0], tl[1]+vert_span)
-                    tr = (tr[0], tr[1]+vert_span)
-
-                    image_points = np.float32([bl, br, tl, tr])
-
-                    # TODO variable crop resolution
-                    model_points = np.float32([[0, 1080], [1920, 1080], [0, 0], [1920, 0]])
-
-                    # Estimate the homography to translate the distorted original image crop to a
-                    # rectangle matching the scale of the selected output resolution.
-                    homography, mask = cv2.findHomography(image_points, model_points)
-
-                    # De-warp the image.
-                    un_warped_crop = cv2.warpPerspective(im_src, homography, (1920, 1080))
-                    if True:
-                        self.observer2.add_observer_image_frame(un_warped_crop)
-
-                    # Apply the de-warped image to the surface model canvas.
-                    height, width, channel = un_warped_crop.shape
+                    height, width, channel = im_out.shape
                     bytes_per_line = 3 * width
-                    q_img = QtGui.QImage(un_warped_crop.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-                    self.surface.set_image(QtGui.QPixmap(q_img))
+                    alpha = 0.5
+                    beta = (1.0 - alpha)
 
-                    # Prepare the perspective aware cropping boundaries.
-                    pts = np.array([tl, tr, br, bl], np.int32)
-                    mask = np.zeros(im_src.shape[:2], dtype="uint8")
-                    cv2.fillPoly(mask, [pts], 255)
+                    # Composite image
+                    src1 = model.surface_image()
 
-                    roi_mask = np.zeros_like(im_src)
-                    roi_mask[:, :, 0] = mask
-                    roi_mask[:, :, 1] = mask
-                    roi_mask[:, :, 2] = mask
+                    if src1.shape == im_out.shape:
+                        dst = cv2.addWeighted(src1, alpha, im_out, beta, 0.0)
 
-                    # Extract the ROI
-                    _roi = cv2.bitwise_and(im_src, roi_mask)
-                    _roi = cv2.cvtColor(_roi, cv2.COLOR_BGR2RGB)
+                        # Set composite image to surface model
+                        q_img = QtGui.QImage(dst.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+                        self.surface.set_image(QtGui.QPixmap(q_img))
 
-                    # Extract the background mask, and darken greyscale
-                    _background = cv2.cvtColor(im_src, cv2.COLOR_BGR2GRAY)
-                    img = cv2.cvtColor(_background, cv2.COLOR_GRAY2BGR)
-                    _background = cv2.bitwise_and(img, 255 - roi_mask)
-                    _background //= 2
+                    self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
+                    self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
 
-                    # Merge imagery
-                    im_src = _background + _roi
-                    cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+                    # if crop is not None:
+                    if self.OMB_mode:
 
-                    # Highlight ROI boundary
-                    im_src = cv2.line(im_src, tl, tr, (0, 0, 255), 3)
-                    im_src = cv2.line(im_src, tr, br, (0, 0, 255), 3)
-                    im_src = cv2.line(im_src, br, bl, (0, 0, 255), 3)
-                    im_src = cv2.line(im_src, bl, tl, (0, 0, 255), 3)
+                        # Frame id
+                        _frame = self.image_model.frame_position()
+                        _world_detections = self.tracker.detections_for_frame(_frame)
+                        _camera_detections = []
 
-                    if True:
-                        self.observer.add_observer_image_frame(im_src)
+                        for _player_id, detection in enumerate(_world_detections):
 
-                if self.show_cal_markers:
+                            x, y = detection["unified_world_foot"]
 
-                    if self.show_vertical_projections:
-                        thickness = 1
+                            if self.image_model.__class__.__name__ == "VKCameraPanorama":
+                                # Project point through panoramic transforms (a special case coordinated by the VKCameraPanorama class).
+                                _image_detection = self.image_model.projected_panoramic_point_for_2d_world_point(world_point={"x": x, "y": y})
+                                _camera_detections.append(_image_detection)
 
-                        world_points = np.zeros((model.model_width * model.model_height, 3), np.float32)
+                                cv2.circle(im_src, _image_detection, radius=5, color=(255, 0, 0), thickness=4)
+                                cv2.putText(im_src, str(_player_id), _image_detection, cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 0), 2, cv2.LINE_AA)
 
-                        world_points[:, :2] = np.mgrid[model.model_offset_x:model.model_width + model.model_offset_x,
-                                              model.model_offset_y:model.model_height + model.model_offset_y].T.reshape(
-                            -1, 2) * model.model_scale
+                            else:
+                                # Project point through VKWorldModel class (normally this would be a 4K VKCameraVideoFile instance).
+                                _image_detection = self.world_model.projected_image_point_for_2d_world_point(world_point={"x": x, "y": y})
 
-                        for world_point in world_points:
-                            # Render vertical
-                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-                            projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
-                            theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], -model.model_scale * 2]]], dtype='float32')
-                            projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
-                            im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0, 255, 255), thickness)
-                    else:
-                        thickness = 3
+                        self.observer.update_detections(frame=_frame, detections=_camera_detections)
 
-                        for world_point in model.model_points:
-                            unit_vector = -model.model_scale * 1.8
+                        # Get the predicted locus of action..
+                        target_view, fov = self.observer.get_viewpoint_estimates_for_frame(frame=_frame)
 
-                            # Render y-axis
-                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                        tl, tr, bl, br = model.rotated_image_crop(image_target=target_view,
+                                                                  camera=source,
+                                                                  fov=self.cropFOV)
 
-                            projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
-                            theoretical_3d_model_point = np.array([[[world_point[0], world_point[1] + unit_vector, 0]]], dtype='float32')
-                            projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+                        vert_span = int(abs(tl[1] - bl[1]) / 2)
+                        bl = (bl[0], bl[1]+vert_span)
+                        br = (br[0], br[1]+vert_span)
+                        tl = (tl[0], tl[1]+vert_span)
+                        tr = (tr[0], tr[1]+vert_span)
 
-                            int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
-                            int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
-                            im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 255, 0), thickness)
+                        image_points = np.float32([bl, br, tl, tr])
 
-                            # Render x-axis
-                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-                            projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
-                            theoretical_3d_model_point = np.array([[[world_point[0] + unit_vector, world_point[1], 0]]], dtype='float32')
-                            projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+                        # TODO variable crop resolution
+                        model_points = np.float32([[0, 1080], [1920, 1080], [0, 0], [1920, 0]])
 
-                            int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
-                            int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
-                            im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 0, 255), thickness)
+                        # Estimate the homography to translate the distorted original image crop to a
+                        # rectangle matching the scale of the selected output resolution.
+                        homography, mask = cv2.findHomography(image_points, model_points)
 
-                            # Render vertical
-                            model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
-                            projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
-                            theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], unit_vector]]], dtype='float32')
-                            projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+                        # De-warp the image.
+                        un_warped_crop = cv2.warpPerspective(im_src, homography, (1920, 1080))
+                        if True:
+                            self.observer2.add_observer_image_frame(un_warped_crop)
 
-                            int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
-                            int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
-                            im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (255, 0, 0), thickness)
+                        # Apply the de-warped image to the surface model canvas.
+                        height, width, channel = un_warped_crop.shape
+                        bytes_per_line = 3 * width
+                        q_img = QtGui.QImage(un_warped_crop.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+                        self.surface.set_image(QtGui.QPixmap(q_img))
+
+                        # Prepare the perspective aware cropping boundaries.
+                        pts = np.array([tl, tr, br, bl], np.int32)
+                        mask = np.zeros(im_src.shape[:2], dtype="uint8")
+                        cv2.fillPoly(mask, [pts], 255)
+
+                        roi_mask = np.zeros_like(im_src)
+                        roi_mask[:, :, 0] = mask
+                        roi_mask[:, :, 1] = mask
+                        roi_mask[:, :, 2] = mask
+
+                        # Extract the ROI
+                        _roi = cv2.bitwise_and(im_src, roi_mask)
+                        _roi = cv2.cvtColor(_roi, cv2.COLOR_BGR2RGB)
+
+                        # Extract the background mask, and darken greyscale
+                        _background = cv2.cvtColor(im_src, cv2.COLOR_BGR2GRAY)
+                        img = cv2.cvtColor(_background, cv2.COLOR_GRAY2BGR)
+                        _background = cv2.bitwise_and(img, 255 - roi_mask)
+                        _background //= 2
+
+                        # Merge imagery
+                        im_src = _background + _roi
+                        cv2.cvtColor(im_src, cv2.COLOR_BGR2RGB, im_src)
+
+                        # Highlight ROI boundary
+                        im_src = cv2.line(im_src, tl, tr, (0, 0, 255), 3)
+                        im_src = cv2.line(im_src, tr, br, (0, 0, 255), 3)
+                        im_src = cv2.line(im_src, br, bl, (0, 0, 255), 3)
+                        im_src = cv2.line(im_src, bl, tl, (0, 0, 255), 3)
+
+                        if True:
+                            self.observer.add_observer_image_frame(im_src)
+
+                    if self.show_cal_markers:
+
+                        if self.show_vertical_projections:
+                            thickness = 1
+
+                            world_points = np.zeros((model.model_width * model.model_height, 3), np.float32)
+
+                            world_points[:, :2] = np.mgrid[model.model_offset_x:model.model_width + model.model_offset_x,
+                                                  model.model_offset_y:model.model_height + model.model_offset_y].T.reshape(
+                                -1, 2) * model.model_scale
+
+                            for world_point in world_points:
+                                # Render vertical
+                                model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                                projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
+                                theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], -model.model_scale * 2]]], dtype='float32')
+                                projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+                                im_src = cv2.line(im_src, tuple(projected_ground_point.ravel()), tuple(projected_vertical_point.ravel()), (0, 255, 255), thickness)
+                        else:
+                            thickness = 3
+
+                            for world_point in model.model_points:
+                                unit_vector = -model.model_scale * 1.8
+
+                                # Render y-axis
+                                model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+
+                                projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
+                                theoretical_3d_model_point = np.array([[[world_point[0], world_point[1] + unit_vector, 0]]], dtype='float32')
+                                projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+
+                                int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+                                int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+                                im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 255, 0), thickness)
+
+                                # Render x-axis
+                                model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                                projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
+                                theoretical_3d_model_point = np.array([[[world_point[0] + unit_vector, world_point[1], 0]]], dtype='float32')
+                                projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+
+                                int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+                                int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+                                im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (0, 0, 255), thickness)
+
+                                # Render vertical
+                                model_point = np.array([[[world_point[0], world_point[1], 0]]], dtype='float32')
+                                projected_ground_point = model.projected_image_point_for_3d_world_point(world_point=model_point, camera_model=source)
+                                theoretical_3d_model_point = np.array([[[world_point[0], world_point[1], unit_vector]]], dtype='float32')
+                                projected_vertical_point = model.projected_image_point_for_3d_world_point(world_point=theoretical_3d_model_point, camera_model=source)
+
+                                int_projected_ground_point = tuple(int(el) for el in tuple(projected_ground_point.ravel()))
+                                int_projected_vertical_point = tuple(int(el) for el in tuple(projected_vertical_point.ravel()))
+                                im_src = cv2.line(im_src, int_projected_ground_point, int_projected_vertical_point, (255, 0, 0), thickness)
 
             # Display images
             height, width, channel = im_src.shape
@@ -1074,7 +1079,7 @@ class Window(QtWidgets.QWidget):
 def argument_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sport', type=str, required=False,
-                        help="input sport type e.g. 'hockey'")
+                        help="input sport type e.g. 'Hockey'")
     parser.add_argument('--config', type=str, required=False,
                         help="input camera configuration json file.")
 
@@ -1086,13 +1091,14 @@ if __name__ == '__main__':
     opts = argument_parser().parse_args(sys.argv[1:])
 
     app = QtWidgets.QApplication(sys.argv)
-    window = Window(sport=opts.sport)
+    window = Window()
     window.setGeometry(500, 300, 800, 600)
 
     window.show()
 
-    if opts.sport is not None:
-        window.update_world_model(world_model_name=opts.sport)
+    _initial_surface_model = opts.sport or "Hockey"
+    window.update_world_model(world_model_name=_initial_surface_model)
+    window.play()
 
     if opts.config is not None:
         assert os.path.exists(opts.config), "Invalid path to config file."
