@@ -261,9 +261,14 @@ class Window(QtWidgets.QWidget):
         self.btnComputeHomograhy.setText('Compute Homograhy')
         self.btnComputeHomograhy.clicked.connect(self.compute_homography)
 
+        # Camera capture management
+        self.btnShowCaptureDeviceWidget = QtWidgets.QToolButton(self)
+        self.btnShowCaptureDeviceWidget.setText('Video Capture')
+        self.btnShowCaptureDeviceWidget.clicked.connect(self.show_capture_device_controller)
+
         # Correspondence management
         self.btnShowCorrespondences = QtWidgets.QToolButton(self)
-        self.btnShowCorrespondences.setText('Show Correspondences')
+        self.btnShowCorrespondences.setText('Correspondences')
         self.btnShowCorrespondences.clicked.connect(self.show_correspondences)
 
         self.btnRemoveAllCorrespondences = QtWidgets.QToolButton(self)
@@ -409,7 +414,6 @@ class Window(QtWidgets.QWidget):
 
         # Widgets
         self.correspondencesWidget = MyPopup(self.world_model)
-
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
 
         if sport:
@@ -526,62 +530,6 @@ class Window(QtWidgets.QWidget):
         if self.addingCorrespondencesEnabled:
             self.viewer.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 100, 30)))
             self.surface.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
-
-        # def draw_image_space_detection(self, pos):
-        #     # Render reference point annotation.
-        #     r = 5
-        #     yellow = Qt.yellow
-        #     pen = QtGui.QPen(Qt.red)
-        #     brush = QtGui.QBrush(QtGui.QColor(255, 255, 0, 100))
-        #
-        #     poly = QtGui.QPolygonF()
-        #     x, y = pos.x(), pos.y()
-        #     poly_points = np.array([])
-
-    #         #
-    #         # # Compute inverse of 2D homography
-    #         # print("**", homography)
-    #         #
-    #         val, H = cv2.invert(self.homography)
-    #         #
-    #         for i in range(1, 33):
-    #             # These points are in world coordinates.
-    #             _x = x + (r * math.cos(2 * math.pi * i / 32))
-    #             _y = y + (r * math.sin(2 * math.pi * i / 32))
-    #
-    #                 # ground_point = np.array([[[world_point[0], world_point[1]]]], dtype='float32')
-    #                 # ground_point = cv2.perspectiveTransform(ground_point, H)
-    #                 # ref_point = np.array([[[world_point[0], world_point[1], -10]]], dtype='float32')
-    #                 # (ref_point, jacobian) = cv2.projectPoints(ref_point, rotation_vector, translation_vector, camera_matrix, distortion_matrix)
-    #                 # # Render vertical
-    #                 # im_src = cv2.line(im_src, tuple(ground_point.ravel()), tuple(ref_point.ravel()), (0,255,255), 2)
-    #
-    #
-    #             #Convert to image coordinates.
-    #             axis = np.float32([[_x, _y]]).reshape(-1,2)
-    #             imgpts = cv2.perspectiveTransform(axis, H)
-    #
-    #             #Draw the points in a circle in perspective.
-    #             (xx, yy) = tuple(imgpts[0].ravel())
-    #
-    #             poly_points = np.append(poly_points, [xx, yy])
-    #
-    #             _p = QtCore.QtCore.QPointF(xx,yy)
-    #             poly.append(QtCore.QtCore.QPointF(xx,yy))
-    #
-    #         self.viewer.scene.addPolygon(poly, pen, brush)
-    #
-    #         #Render image-space point
-    #         axis = np.float32([[pos.x(),pos.y(),0], [pos.x(),pos.y(),-20]]).reshape(-1,3)
-    #         (imgpts, jacobian) = cv2.projectPoints(axis,
-    #                                                self._myRotationVector,
-    #                                                self._myTranslationVector,
-    #                                                self._myCameraMatrix,
-    #                                                self._myDistortionMatrix)
-    #
-    #         (x, y) = tuple(imgpts[0].ravel())
-    #         (xx, yy) = tuple(imgpts[1].ravel())
-    #         self.viewer.scene.addLine(xx, yy, x, y, pen)
 
     def image_clicked(self, pos):
 
@@ -837,12 +785,16 @@ class Window(QtWidgets.QWidget):
         self.update_displays()
 
     def play(self):
-        self.is_playing = not self.is_playing
-        while self.is_playing:
-            self.update_displays()
-            app.processEvents()
-            if self.image_model.eof():
-                self.is_playing = False
+
+        if self.image_model is not None:
+            self.is_playing = not self.is_playing
+            while self.is_playing:
+                self.update_displays()
+                app.processEvents()
+                if self.image_model.eof():
+                    self.is_playing = False
+        else:
+            print("No image capture devices have been initialised...")
 
     def update_panorama_params(self):
 
