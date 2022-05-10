@@ -425,7 +425,7 @@ class Window(QtWidgets.QWidget):
             self.capture_device_control_widget = widgets.CameraControllerWidget(parent=self, devices=_local_devices)
             self.capture_device_control_widget.show()
             self.capture_device_control_widget.activateWindow()
-            self.trigger_capture_device()
+            self.view_current_frame()
         else:
             print("No default imaging devices were found...")
 
@@ -460,14 +460,10 @@ class Window(QtWidgets.QWidget):
         return available_devices
 
     def update_current_camera_device(self, camera):
-        print(camera)
         self.image_model = camera
-        self.trigger_capture_device()
-        self.update_displays()
+        self.view_current_frame()
 
     def keyPressEvent(self, event):
-        # print("down")
-
         if event.key() == Qt.Key_Space:
             self.play()
             return
@@ -481,24 +477,8 @@ class Window(QtWidgets.QWidget):
             if self.viewer.empty or self.surface.empty:
                 return
 
-        # else:
-        # if event.key() == Qt.Key_Space:
-        #     self.viewer.set_cross_cursor(True)
-        #     self.surface.set_cross_cursor(True)
-        #
-        # self.viewer.setCursor(Qt.CrossCursor)
-        # self.surface.setCursor(Qt.CrossCursor)
-
     def keyReleaseEvent(self, event):
         pass
-        # if event.key() == Qt.Key_Space:
-        #     self.viewer.set_cross_cursor(False)
-        #     self.surface.set_cross_cursor(False)
-
-        # if not event.isAutoRepeat():
-        #     if event.key() == Qt.Key_Space:
-        #         self.viewer.toggleDragMode()
-        #         self.surface.toggleDragMode()
 
     def load_surface_image(self):
 
@@ -528,17 +508,22 @@ class Window(QtWidgets.QWidget):
 
             self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
-            im_src = self.image_model.get_frame()
-            height, width, channel = im_src.shape
-            bytes_per_line = 3 * width
-            q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+            self.view_current_frame()
 
-            self.viewer.set_image(QtGui.QPixmap(q_img))
-            self.correspondencesWidget.update_items()
-            self.center_views()
-            self.image_model.update_camera_properties()
-            self.update_displays()
-            app.processEvents()
+    def trigger_capture_device(self):
+        self.view_current_frame()
+
+    def view_current_frame(self):
+        im_src = self.image_model.get_frame()
+        height, width, channel = im_src.shape
+        bytes_per_line = 3 * width
+        q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+
+        self.viewer.set_image(QtGui.QPixmap(q_img))
+        self.correspondencesWidget.update_items()
+        self.image_model.update_camera_properties()
+        self.update_displays()
+        app.processEvents()
 
     def set_world_model_name(self):
         print("Setting world surface model:", self.cboSurfaces.currentText())
