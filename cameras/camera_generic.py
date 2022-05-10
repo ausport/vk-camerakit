@@ -29,6 +29,14 @@ class VKCameraGenericDevice(VKCamera):
         cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
         return frame
 
+    def exposure_time(self):
+        """Current exposure time of the camera. (if available)
+
+        Returns:
+            (int): Exposure time.
+        """
+        return self.video_object.get(cv2.CAP_PROP_EXPOSURE) # / 1e3
+
     def set_capture_parameters(self, configs):
         """Updates capture device properties.
         The default instance of this method assumes the capture device is OpenCV-compatible.
@@ -47,12 +55,19 @@ class VKCameraGenericDevice(VKCamera):
             result = result and self.video_object.set(cv2.CAP_PROP_FRAME_WIDTH, int(configs["CAP_PROP_FRAME_WIDTH"]))
         if "CAP_PROP_FRAME_HEIGHT" in configs:
             result = result and self.video_object.set(cv2.CAP_PROP_FRAME_HEIGHT, int(configs["CAP_PROP_FRAME_HEIGHT"]))
+        if "CAP_PROP_FPS" in configs:
+            result = result and self.video_object.set(cv2.CAP_PROP_FPS, int(configs["CAP_PROP_FPS"]))
+        # if "CAP_PROP_EXPOSURE" in configs:
+        #     result = result and self.video_object.set(cv2.CAP_PROP_EXPOSURE, int(configs["CAP_PROP_EXPOSURE"]))
 
         # We need to manually set the FPS to it's maximum in the case that we've previously changed to a
         # higher resolution (which automatically drops the fps).
         self.video_object.set(cv2.CAP_PROP_FPS, math.inf)
 
         return result
+
+    def name(self):
+        return '{} | {}'.format("Generic", self.device)
 
     def __str__(self):
         """Overriding str
