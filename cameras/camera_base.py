@@ -304,6 +304,7 @@ class VKCamera:
         Args:
             video_export_path (str): destination path.
             size(tuple): output size - default 1920 x 1080
+            fps(float): desired frame rate.
         Returns:
             None
         """
