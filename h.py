@@ -396,6 +396,7 @@ class Window(QtWidgets.QWidget):
 
         hb_correspondences = QtWidgets.QHBoxLayout()
         hb_correspondences.setAlignment(Qt.AlignLeft)
+        hb_correspondences.addWidget(self.btnShowCaptureDeviceWidget)
         hb_correspondences.addWidget(self.btnShowCorrespondences)
         hb_correspondences.addWidget(self.btnAddCorrespondences)
         hb_correspondences.addWidget(self.btnRemoveAllCorrespondences)
@@ -416,8 +417,17 @@ class Window(QtWidgets.QWidget):
         self.correspondencesWidget = MyPopup(self.world_model)
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
 
-        if sport:
-            self.cboSurfaces.setCurrentText(sport)
+        _local_devices = self.scan_capture_devices()
+
+        if len(_local_devices) > 0:
+            self.image_model = _local_devices[0]
+            print("Starting up default imaging device...")
+            self.capture_device_control_widget = widgets.CameraControllerWidget(parent=self, devices=_local_devices)
+            self.capture_device_control_widget.show()
+            self.capture_device_control_widget.activateWindow()
+            self.trigger_capture_device()
+        else:
+            print("No default imaging devices were found...")
 
     def reset_controls(self):
         # Abort correspondences
@@ -430,9 +440,30 @@ class Window(QtWidgets.QWidget):
         self.viewer.setDragMode(QtWidgets.QGraphicsView.NoDrag)
         self.surface.setDragMode(QtWidgets.QGraphicsView.NoDrag)
 
-    # def mousePressEvent(self, event):
-    #     print("Windows Mouse Event")
-    #     # return event
+    @staticmethod
+    def scan_capture_devices():
+
+        available_devices = []
+
+        # Try local capture class.
+        camera_model = cameras.VKCameraGenericDevice(device=0)
+        if camera_model.is_available():
+            print("Found:", camera_model.__class__)
+            available_devices.append(camera_model)
+            # camera_model.close()
+
+        camera_model = cameras.VKCameraVimbaDevice(ip_address="10.2.0.2")
+        if camera_model.is_available():
+            print("Found:", camera_model.__class__)
+            available_devices.append(camera_model)
+
+        return available_devices
+
+    def update_current_camera_device(self, camera):
+        print(camera)
+        self.image_model = camera
+        self.trigger_capture_device()
+        self.update_displays()
 
     def keyPressEvent(self, event):
         # print("down")
@@ -494,12 +525,6 @@ class Window(QtWidgets.QWidget):
             # Regenerate a camera object
             if self.image_model is not None:
                 self.image_model.close()
-
-            # TODO - open image device with it's own button widget.
-            if image_path[0] == "":
-                self.image_model = cameras.VKCameraGenericDevice(device=0)
-            else:
-                self.image_model = cameras.VKCameraVideoFile(filepath=image_path[0])
 
             self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
@@ -603,6 +628,13 @@ class Window(QtWidgets.QWidget):
             self.surface.set_cross_cursor(False)
 
             self.correspondencesWidget.update_items()
+
+    def show_capture_device_controller(self):
+        if not self.capture_device_control_widget.isVisible():
+            self.capture_device_control_widget.show()
+
+        if not self.capture_device_control_widget.isActiveWindow():
+            self.capture_device_control_widget.activateWindow()
 
     def add_correspondences(self):
         # 1. Highlight image space.
