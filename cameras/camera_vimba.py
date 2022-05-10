@@ -1,7 +1,6 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
 import cv2
 from vimba import Vimba, VimbaFeatureError, PixelFormat, VimbaCameraError
-from vimba.c_binding import VimbaCError
 from cameras import VKCamera
 
 
@@ -33,7 +32,6 @@ class VKCameraVimbaDevice(VKCamera):
         # Enable auto exposure time setting if camera supports it
         try:
             self.video_object.ExposureAuto.set('Continuous')
-
         except (AttributeError, VimbaFeatureError):
             pass
 
@@ -52,10 +50,6 @@ class VKCameraVimbaDevice(VKCamera):
         except (AttributeError, VimbaFeatureError):
             pass
 
-        self.video_object.Width.set(720)
-        self.video_object.Height.set(480)
-
-        # TODO - camera-relevant image capture features
         # Get properties of the camera
         self.camera_name = self.video_object.get_name()
         self.camera_model = self.video_object.get_model()
@@ -63,6 +57,12 @@ class VKCameraVimbaDevice(VKCamera):
         self.camera_serial = self.video_object.get_serial()
         self.camera_interface = self.video_object.get_interface_id()
         self.ip_address = ip_address
+
+        # TODO - pixel formats in widget
+        # px = self.video_object.get_pixel_formats()
+        # print(px)
+        # print(self.video_object.get_pixel_format())  # returns the current pixel format
+        # set_pixel_format (fmt) # enables you to set a new pixel format
 
     def eof(self):
         """Overrides eof.
@@ -108,7 +108,7 @@ class VKCameraVimbaDevice(VKCamera):
         """Queries (and returns) the temperature of the camera"""
         return self.video_object.DeviceTemperature.get()
 
-    def get_camera_exposure_time(self):
+    def exposure_time(self):
         """Queries (and returns) the current exposure time of the camera. Returned in milliseconds
 
         When queried, the result is in microseconds
@@ -133,6 +133,49 @@ class VKCameraVimbaDevice(VKCamera):
         except (AttributeError, VimbaFeatureError):
             return False
 
+    def set_capture_parameters(self, configs):
+        """Updates capture device properties for Vimba cameras.
+
+        Args:
+            configs (dict): dictionary of configurations.  The keys are expected to be consistent with OpenCV flags.
+
+        Returns:
+            (int): Success.
+        """
+        assert type(configs) is dict, "WTF!!  set_capture_parameters: A dict was expected but not received..."
+        result = True
+
+        if "CAP_PROP_FRAME_WIDTH" in configs:
+            try:
+                self.video_object.Width.set(int(configs["CAP_PROP_FRAME_WIDTH"]))
+            except (AttributeError, VimbaFeatureError):
+                pass
+
+        if "CAP_PROP_FRAME_HEIGHT" in configs:
+            try:
+                self.video_object.Height.set(int(configs["CAP_PROP_FRAME_HEIGHT"]))
+            except (AttributeError, VimbaFeatureError):
+                pass
+
+        if "CAP_PROP_FPS" in configs:
+            try:
+                self.video_object.AcquisitionFrameRateAbs.set(int(configs["CAP_PROP_FPS"]))
+            except (AttributeError, VimbaFeatureError):
+                pass
+
+        # Try to adjust GeV packet size. This Feature is only available for GigE - Cameras.
+        try:
+            self.video_object.GVSPAdjustPacketSize.run()
+            while not self.video_object.GVSPAdjustPacketSize.is_done():
+                pass
+        except (AttributeError, VimbaFeatureError):
+            pass
+
+        return result
+
+    def name(self):
+        return '{} | {}'.format(self.camera_name, self.ip_address)
+
     def __str__(self):
         """Overriding str
 
@@ -150,12 +193,12 @@ class VKCameraVimbaDevice(VKCamera):
                "\n\tTemperature       : {7:.1f} deg C" \
                "\n\tExposure Time     : {8:.1f} ms" \
                "\n\tFrame Rate        : {9:.1f} f.p.s".format(self.camera_model,
-                                                   self.ip_address,
-                                                   self.camera_identifier,
-                                                   self.camera_serial,
-                                                   self.camera_interface,
-                                                   self.width(),
-                                                   self.height(),
-                                                   self.get_camera_temperature(),
-                                                   self.get_camera_exposure_time(),
-                                                   self.fps())
+                                                              self.ip_address,
+                                                              self.camera_identifier,
+                                                              self.camera_serial,
+                                                              self.camera_interface,
+                                                              self.width(),
+                                                              self.height(),
+                                                              self.get_camera_temperature(),
+                                                              self.exposure_time(),
+                                                              self.fps())
