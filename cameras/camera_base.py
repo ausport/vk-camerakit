@@ -1,4 +1,6 @@
 """Generic class for all image sources"""
+import time
+
 import cv2
 import filetype
 import json
@@ -11,6 +13,7 @@ from models import world_model as surface
 
 VK_CAPTURE_MODE_PREVIEW = 0
 VK_CAPTURE_MODE_RECORD = 1
+
 
 class VKCamera:
     def __init__(self, surface_name=None, verbose_mode=False):
@@ -55,6 +58,7 @@ class VKCamera:
             self.surface_model = surface.VKWorldModel(sport=surface_name)
 
         self.capture_mode = VK_CAPTURE_MODE_PREVIEW
+        self._video_writer = None
 
         if verbose_mode:
             print(self)
@@ -313,30 +317,50 @@ class VKCamera:
             # pad out to a 16:9 aspect ratio
             new_image_width = self.width()
             new_image_height = int(new_image_width / 16) * 9
-            _video_writer = cv2.VideoWriter(str(video_export_path), fourcc, fps, size, True)
+            self._video_writer = cv2.VideoWriter(str(video_export_path), fourcc, fps, size, True)
 
             self.capture_mode = VK_CAPTURE_MODE_RECORD
-            while self.capture_mode == VK_CAPTURE_MODE_RECORD:
-                _frame = self.get_frame()
-                cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
+            from threading import Thread
 
-                # old_image_height, old_image_width, channels = _frame.shape
-                # _padded = np.full((new_image_height, new_image_width, channels), (0, 0, 0), dtype=np.uint8)
-                #
-                # # compute center offset
-                # x_center = (new_image_width - old_image_width) // 2
-                # y_center = (new_image_height - old_image_height) // 2
-                #
-                # # copy img image into center of result image
-                # _padded[y_center:y_center + old_image_height, x_center:x_center + old_image_width] = _frame
-                # _padded = cv2.cvtColor(np.array(_padded), cv2.COLOR_RGB2BGR)
-                # _padded = cv2.resize(_padded, dsize=size, interpolation=cv2.INTER_CUBIC)
-                _video_writer.write(_frame)
+            thread = Thread(target=self.cap_loop)
+            # thread.daemon = True
+            thread.start()
+            time.sleep(2)
+            self.capture_mode = VK_CAPTURE_MODE_PREVIEW
+            # thread.join()
 
-                if self.eof():
-                    break
+            # while self.capture_mode == VK_CAPTURE_MODE_RECORD:
+            #     _frame = self.get_frame()
+            #     cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
+            #
+            #     # old_image_height, old_image_width, channels = _frame.shape
+            #     # _padded = np.full((new_image_height, new_image_width, channels), (0, 0, 0), dtype=np.uint8)
+            #     #
+            #     # # compute center offset
+            #     # x_center = (new_image_width - old_image_width) // 2
+            #     # y_center = (new_image_height - old_image_height) // 2
+            #     #
+            #     # # copy img image into center of result image
+            #     # _padded[y_center:y_center + old_image_height, x_center:x_center + old_image_width] = _frame
+            #     # _padded = cv2.cvtColor(np.array(_padded), cv2.COLOR_RGB2BGR)
+            #     # _padded = cv2.resize(_padded, dsize=size, interpolation=cv2.INTER_CUBIC)
+            #     _video_writer.write(_frame)
+            #
+            #     if self.eof():
+            #         break
 
-            _video_writer.release()
+
+
+
+    def cap_loop(self):
+        print("Starting queue")
+        while self.capture_mode == VK_CAPTURE_MODE_RECORD:
+            _frame = self.get_frame()
+            cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
+            self._video_writer.write(_frame)
+            print(time.time())
+        print("Exiting queue")
+        self._video_writer.release()
 
     def export_json(self, json_path):
         """Export current camera model in json format.

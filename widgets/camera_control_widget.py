@@ -152,14 +152,18 @@ class CameraControllerWidget(QWidget):
 
     def save_video(self):
 
-        path = QFileDialog.getSaveFileName(self, 'Export Panorama Composite',
-                                           self._current_active_device.name(),
-                                           "mp4(*.mp4)")
+        # path = QFileDialog.getSaveFileName(self, 'Export Panorama Composite',
+        #                                    self._current_active_device.name(),
+        #                                    "mp4(*.mp4)")
 
-        import threading
-        th = threading.Thread(target=self._current_active_device.save_video, args=(path[0],
-                                                                                   (self._current_active_device.width(),
-                                                                                    self._current_active_device.height()),
-                                                                                   self._current_active_device.fps()))
+        self._current_active_device.save_video(video_export_path="/home/stuart/Desktop/test.mp4",
+                                               size=(self._current_active_device.width(), self._current_active_device.height()),
+                                               fps=self._current_active_device.fps())
 
-        th.start()
+
+        # import threading
+        # th = threading.Thread(target=self._current_active_device.save_video, args=(path[0],
+        #                                                                            (self._current_active_device.width(), self._current_active_device.height()),
+        #                                                                            self._current_active_device.fps()))
+        #
+        # th.start()
