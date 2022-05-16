@@ -163,14 +163,6 @@ class VKCameraVimbaDevice(VKCamera):
             except (AttributeError, VimbaFeatureError):
                 pass
 
-        # Try to adjust GeV packet size. This Feature is only available for GigE - Cameras.
-        try:
-            self.video_object.GVSPAdjustPacketSize.run()
-            while not self.video_object.GVSPAdjustPacketSize.is_done():
-                pass
-        except (AttributeError, VimbaFeatureError):
-            pass
-
         return result
 
     def name(self):
