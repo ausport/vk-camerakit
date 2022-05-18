@@ -1,10 +1,11 @@
 """Camera controller for BlackMagic BRAW format image/video file resource"""
-# import cv2
 from cameras import VKCamera
 from pybraw import PixelFormat, ResolutionScale
 from pybraw.torch.reader import FrameImageReader
-from PIL import Image
 from pybraw import _pybraw, verify
+
+from PIL import Image
+import numpy as np
 
 
 class MyCallback(_pybraw.BlackmagicRawCallback):
@@ -29,12 +30,11 @@ class VKCameraBlackMagicRAW(VKCamera):
         # self.video_object = FrameImageReader(filepath, processing_device='cuda')
 
         factory = _pybraw.CreateBlackmagicRawFactoryInstance()
-        codec = verify(factory.CreateCodec())
-        self.video_object = verify(codec.OpenClip(filepath))
+        self._codec = verify(factory.CreateCodec())
+        self.video_object = verify(self._codec.OpenClip(filepath))
 
-        print(self)
-        exit(1)
-
+        self._callback = MyCallback()
+        verify(self._codec.SetCallback(self._callback))
 
     def get_frame(self, frame_number=None):
         """Raw camera file image.
@@ -45,20 +45,22 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (array): image.
         """
-        # if frame_number is not None:
-        #     self.video_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number - 1)
-        #
-        # if self.is_video:
-        #     res, frame = self.video_object.read()
-        # else:
-        #     # Assume image file type.
-        #     frame = cv2.imread(self.filepath)
-        #
-        # if frame is not None:
-        #     # Pillow assumes RGB - OpenCV reads BRG
-        #     cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
-        frame = None
-        return frame
+        f = frame_number or self.frame_position()
+        print("getting {0}".format(f))
+        read_job = verify(self.video_object.CreateJobReadFrame(f))
+        read_job.Submit()
+        read_job.Release()
+
+        verify(self._codec.FlushJobs())
+
+        resource_type = verify(self._callback.processed_image.GetResourceType())
+        assert resource_type == _pybraw.blackmagicRawResourceTypeBufferCPU
+        np_image = self._callback.processed_image.to_py()
+        del self._callback.processed_image
+
+        pil_image = Image.fromarray(np_image[..., :3])
+        print(pil_image)
+        return np.asarray(pil_image)
 
     def set_position(self, frame_number):
         """Seek to frame number
@@ -77,7 +79,9 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (int): The CAP_PROP_POS_FRAMES property - zero if a live camera.
         """
-        return verify(self.video_object.GetTimecodeForFrame())
+        # print(verify(self.video_object.GetTimecodeForFrame()))
+        # return verify(self.video_object.GetTimecodeForFrame())
+        return 1
 
     def frame_count(self):
         """The number of frames in the video resource.
@@ -118,6 +122,14 @@ class VKCameraBlackMagicRAW(VKCamera):
             (float): The CAP_PROP_FPS property.
         """
         return verify(self.video_object.GetCameraType())
+
+    def eof(self):
+        """Signals end of video file.
+
+        Returns:
+            (bool): True if end of file.
+        """
+        return False
 
     def __str__(self):
         """Overriding str
