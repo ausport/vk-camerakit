@@ -31,7 +31,9 @@ World models are typically used as a property of a device-specific `VKCamera` cl
 
 ![](images/verticals.png)
 
-### Installation Notes:
+## Installation Notes:
+
+### Vimba SDK
 
 If using the Vimba cameras, the Vimba SDK (see below) is required to install `vimbapython`.  This requires a pip environment.
 
@@ -55,6 +57,46 @@ Resolve this by re-installing `xcb`:
 
 ```bash
 sudo apt install libxcb-xinerama0 
+```
+
+### BlackMagic BRAW API
+
+[Aiden Nibali](https://github.com/anibali/pybraw) has developed a set of python wrappers exposing the important functions in the BlackMagic API.
+
+He recommends setting up a Conda environment - follow his instructions if you prefer a Conda.
+
+Alternately, you can install the pybraw package in a pip environment (preserving the Vimba SDK requirements).
+
+You will need to copy all of the Blackmagic libraries to somewhere accessible..  eg.
+
+```text
+cd [path_to_downloaded_libraries]/BlackmagicRAW/BlackmagicRawAPI/
+sudo cp *.* /usr/lib/x86_64-linux-gnu/
+```
+
+Clone the pybraw package from Aiden's github repository:
+
+```text
+git clone https://github.com/anibali/pybraw
+```
+Activate the pip venv, and navigate to the cloned repository.
+
+Install the pybraw package:
+
+```text
+pip install --no-build-isolation -U .
+```
+
+Test the package has installed correctly:
+
+```python
+from pybraw import PixelFormat, ResolutionScale
+from pybraw.torch.reader import FrameImageReader
+file_name = [path_to_sample_footage]
+reader = FrameImageReader(file_name, processing_device='cuda')
+# Get the number of frames in the video.
+frame_count = reader.frame_count()
+print(frame_count)
 ```
 
 
