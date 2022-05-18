@@ -416,7 +416,8 @@ class Window(QtWidgets.QWidget):
         # Widgets
         self.correspondencesWidget = MyPopup(self.world_model)
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
-        self.open_capture_devices()
+        # self.open_capture_devices()
+
 
     def reset_controls(self):
         # Abort correspondences
@@ -483,24 +484,21 @@ class Window(QtWidgets.QWidget):
 
     def load_camera_image(self, image_path):
 
-        print(image_path)
         if self.world_model is not None:
 
             if image_path is False:
-                image_path = QtWidgets.QFileDialog.getOpenFileName(self, "Open Image", "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")
-            else:
-                image_path = [image_path]
+                image_path = QtWidgets.QFileDialog.getOpenFileName(self, "Open Image", "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")[0]
 
-            # Regenerate a camera object
-            if self.image_model is not None:
-                self.image_model.close()
+            if os.path.splitext(image_path)[1] == ".braw":
+                self.image_model = cameras.VKCameraBlackMagicRAW(filepath=image_path)
+            else:
+                self.image_model = cameras.VKCameraVideoFile(filepath=image_path)
+
+            print(self.image_model)
 
             self.sliderVideoTime.setMaximum(max(0, self.image_model.frame_count()))
 
             self.view_current_frame()
-
-    def trigger_capture_device(self):
-        self.view_current_frame()
 
     def view_current_frame(self):
         im_src = self.image_model.get_frame()
@@ -1068,6 +1066,7 @@ if __name__ == '__main__':
 
     _initial_surface_model = opts.sport or "Hockey"
     window.update_world_model(world_model_name=_initial_surface_model)
+    window.load_camera_image(image_path='/home/stuart/data/braw/A002_07151428_C002.braw')
     window.play()
 
     if opts.config is not None:
