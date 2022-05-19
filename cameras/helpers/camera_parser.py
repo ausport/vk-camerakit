@@ -1,7 +1,7 @@
 import json
 import os
 import numpy as np
-from cameras import VKCameraVideoFile, VKCameraPanorama, VKCameraGenericDevice, VKCamera
+from cameras import VKCameraVideoFile, VKCameraPanorama, VKCameraGenericDevice, VKCamera, VKCameraBlackMagicRAW
 
 
 def parse_camera_model_with_dict(data):
@@ -35,6 +35,10 @@ def parse_camera_model_with_dict(data):
     elif _vk_camera_class == "VKCameraVideoFile":
         assert "image_path" in data, "Camera file doesn't include an image path..."
         camera_model = VKCameraVideoFile(filepath=data["image_path"], surface_name=_surface_model_name)
+
+    elif _vk_camera_class == "VKCameraBlackMagicRAW":
+        assert "image_path" in data, "Camera file doesn't include an image path..."
+        camera_model = VKCameraBlackMagicRAW(filepath=data["image_path"], surface_name=_surface_model_name)
 
     elif _vk_camera_class == "VKCameraPanorama":
         '''
