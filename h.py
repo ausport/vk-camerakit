@@ -487,7 +487,7 @@ class Window(QtWidgets.QWidget):
         if self.world_model is not None:
 
             if image_path is False:
-                image_path = QtWidgets.QFileDialog.getOpenFileName(self, "Open Image", "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv)")[0]
+                image_path = QtWidgets.QFileDialog.getOpenFileName(self, "Open Image", "/home", "Media (*.png *.xpm *.jpg *.avi *.mov *.jpg *.mp4 *.mkv *.braw)")[0]
 
             if os.path.splitext(image_path)[1] == ".braw":
                 self.image_model = cameras.VKCameraBlackMagicRAW(filepath=image_path)
@@ -1067,7 +1067,8 @@ if __name__ == '__main__':
     _initial_surface_model = opts.sport or "Hockey"
     window.update_world_model(world_model_name=_initial_surface_model)
     window.load_camera_image(image_path='/home/stuart/data/braw/A002_07151428_C002.braw')
-    window.play()
+    window.center_views()
+    # window.play()
 
     if opts.config is not None:
         assert os.path.exists(opts.config), "Invalid path to config file."
