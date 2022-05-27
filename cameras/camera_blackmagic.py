@@ -2,21 +2,9 @@
 from cameras import VKCamera
 from pybraw import PixelFormat, ResolutionScale
 from pybraw.torch.reader import FrameImageReader
-from pybraw import _pybraw, verify
 from torchvision import transforms
 
 import numpy as np
-
-
-class MyCallback(_pybraw.BlackmagicRawCallback):
-    def ReadComplete(self, job, result, frame):
-        frame.SetResourceFormat(_pybraw.blackmagicRawResourceFormatRGBAU8)
-        process_job = verify(frame.CreateJobDecodeAndProcessFrame())
-        verify(process_job.Submit())
-        process_job.Release()
-
-    def ProcessComplete(self, job, result, processed_image):
-        self.processed_image = processed_image
 
 
 class VKCameraBlackMagicRAW(VKCamera):
