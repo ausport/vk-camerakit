@@ -3,8 +3,8 @@ from cameras import VKCamera
 from pybraw import PixelFormat, ResolutionScale
 from pybraw.torch.reader import FrameImageReader
 from pybraw import _pybraw, verify
+from torchvision import transforms
 
-from PIL import Image
 import numpy as np
 
 
@@ -20,21 +20,14 @@ class MyCallback(_pybraw.BlackmagicRawCallback):
 
 
 class VKCameraBlackMagicRAW(VKCamera):
-    def __init__(self, filepath, verbose_mode=False, surface_name=None, with_cuda=True):
+    def __init__(self, filepath, verbose_mode=False, surface_name=None, device="cuda", scale=ResolutionScale.Eighth):
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
-        self.filepath = filepath
-        self.with_cuda = with_cuda
-
-        # Asynchronous GPU decoding
-        # self.video_object = FrameImageReader(filepath, processing_device='cuda')
-
-        factory = _pybraw.CreateBlackmagicRawFactoryInstance()
-        self._codec = verify(factory.CreateCodec())
-        self.video_object = verify(self._codec.OpenClip(filepath))
-
-        self._callback = MyCallback()
-        verify(self._codec.SetCallback(self._callback))
+        self.video_object = FrameImageReader(filepath, processing_device=device)
+        self._filepath = filepath
+        self._processing_device = device
+        self._resolution_scale = scale
+        self._current_frame_index = 0
 
     def get_frame(self, frame_number=None):
         """Raw camera file image.
@@ -45,22 +38,17 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (array): image.
         """
-        f = frame_number or self.frame_position()
-        print("getting {0}".format(f))
-        read_job = verify(self.video_object.CreateJobReadFrame(f))
-        read_job.Submit()
-        read_job.Release()
+        self._current_frame_index = frame_number or self._current_frame_index
+        transform = transforms.ToPILImage()
 
-        verify(self._codec.FlushJobs())
+        with self.video_object.run_flow(PixelFormat.RGB_F32_Planar, max_running_tasks=3) as task_manager:
+            task = task_manager.enqueue_task(self._current_frame_index, resolution_scale=self._resolution_scale)
+            image_tensor = task.consume()
+            # Increment frame index
+            if self._current_frame_index < self.frame_count():
+                self._current_frame_index += 1
 
-        resource_type = verify(self._callback.processed_image.GetResourceType())
-        assert resource_type == _pybraw.blackmagicRawResourceTypeBufferCPU
-        np_image = self._callback.processed_image.to_py()
-        del self._callback.processed_image
-
-        pil_image = Image.fromarray(np_image[..., :3])
-        print(pil_image)
-        return np.asarray(pil_image)
+            return np.asarray(transform(image_tensor))
 
     def set_position(self, frame_number):
         """Seek to frame number
@@ -70,8 +58,8 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             None
         """
-        # self.video_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number - 1)
-        pass
+        if frame_number < self.frame_count():
+            self._current_frame_index = frame_number
 
     def frame_position(self):
         """The current frame number in the video resource.
@@ -79,9 +67,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (int): The CAP_PROP_POS_FRAMES property - zero if a live camera.
         """
-        # print(verify(self.video_object.GetTimecodeForFrame()))
-        # return verify(self.video_object.GetTimecodeForFrame())
-        return 1
+        return self._current_frame_index
 
     def frame_count(self):
         """The number of frames in the video resource.
@@ -89,7 +75,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
         """
-        return verify(self.video_object.GetFrameCount())
+        return self.video_object.frame_count()
 
     def width(self):
         """The pixel width of the video resource.
@@ -97,7 +83,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_WIDTH property.
         """
-        return verify(self.video_object.GetWidth())
+        return self.video_object.frame_width()
 
     def height(self):
         """The pixel height of the video resource.
@@ -105,7 +91,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_HEIGHT property.
         """
-        return verify(self.video_object.GetHeight())
+        return self.video_object.frame_height()
 
     def fps(self):
         """The frames per second of the video resource.
@@ -113,7 +99,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (float): The CAP_PROP_FPS property.
         """
-        return verify(self.video_object.GetFrameRate())
+        return self.video_object.frame_rate()
 
     def camera_type(self):
         """The frames per second of the video resource.
@@ -121,7 +107,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (float): The CAP_PROP_FPS property.
         """
-        return verify(self.video_object.GetCameraType())
+        return self.video_object.camera_type()
 
     def eof(self):
         """Signals end of video file.
@@ -139,11 +125,11 @@ class VKCameraBlackMagicRAW(VKCamera):
         """
         return "Blackmagic BRAW File Source:" \
                "\n\tFilename         : {0}" \
-               "\n\tFilename         : {1}" \
+               "\n\tCamera Type      : {1}" \
                "\n\tWidth            : {2}" \
                "\n\tHeight           : {3}" \
                "\n\tFrame Rate       : {4}" \
-               "\n\tFrame Count      : {5}".format(self.filepath,
+               "\n\tFrame Count      : {5}".format(self._filepath,
                                                    self.camera_type(),
                                                    self.width(),
                                                    self.height(),
