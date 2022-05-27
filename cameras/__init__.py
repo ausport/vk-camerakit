@@ -6,12 +6,14 @@ from cameras.helpers.panorama import *
 
 try:
     from cameras.camera_blackmagic import VKCameraBlackMagicRAW
-    from cameras.helpers.braw import JobCounter, CameraCodecCallback, BufferManagerFlow1, UserData
+    print("Blackmagic BRAW format Supported.")
 except ImportError:
     print("* The Blackmagic BRAW SDK is not available.")
 
 try:
     from cameras.camera_vimba import VKCameraVimbaDevice
+    import vimba
+    print("Vimba SDK Supported:", vimba.__version__)
 except ImportError:
     print("* Vimba library is not available.")
 
