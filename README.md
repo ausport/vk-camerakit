@@ -46,7 +46,7 @@ install `opencv-python-headless`, which doesn't install Qt overheads, and avoids
 
 On occasion, depending on the order of dependency installation, the following error can occur mixing the pip version of PyQt5, and OpenCV.
 
-```bash
+```shell
 qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
 
 This application failed to start because no Qt platform plugin could be initialized. 
@@ -55,7 +55,7 @@ Reinstalling the application may fix this problem.
 
 Resolve this by re-installing `xcb`:
 
-```bash
+```shell
 sudo apt install libxcb-xinerama0 
 ```
 
@@ -63,27 +63,26 @@ sudo apt install libxcb-xinerama0
 
 [Aiden Nibali](https://github.com/anibali/pybraw) has developed a set of python wrappers exposing the important functions in the BlackMagic API.
 
-He recommends setting up a Conda environment - follow his instructions if you prefer a Conda.
+A Conda environment is required, which can be tricky to combine with the pip-supported python version required for
+the Vimba SDK (see below).
 
-Alternately, you can install the pybraw package in a pip environment (preserving the Vimba SDK requirements).
+You will need to copy all the Blackmagic libraries to somewhere accessible..
 
-You will need to copy all of the Blackmagic libraries to somewhere accessible..  eg.
-
-```text
+```shell
 cd [path_to_downloaded_libraries]/BlackmagicRAW/BlackmagicRawAPI/
-sudo cp *.* /usr/lib/x86_64-linux-gnu/
+sudo cp *.so "$CONDA_PREFIX/lib/"
 ```
 
-Clone the pybraw package from Aiden's github repository:
+Clone the pybraw package from Aiden's GitHub repository:
 
-```text
+```shell
 git clone https://github.com/anibali/pybraw
 ```
-Activate the pip venv, and navigate to the cloned repository.
+Activate the Conda venv, and navigate to the cloned repository.
 
 Install the pybraw package:
 
-```text
+```shell
 pip install --no-build-isolation -U .
 ```
 
@@ -99,17 +98,13 @@ frame_count = reader.frame_count()
 print(frame_count)
 ```
 
+The latest PyTorch updates seem to break pybraw.  So currently, if torchvision is required you should install an older
+version in the conda environment you have created:
 
-#### Requirements:
-```bash
-[packages]
-filetype = "==1.0.7"
-numpy = "==1.19.2"
-opencv-python = "==4.5.5.64"
-pyqt = "==5.9.2"
-vimbapython = "==1.1.0"
-Pillow = "==9.1.0"
+```shell
+conda install pytorch==1.9.1 torchvision==0.10.1 torchaudio==0.9.1 cudatoolkit=11.3 -c pytorch -c conda-forge
 ```
+
 #### VIMBA Cameras:
 
 Allied Vision (Prosilica) imaging devices are supported by the VIMBA SDK.
