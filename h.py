@@ -1060,9 +1060,7 @@ if __name__ == '__main__':
 
     _initial_surface_model = opts.sport or "Hockey"
     window.update_world_model(world_model_name=_initial_surface_model)
-    window.load_camera_image(image_path='/home/stuart/data/braw/A002_07151428_C002.braw')
     window.center_views()
-    # window.play()
 
     if opts.config is not None:
         assert os.path.exists(opts.config), "Invalid path to config file."
