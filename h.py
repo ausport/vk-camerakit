@@ -501,12 +501,6 @@ class Window(QtWidgets.QWidget):
             self.view_current_frame()
 
     def view_current_frame(self):
-        im_src = self.image_model.get_frame()
-        height, width, channel = im_src.shape
-        bytes_per_line = 3 * width
-        q_img = QtGui.QImage(im_src.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-
-        self.viewer.set_image(QtGui.QPixmap(q_img))
         self.image_model.update_camera_properties()
         self.update_displays()
         app.processEvents()
