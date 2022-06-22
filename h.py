@@ -15,6 +15,7 @@ import models
 import observers
 import tracking
 import widgets
+import scenes
 
 
 class GraphicsScene(QtWidgets.QGraphicsScene):
@@ -195,7 +196,7 @@ class MyPopup(QtWidgets.QWidget):
 
 
 class Window(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, debug=False):
 
         # TODO - clean up this interface with subclassed QGroupBox:
         # https://doc.qt.io/qt-5/qtwidgets-widgets-sliders-example.html
@@ -229,14 +230,19 @@ class Window(QtWidgets.QWidget):
         self.observer = None
         self.observer2 = None
 
-        if False:
+        # A project may deploy a scene.
+        # Trackers and camera objects are controlled by a VKScene object.
+        # Methods include coordinating the
+
+        if debug:
             # TODO - this is for short-term demonstration purposes only...
             # Normally, a tracking controller will be implemented at run time.
-            _path = "/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_annotations.json"
+            print("Loading exemplars...")
+            _path = "/data/OMB_Tests/bball_annotations.json"
             assert os.path.exists(_path), "Demo-mode anntotations are not valid.."
             self.tracker = tracking.VKTrackingEmulator(annotations_path=_path)
-            self.observer = observers.VKGameObserverGeneric(destination_path="/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_output.mp4")
-            self.observer2 = observers.VKGameObserverGeneric(destination_path="/Users/stuartmorgan2/Desktop/OMB_Tests/hockey_output2.mp4")
+            self.observer = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output.mp4")
+            self.observer2 = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output2.mp4")
 
         """
         User interface widgets, relevant for this implementation only.
@@ -418,7 +424,6 @@ class Window(QtWidgets.QWidget):
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
         # self.open_capture_devices()
 
-
     def reset_controls(self):
         # Abort correspondences
         self.last_image_pairs = {0, 0}
@@ -429,6 +434,11 @@ class Window(QtWidgets.QWidget):
         self.addingCorrespondencesEnabled = False
         self.viewer.setDragMode(QtWidgets.QGraphicsView.NoDrag)
         self.surface.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+
+    def create_a_scene(self):
+        assert self.tracker is not None, "WTF: There is no tracker...!"
+        assert self.image_model is not None, "WTF: There is no camera...!"
+        #TODO - implement scene creation..
 
     @staticmethod
     def scan_capture_devices():
@@ -1044,6 +1054,8 @@ def argument_parser():
                         help="input sport type e.g. 'Hockey'")
     parser.add_argument('--config', type=str, required=False,
                         help="input camera configuration json file.")
+    parser.add_argument('--debug', type=bool, required=False,
+                        help="set True to skip manual config.")
 
     return parser
 
@@ -1053,17 +1065,20 @@ if __name__ == '__main__':
     opts = argument_parser().parse_args(sys.argv[1:])
 
     app = QtWidgets.QApplication(sys.argv)
-    window = Window()
+    window = Window(debug=opts.debug is not None)
     window.setGeometry(500, 300, 800, 600)
-
-    window.show()
 
     _initial_surface_model = opts.sport or "Hockey"
     window.update_world_model(world_model_name=_initial_surface_model)
-    window.center_views()
 
     if opts.config is not None:
         assert os.path.exists(opts.config), "Invalid path to config file."
         window.update_camera_properties(config_path=opts.config)
+
+    if opts.debug:
+        window.update_camera_properties(config_path="/data/OMB_Tests/Basketball-Panorama-Planar.json")
+
+    window.show()
+    window.center_views()
 
     sys.exit(app.exec_())
