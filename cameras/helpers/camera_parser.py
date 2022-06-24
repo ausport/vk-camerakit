@@ -1,7 +1,8 @@
 import json
 import os
 import numpy as np
-from cameras import VKCameraVideoFile, VKCameraPanorama, VKCameraGenericDevice, VKCamera, VKCameraBlackMagicRAW
+
+import cameras
 
 
 def parse_camera_model_with_dict(data):
@@ -14,7 +15,7 @@ def parse_camera_model_with_dict(data):
         camera_model (VKCamera): model representation camera described by the data object.
     """
 
-    camera_model = VKCamera()
+    camera_model = cameras.VKCamera()
 
     # Load the surface model first
     if "surface_model" in data:
@@ -30,15 +31,15 @@ def parse_camera_model_with_dict(data):
 
     if _vk_camera_class == "VKCamera":
         # Attempt to initiate a camera device..
-        camera_model = VKCameraGenericDevice(device=0, surface_name=_surface_model_name)
+        camera_model = cameras.VKCameraGenericDevice(device=0, surface_name=_surface_model_name)
 
     elif _vk_camera_class == "VKCameraVideoFile":
         assert "image_path" in data, "Camera file doesn't include an image path..."
-        camera_model = VKCameraVideoFile(filepath=data["image_path"], surface_name=_surface_model_name)
+        camera_model = cameras.VKCameraVideoFile(filepath=data["image_path"], surface_name=_surface_model_name)
 
     elif _vk_camera_class == "VKCameraBlackMagicRAW":
         assert "image_path" in data, "Camera file doesn't include an image path..."
-        camera_model = VKCameraBlackMagicRAW(filepath=data["image_path"], surface_name=_surface_model_name)
+        camera_model = cameras.VKCameraBlackMagicRAW(filepath=data["image_path"], surface_name=_surface_model_name)
 
     elif _vk_camera_class == "VKCameraPanorama":
         '''
@@ -64,9 +65,9 @@ def parse_camera_model_with_dict(data):
             # Parse an initialised camera model from the data
             input_camera_models.append(parse_camera_model_with_dict(camera["input_camera_model"]))
 
-        camera_model = VKCameraPanorama(input_camera_models=input_camera_models,
-                                        stitch_params=data["stitching_parameters"],
-                                        surface_name=_surface_model_name)
+        camera_model = cameras.VKCameraPanorama(input_camera_models=input_camera_models,
+                                                stitch_params=data["stitching_parameters"],
+                                                surface_name=_surface_model_name)
 
     # Load additional parameters if available
     if camera_model.surface_model is not None:
