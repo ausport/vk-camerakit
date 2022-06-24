@@ -3,18 +3,22 @@ from cameras.camera_generic import VKCameraGenericDevice
 from cameras.camera_file import VKCameraVideoFile
 from cameras.camera_panoramic import VKCameraPanorama
 from cameras.helpers.panorama import *
+from cameras.helpers.camera_parser import load_camera_model_from_json as load_camera_model
+
+print("################################################")
+print("#\n#\tVK-CameraKit\n#")
 
 try:
     from cameras.camera_blackmagic import VKCameraBlackMagicRAW
-    print("Blackmagic BRAW format Supported.")
+    print("#\t\t* Blackmagic BRAW format supported.")
 except ImportError:
-    print("* The Blackmagic BRAW SDK is not available.")
+    print("#\t\t* The Blackmagic BRAW SDK is not supported.")
 
 try:
     from cameras.camera_vimba import VKCameraVimbaDevice
     import vimba
-    print("Vimba SDK Supported:", vimba.__version__)
+    print("#\t\t* Vimba SDK Supported:", vimba.__version__)
 except ImportError:
-    print("* Vimba library is not available.")
+    print("#\t\t* Vimba library is not supported.")
 
-from cameras.helpers.camera_parser import load_camera_model_from_json as load_camera_model
+print("#\n################################################\n")
