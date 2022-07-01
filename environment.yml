@@ -1,0 +1,35 @@
+name: camerakit
+channels:
+  - defaults
+dependencies:
+  - conda-forge::pip=22.0.4
+  - conda-forge::python=3.7.12
+  - conda-forge::numpy=1.21.5
+  - conda-forge::pillow=9.0.1
+  - conda-forge::termcolor=1.1.0
+  - conda-forge::pytest=7.1.1
+  - conda-forge::pytest-lazy-fixture=0.6.3
+  - conda-forge::pytorch=1.9.1=cuda112py37h3bec1eb_3
+  - conda-forge::cudatoolkit=11.2.2
+  - conda-forge::gxx=11.2.0
+  - conda-forge::gxx_linux-64=11.2.0
+  - conda-forge::pybind11=2.9.2
+  - conda-forge::libcxx=13.0.1
+  - conda-forge::libcxxabi==13.0.1
+  - pip:
+      - build==0.8.0
+      - cycler==0.11.0
+      - filetype==1.0.13
+      - fonttools==4.33.3
+      - kiwisolver==1.4.2
+      - matplotlib==3.5.2
+      - opencv-python-headless==4.6.0.66
+      - pep517==0.12.0
+      - pyqt5==5.15.7
+      - pyqt5-qt5==5.15.2
+      - pyqt5-sip==12.11.0
+      - python-dateutil==2.8.2
+      - six==1.16.0
+      - torch==1.9.1
+      - torchvision==0.10.1
+prefix: /home/stuart/miniconda3/envs/camerakit
