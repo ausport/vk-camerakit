@@ -47,7 +47,7 @@ conda activate vkcamerakit
 ```
 
 
-### BlackMagic BRAW API - [Optional]
+### BlackMagic (braw format) Camera Support - (braw format) - [Optional]
 
 [Aiden Nibali](https://github.com/anibali/pybraw) has developed a set of python wrappers exposing the important functions in the BlackMagic API.
 
@@ -108,12 +108,13 @@ pip install -e .
 Any changes made to the `vk-camerakit` repository will be automatically mapped to your 
 application without needing to build or re-install the package.
 
-### Vimba SDK
+### Allied Vision Camera Support [optional]
 
-If using the Vimba cameras, the Vimba SDK (see below) is required to install `vimbapython`.  This requires a pip environment.
+Allied Vision (Prosilica) imaging devices are supported by the VIMBA SDK.
 
-The easiest method is to first install `pipenv` to create an environment in which to install the
-`vimbapython` libraries.
+Download the SDK [here](https://www.alliedvision.com/en/products/vimba-sdk/#c1497) and install `vimbapython`.  
+
+This requires a pip version of Python 3.8+.
 
 A further note - the pip install for `PyQt5` is not compatible with the typical `opencv-python`, since the pip installation
 of the latter installs it's own Qt libraries by default (for Linux, but not for OSX).  The easiest workaround here is to
@@ -135,17 +136,3 @@ sudo apt install libxcb-xinerama0
 ```
 
 
-The latest PyTorch updates seem to break pybraw.  So currently, if torchvision is required you should install an older
-version in the conda environment you have created:
-
-```shell
-conda install pytorch==1.9.1 torchvision==0.10.1 torchaudio==0.9.1 cudatoolkit=11.3 -c pytorch -c conda-forge
-```
-
-#### VIMBA Cameras:
-
-Allied Vision (Prosilica) imaging devices are supported by the VIMBA SDK.
-
-Download the SDK [here](https://www.alliedvision.com/en/products/vimba-sdk/#c1497).
-
-Note that the installer requires Python 3.8+
