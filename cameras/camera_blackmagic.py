@@ -95,6 +95,7 @@ class VKCameraBlackMagicRAW(VKCamera):
         Returns:
             (float): The CAP_PROP_FPS property.
         """
+        return "12K"
         return self.video_object.camera_type()
 
     def eof(self):
