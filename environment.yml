@@ -1,4 +1,4 @@
-name: camerakit
+name: vkcamerakit
 channels:
   - defaults
 dependencies:
@@ -29,7 +29,9 @@ dependencies:
       - pyqt5-qt5==5.15.2
       - pyqt5-sip==12.11.0
       - python-dateutil==2.8.2
+      - scipy==1.7.3
       - six==1.16.0
       - torch==1.9.1
       - torchvision==0.10.1
-prefix: /home/stuart/miniconda3/envs/camerakit
+prefix: /home/stuart/miniconda3/envs/vkcamerakit
+
