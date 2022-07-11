@@ -7,6 +7,7 @@ dependencies:
   - conda-forge::numpy=1.21.5
   - conda-forge::pillow=9.0.1
   - conda-forge::termcolor=1.1.0
+  - conda-forge::pyqt=5.9.2
   - conda-forge::pytest=7.1.1
   - conda-forge::pytest-lazy-fixture=0.6.3
   - conda-forge::pytorch=1.9.1=cuda112py37h3bec1eb_3
@@ -23,15 +24,15 @@ dependencies:
       - fonttools==4.33.3
       - kiwisolver==1.4.2
       - matplotlib==3.5.2
-      - opencv-python-headless==4.6.0.66
+      - opencv-python==4.6.0.66
+      - pandas~=1.3.5
       - pep517==0.12.0
-      - pyqt5==5.15.7
-      - pyqt5-qt5==5.15.2
-      - pyqt5-sip==12.11.0
       - python-dateutil==2.8.2
       - scipy==1.7.3
       - six==1.16.0
       - torch==1.9.1
       - torchvision==0.10.1
+      - wget==3.2
+      - yolov5
 prefix: /home/stuart/miniconda3/envs/vkcamerakit
 
