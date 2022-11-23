@@ -177,8 +177,6 @@ class VKCameraPanorama(VKCamera):
         Returns:
             Serialised camera model.
         """
-        # TODO - add surface properties (scale and offset) to serialisation of each input camera.
-
         _camera_parameters = {'class': self.__class__.__name__}
 
         # Camera-specific parameters
