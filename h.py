@@ -11,8 +11,8 @@ import time
 
 # vk modules
 import cameras
-import models
-import observers
+import world_models
+# import observers
 import tracking
 import widgets
 import scenes
@@ -521,7 +521,7 @@ class Window(QtWidgets.QWidget):
         self.update_world_model(world_model_name=self.cboSurfaces.currentText())
 
     def update_world_model(self, world_model_name):
-        self.world_model = models.VKWorldModel(sport=world_model_name)
+        self.world_model = world_models.VKWorldModel(sport=world_model_name)
         self.load_surface_image()
         self.center_views()
 
