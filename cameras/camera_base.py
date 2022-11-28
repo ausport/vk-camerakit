@@ -8,8 +8,8 @@ import numpy as np
 import os
 from PIL import Image
 
-from models.geometry import ray_intersection
-from models import world_model as surface
+from world_models.geometry import ray_intersection
+from world_models import world_model as surface
 
 VK_CAPTURE_MODE_PREVIEW = 0
 VK_CAPTURE_MODE_RECORD = 1

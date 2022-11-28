@@ -6,6 +6,6 @@ setup(
     author='Stuart Morgan (Australian Institute of Sport)',
     packages=['cameras',
               'cameras.helpers',
-              'models',
+              'world_models',
               'widgets']
 )
