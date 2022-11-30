@@ -117,7 +117,7 @@ class VKWorldModel:
         return np.array_equal(self.homography, identity)
 
     def world_point_for_image_point(self, image_point):
-        """Estimate world coordinates from camera coordinates.
+        """Estimate world coordinates in meters (relative to top left origin) from camera coordinates.
         Args:
             image_point (x, y): camera/image coordinates.
 
@@ -125,10 +125,13 @@ class VKWorldModel:
             (x,y): Returns world coordinates.
         """
         world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), self.homography)
-        return world_point.item(0), world_point.item(1)
+        _metric_x = world_point.item(0) / self.model_scale
+        _metric_y = world_point.item(1) / self.model_scale
+
+        return _metric_x, _metric_y
 
     def normal_world_point_for_image_point(self, image_point):
-        """Estimate normalised world coordinates from camera coordinates.
+        """Estimate normalised world coordinates [0-1] (relative to top left origin) from camera coordinates.
         Args:
             image_point (x, y): camera/image coordinates.
 
@@ -136,10 +139,8 @@ class VKWorldModel:
             (x,y): Returns normalised world coordinates.
         """
         world_point = self.world_point_for_image_point(image_point=image_point)
-        _scaled_width = self.model_width*self.model_scale
-        _scaled_height = self.model_height*self.model_scale
-        _normal_x = world_point[0] / _scaled_width
-        _normal_y = world_point[1] / _scaled_height
+        _normal_x = world_point[0] / self.model_width
+        _normal_y = world_point[1] / self.model_height
 
         return _normal_x, _normal_y
 
