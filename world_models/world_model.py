@@ -125,6 +125,10 @@ class VKWorldModel:
             (x,y): Returns world coordinates.
         """
         world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), self.homography)
+        # NB- the image-world correspondences are in pixel-to-pixel terms.
+        # i.e. the world surface image correspondences are in pixel values.
+        # The model scale factor translates the surface model from pixels to
+        # world coordinates in meters.
         _metric_x = world_point.item(0) / self.model_scale
         _metric_y = world_point.item(1) / self.model_scale
 
@@ -144,22 +148,6 @@ class VKWorldModel:
 
         return _normal_x, _normal_y
 
-    def normal_world_point_for_image_point(self, image_point):
-        """Estimate normalised world coordinates from camera coordinates.
-        Args:
-            image_point (x, y): camera/image coordinates.
-
-        Returns:
-            (x,y): Returns normalised world coordinates.
-        """
-        world_point = self.world_point_for_image_point(image_point=image_point)
-        _scaled_width = self.model_width*self.model_scale
-        _scaled_height = self.model_height*self.model_scale
-        _normal_x = world_point[0] / _scaled_width
-        _normal_y = world_point[1] / _scaled_height
-
-        return _normal_x, _normal_y
-
     def projected_image_point_for_2d_world_point(self, world_point):
         """Estimate 2d camera coordinates from 2d world coordinates.
         Args:
@@ -168,8 +156,9 @@ class VKWorldModel:
         Returns:
             (x,y): Returns world coordinates.
         """
+        # TODO - the world point could be in meters or normalised coordinates.
+        raise NotImplementedError('TODO- the world point could be in meters or normalised coordinates')
         projected_point = cv2.perspectiveTransform(np.array([[[world_point['x'], world_point['y']]]], dtype='float32'), self.inverse_homography)
-        # TODO - Can't we just return the projected_point?
         return projected_point.item(0), projected_point.item(1)
 
     def projected_image_point_for_3d_world_point(self, world_point, camera_model):
