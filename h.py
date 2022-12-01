@@ -185,12 +185,16 @@ class MyPopup(QtWidgets.QWidget):
             print("two_d_model_points", two_d_model_points)
 
             for idx in range(0, two_d_model_points.shape[0]):
-                print(idx)
-                s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3}".format(
+                _img_point = {"x": self.camera_model.image_points[idx][0], "y": self.camera_model.image_points[idx][1]}
+                world_coordinates = self.camera_model.world_point_for_image_point(image_point=_img_point)
+                s = "Image x:{0}, y:{1} : Surface x:{2}, y:{3} : World (m) x:{4}, y:{5}".format(
                     self.camera_model.image_points[idx][0],
                     self.camera_model.image_points[idx][1],
                     two_d_model_points[idx][0],
-                    two_d_model_points[idx][1])
+                    two_d_model_points[idx][1],
+                    world_coordinates[0],
+                    world_coordinates[1]
+                )
 
                 self.listCorrespondences.addItem(s)
 
@@ -636,7 +640,7 @@ class Window(QtWidgets.QWidget):
 
         if not self.correspondencesWidget.isVisible():
             self.correspondencesWidget = MyPopup(self.world_model)
-            self.correspondencesWidget.setGeometry(QtCore.QRect(100, 100, 400, 200))
+            self.correspondencesWidget.setGeometry(QtCore.QRect(100, 100, 600, 300))
             self.correspondencesWidget.show()
 
         if not self.correspondencesWidget.isActiveWindow():
