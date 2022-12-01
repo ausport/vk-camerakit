@@ -286,8 +286,6 @@ class VKCamera:
             dest_path (str): destination for saved image.
         """
         _frame = self.get_frame()
-
-        cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
         img = Image.fromarray(_frame)
         img.save(dest_path)
 
@@ -349,14 +347,10 @@ class VKCamera:
             #     if self.eof():
             #         break
 
-
-
-
     def cap_loop(self):
         print("Starting queue")
         while self.capture_mode == VK_CAPTURE_MODE_RECORD:
             _frame = self.get_frame()
-            cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
             self._video_writer.write(_frame)
             print(time.time())
         print("Exiting queue")

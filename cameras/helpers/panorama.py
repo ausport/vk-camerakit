@@ -507,7 +507,6 @@ class VKPanoramaController:
         result_mask = None
         result, result_mask = blender.blend(result, result_mask)
         dst = cv.normalize(src=result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-        cv.cvtColor(dst, cv.COLOR_BGR2RGB, dst)
         return dst
 
     def panoramic_point_for_world_point(self, world_point, panorama_projection_models, camera_models):
