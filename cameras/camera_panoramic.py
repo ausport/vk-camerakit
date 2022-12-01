@@ -164,9 +164,16 @@ class VKCameraPanorama(VKCamera):
         Returns:
             (x,y): Returns world coordinates.
         """
-        panoramic_image_point = self._stitching_controller.panoramic_point_for_world_point(world_point=world_point,
+        print(world_point)
+        _world_point_x = world_point["x"] + self.surface_model.model_offset_x
+        _world_point_y = world_point["y"] + self.surface_model.model_offset_x
+        print(_world_point_x, _world_point_y)
+
+        panoramic_image_point = self._stitching_controller.panoramic_point_for_world_point(world_point={"x": _world_point_x, "y": _world_point_y},
                                                                                            panorama_projection_models=self.panorama_projection_models,
                                                                                            camera_models=self.input_camera_models)
+        print(panoramic_image_point)
+        exit(1)
         return panoramic_image_point
 
     def camera_model_json(self):
