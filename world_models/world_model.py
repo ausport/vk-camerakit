@@ -124,13 +124,20 @@ class VKWorldModel:
         Returns:
             (x,y): Returns world coordinates.
         """
-        world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]], dtype='float32'), self.homography)
+        world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]],
+                                                        dtype='float32'), self.homography)
         # NB- the image-world correspondences are in pixel-to-pixel terms.
         # i.e. the world surface image correspondences are in pixel values.
         # The model scale factor translates the surface model from pixels to
         # world coordinates in meters.
-        _metric_x = world_point.item(0) / self.model_scale
-        _metric_y = world_point.item(1) / self.model_scale
+        # Be aware that the metric coordinates are also reported relative to the surface origin
+        # (the top-left corner of the playing surface).  The origin of the surface area in real
+        # world meters is therefore a negative value (model offset value).
+        # We do this to normalise world point values as 0-->1 in relation to the actual
+        # playing area, and avoid the normalised bottom/right perimeter values being > 1.
+
+        _metric_x = (world_point.item(0) / self.model_scale) - self.model_offset_x
+        _metric_y = (world_point.item(1) / self.model_scale) - self.model_offset_y
 
         return _metric_x, _metric_y
 
