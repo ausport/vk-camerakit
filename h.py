@@ -15,7 +15,7 @@ import world_models
 # import observers
 import tracking
 import widgets
-import scenes
+# import scenes
 
 
 class GraphicsScene(QtWidgets.QGraphicsScene):
@@ -241,8 +241,8 @@ class Window(QtWidgets.QWidget):
             _path = "/data/OMB_Tests/bball_annotations.json"
             assert os.path.exists(_path), "Demo-mode anntotations are not valid.."
             self.tracker = tracking.VKTrackingEmulator(annotations_path=_path)
-            self.observer = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output.mp4")
-            self.observer2 = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output2.mp4")
+            # self.observer = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output.mp4")
+            # self.observer2 = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output2.mp4")
 
         """
         User interface widgets, relevant for this implementation only.
