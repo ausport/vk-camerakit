@@ -144,6 +144,22 @@ class VKWorldModel:
 
         return _normal_x, _normal_y
 
+    def normal_world_point_for_image_point(self, image_point):
+        """Estimate normalised world coordinates from camera coordinates.
+        Args:
+            image_point (x, y): camera/image coordinates.
+
+        Returns:
+            (x,y): Returns normalised world coordinates.
+        """
+        world_point = self.world_point_for_image_point(image_point=image_point)
+        _scaled_width = self.model_width*self.model_scale
+        _scaled_height = self.model_height*self.model_scale
+        _normal_x = world_point[0] / _scaled_width
+        _normal_y = world_point[1] / _scaled_height
+
+        return _normal_x, _normal_y
+
     def projected_image_point_for_2d_world_point(self, world_point):
         """Estimate 2d camera coordinates from 2d world coordinates.
         Args:
