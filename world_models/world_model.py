@@ -116,7 +116,7 @@ class VKWorldModel:
         np.fill_diagonal(identity, 1)
         return np.array_equal(self.homography, identity)
 
-    def world_point_for_image_point(self, image_point):
+    def metric_world_point_for_image_point(self, image_point):
         """Estimate world coordinates in meters (relative to top left origin) from camera coordinates.
         Args:
             image_point (x, y): camera/image coordinates.
@@ -149,7 +149,7 @@ class VKWorldModel:
         Returns:
             (x,y): Returns normalised world coordinates.
         """
-        world_point = self.world_point_for_image_point(image_point=image_point)
+        world_point = self.metric_world_point_for_image_point(image_point=image_point)
         _normal_x = world_point[0] / self.model_width
         _normal_y = world_point[1] / self.model_height
 
@@ -206,8 +206,8 @@ class VKWorldModel:
             (x,y): Returns world coordinates.
         """
         # Convert image target and the camera location to world coordinates.
-        _target_world_location = self.world_point_for_image_point({"x": image_point[0], "y": image_point[1]})
-        _camera_world_location = self.world_point_for_image_point({"x": camera_location[0], "y": camera_location[1]})
+        _target_world_location = self.metric_world_point_for_image_point({"x": image_point[0], "y": image_point[1]})
+        _camera_world_location = self.metric_world_point_for_image_point({"x": camera_location[0], "y": camera_location[1]})
 
         dy = (_camera_world_location[1] - _target_world_location[1])
         dx = (_camera_world_location[0] - _target_world_location[0])
