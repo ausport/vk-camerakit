@@ -549,3 +549,25 @@ class VKPanoramaController:
                     return pt
 
         return None, None
+
+    def panoramic_point_for_image_point(self, image_point, panorama_projection_models, camera_model, camera_idx):
+
+        warper = cv.PyRotationWarper(self.warp_type, self.warped_image_scale)
+
+        # Draw annotations
+        dx = panorama_projection_models[0]["corner"][0]
+        dy = panorama_projection_models[0]["corner"][1]
+
+        x = image_point["x"]
+        y = image_point["y"]
+
+        if 0 < x < camera_model.width():
+            if 0 < y < camera_model.height():
+                panorama_projection = panorama_projection_models[camera_idx]
+                # Project local camera point to panoramic image point.
+                pt = warper.warpPoint((x, y), panorama_projection["extrinsics"], panorama_projection["rotation"])
+                pt = (int(pt[0]), int(pt[1]))
+                pt = (int(pt[0]) - dx, int(pt[1]) - dy)
+                return pt
+
+        return None, None

@@ -159,22 +159,37 @@ class VKCameraPanorama(VKCamera):
     def projected_panoramic_point_for_2d_world_point(self, world_point):
         """Estimate 2d panoramic coordinates from 2d world coordinates.
         Args:
-            world_point (x, y): world/model coordinates.
+            world_point ('x': x, 'y': y): world/model coordinates.
 
         Returns:
             (x,y): Returns world coordinates.
         """
-        print(world_point)
         _world_point_x = world_point["x"] + self.surface_model.model_offset_x
         _world_point_y = world_point["y"] + self.surface_model.model_offset_x
-        print(_world_point_x, _world_point_y)
 
         panoramic_image_point = self._stitching_controller.panoramic_point_for_world_point(world_point={"x": _world_point_x, "y": _world_point_y},
                                                                                            panorama_projection_models=self.panorama_projection_models,
                                                                                            camera_models=self.input_camera_models)
-        print(panoramic_image_point)
-        exit(1)
         return panoramic_image_point
+
+    def projected_panoramic_point_for_image_point_with_camera_name(self, image_point, camera_name):
+        """Estimate 2d panoramic coordinates from 2d world coordinates.
+        Args:
+            image_point ('x': x, 'y': y): image coordinates.
+            camera_name (str): Camera ID - e.g. "Camera A" as defined in camera model json.
+
+        Returns:
+            (x,y): Returns world coordinates.
+        """
+
+        for idx, camera_model in enumerate(self.input_camera_models):
+            if os.path.splitext(os.path.split(camera_model.filepath)[-1])[0] == camera_name:
+                panoramic_image_point = self._stitching_controller.panoramic_point_for_image_point(image_point=image_point,
+                                                                                                   panorama_projection_models=self.panorama_projection_models,
+                                                                                                   camera_model=camera_model,
+                                                                                                   camera_idx=idx)
+                return panoramic_image_point
+        return None
 
     def camera_model_json(self):
         """Serialise the existing model parameters.
