@@ -186,7 +186,7 @@ class MyPopup(QtWidgets.QWidget):
 
             for idx in range(0, two_d_model_points.shape[0]):
                 _img_point = {"x": self.camera_model.image_points[idx][0], "y": self.camera_model.image_points[idx][1]}
-                world_coordinates = self.camera_model.world_point_for_image_point(image_point=_img_point)
+                world_coordinates = self.camera_model.metric_world_point_for_image_point(image_point=_img_point)
                 s = "Image (px) x:{0:.0f}, y:{1:.0f} : Surface (px) x:{2:.0f}, y:{3:.0f} : World (m) x:{4:.1f}, y:{5:.1f}".format(
                     self.camera_model.image_points[idx][0],
                     self.camera_model.image_points[idx][1],
