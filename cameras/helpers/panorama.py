@@ -561,8 +561,8 @@ class VKPanoramaController:
         x = image_point["x"]
         y = image_point["y"]
 
-        if 0 < x < camera_model.width():
-            if 0 < y < camera_model.height():
+        if 0 <= x <= camera_model.width():
+            if 0 <= y <= camera_model.height():
                 panorama_projection = panorama_projection_models[camera_idx]
                 # Project local camera point to panoramic image point.
                 pt = warper.warpPoint((x, y), panorama_projection["extrinsics"], panorama_projection["rotation"])
