@@ -122,7 +122,7 @@ class VKWorldModel:
             image_point (x, y): camera/image coordinates.
 
         Returns:
-            (x,y): Returns world coordinates.
+            (x,y): Returns metric world coordinates.
         """
         world_point = cv2.perspectiveTransform(np.array([[[image_point['x'], image_point['y']]]],
                                                         dtype='float32'), self.homography)
@@ -152,6 +152,22 @@ class VKWorldModel:
         world_point = self.metric_world_point_for_image_point(image_point=image_point)
         _normal_x = world_point[0] / self.model_width
         _normal_y = world_point[1] / self.model_height
+
+        return _normal_x, _normal_y
+
+    def normal_world_point_for_metric_point(self, metric_point):
+        """ Converts metric coordinates to scaled normalised coordinates.
+        Assumes the world coordinates origin is the top left corner of the actual playing surface
+        (excluding the offset).
+
+        Args:
+            metric_point (x, y): metric world coordinates.
+
+        Returns:
+            (x,y): Returns normalised world coordinates.
+        """
+        _normal_x = metric_point[0] / self.model_width
+        _normal_y = metric_point[1] / self.model_height
 
         return _normal_x, _normal_y
 
