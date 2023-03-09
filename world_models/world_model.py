@@ -184,6 +184,20 @@ class VKWorldModel:
         projected_point = cv2.perspectiveTransform(np.array([[[world_point['x'], world_point['y']]]], dtype='float32'), self.inverse_homography)
         return projected_point.item(0), projected_point.item(1)
 
+    def projected_image_point_for_metric_world_point(self, world_point):
+        """Estimate 2d camera coordinates from 2d world coordinates.
+        Args:
+            world_point (x, y): world/model in metric coordinates.
+
+        Returns:
+            (x,y): Returns image coordinates.
+        """
+        _world_point_x = (world_point['x'] + self.model_offset_x)  * self.model_scale
+        _world_point_y = (world_point['y'] + self.model_offset_y)  * self.model_scale
+        projected_point = cv2.perspectiveTransform(np.array([[[_world_point_x, _world_point_y]]], dtype='float32'), self.inverse_homography)
+
+        return projected_point.item(0), projected_point.item(1)
+    
     def projected_image_point_for_3d_world_point(self, world_point, camera_model):
         """Estimate 2d camera coordinates from 3d world coordinates.
 
