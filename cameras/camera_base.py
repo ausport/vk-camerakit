@@ -129,6 +129,9 @@ class VKCamera:
         else:
             raise NotImplementedError
 
+    def surface_model(self):
+        return self.surface_model
+
     def undistorted_image(self, image=None):
         """Undistorted input image with camera matrices.
 
