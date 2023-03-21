@@ -25,6 +25,8 @@ class VKWorldModel:
 
         # Model properties
         self.surface_properties = surface_properties_for_sport(sport=_sport)
+        self.world_surface_lines = metric_surface_lines_with_sport(sport=_sport)
+
         self.model_width = self.surface_properties["model_width"]
         self.model_height = self.surface_properties["model_height"]
         self.model_offset_x = self.surface_properties["model_offset_x"]
