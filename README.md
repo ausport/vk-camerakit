@@ -24,7 +24,7 @@ World models provides the coordinate translations between image and world spaces
 
 World models are typically used as a property of a device-specific `VKCamera` class.
 
-![](world_models/surfaces/hockey.png)
+![](surfaces/hockey.png)
 
 
 ![](images/markers.png)
