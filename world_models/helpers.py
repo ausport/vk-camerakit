@@ -1,6 +1,9 @@
 import cv2
 import os
 import math
+import zipfile
+import io
+import wget
 import numpy as np
 
 # SPORT CONSTANTS
@@ -77,10 +80,20 @@ def surface_image_with_sport(sport):
     if _sport.__class__.__name__ == "int":
         _sport = sport_name_with_constant(sport)
 
-    _path = "./world_models/surfaces/{:s}.png".format(_sport)
-    assert os.path.exists(_path), "WTF!!  The surface image does not exist: {0}".format(_path)
-    img = cv2.imread(_path)
-    cv2.cvtColor(img, cv2.COLOR_BGR2RGB, img)
+    _path = "surfaces/{:s}.png".format(_sport)
+
+    if not os.path.exists("surfaces"):
+        print("Downloading surface images...")
+        zip_path = wget.download(url="https://cloudstor.aarnet.edu.au/plus/s/sG4TUoPMIQ2yY35/download", out="surfaces.zip")
+        assert os.path.exists(zip_path), "WTF!!  Couldn't download surfaces: {0}".format(_path)
+
+        # create a ZipFile object and extract its contents to the extract directory
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(".")
+
+    if os.path.exists(_path):
+        img = cv2.imread(_path)
+
     return img
 
 
