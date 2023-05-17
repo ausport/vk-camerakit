@@ -238,15 +238,15 @@ class Window(QtWidgets.QWidget):
         # Trackers and camera objects are controlled by a VKScene object.
         # Methods include coordinating the
 
-        if debug:
-            # TODO - this is for short-term demonstration purposes only...
-            # Normally, a tracking controller will be implemented at run time.
-            print("Loading exemplars...")
-            _path = "/data/OMB_Tests/bball_annotations.json"
-            assert os.path.exists(_path), "Demo-mode anntotations are not valid.."
-            self.tracker = tracking.VKTrackingEmulator(annotations_path=_path)
-            # self.observer = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output.mp4")
-            # self.observer2 = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output2.mp4")
+        # if debug:
+        #     # TODO - this is for short-term demonstration purposes only...
+        #     # Normally, a tracking controller will be implemented at run time.
+        #     print("Loading exemplars...")
+        #     _path = "/data/OMB_Tests/bball_annotations.json"
+        #     assert os.path.exists(_path), "Demo-mode anntotations are not valid.."
+        #     self.tracker = tracking.VKTrackingEmulator(annotations_path=_path)
+        #     # self.observer = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output.mp4")
+        #     # self.observer2 = observers.VKGameObserverGeneric(destination_path="/data/OMB_Tests/bb_output2.mp4")
 
         """
         User interface widgets, relevant for this implementation only.
@@ -426,7 +426,7 @@ class Window(QtWidgets.QWidget):
         # Widgets
         self.correspondencesWidget = MyPopup(self.world_model)
         self.stitching_control_widget = widgets.PanoramaStitcherWidget(parent=self)
-        # self.open_capture_devices()
+        self.open_capture_devices()
 
     def reset_controls(self):
         # Abort correspondences
@@ -456,7 +456,9 @@ class Window(QtWidgets.QWidget):
             available_devices.append(camera_model)
             # camera_model.close()
 
+        print("Here")
         camera_model = cameras.VKCameraVimbaDevice(ip_address="10.2.0.2")
+        print(camera_model)
         if camera_model.is_available():
             print("Found:", camera_model.__class__)
             available_devices.append(camera_model)
