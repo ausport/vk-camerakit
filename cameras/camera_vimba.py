@@ -159,7 +159,9 @@ class VKCameraVimbaDevice(VKCamera):
 
         if "CAP_PROP_FPS" in configs:
             try:
-                self.video_object.AcquisitionFrameRateAbs.set(int(configs["CAP_PROP_FPS"]))
+                print(f'Tring to set {int(configs["CAP_PROP_FPS"])}')
+                # self.video_object.AcquisitionFrameRateAbs.set(int(configs["CAP_PROP_FPS"]))
+                self.video_object.AcquisitionFrameRateAbs.set(60000)
             except (AttributeError, VimbaFeatureError):
                 pass
 
