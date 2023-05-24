@@ -1,8 +1,17 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
 import cv2
-from vimba import Vimba, VimbaFeatureError, PixelFormat, VimbaCameraError
+import math
+import vmbpy as vimba
+from vmbpy import *
 from cameras import VKCamera
 
+'''
+See examples: https://github.com/alliedvision/VmbPy
+'''
+
+FRAME_HEIGHT = 1088
+FRAME_WIDTH = 1456
+FEATURE_MAX = -1
 
 class VKCameraVimbaDevice(VKCamera):
 
@@ -12,57 +21,106 @@ class VKCameraVimbaDevice(VKCamera):
         print("Searching for Allied Vision device at {0}".format(ip_address))
 
         # Get an instance of Vimba
-        self.vimba = Vimba.get_instance()
+        with VmbSystem.get_instance () as vmb:
 
-        # Instead of using the context manager (suggested), we manually initialize vimba
-        self.vimba.__enter__()
+            cams = vmb.get_all_cameras()
+            print('Cameras found: {}'.format(len(cams)))
 
-        # Get reference to the camera
-        try:
-            self.video_object = self.vimba.get_camera_by_id(ip_address)
-        except VimbaCameraError:
-            raise RuntimeError(f'Failed to access camera: \'{ip_address}\'.')
+            for cam in cams:
+                self.print_camera(cam)
 
-        # Instead of using the context manager, manually initialize the camera
-        self.video_object.__enter__()
+                self.set_nearest_value(cam, 'Height', FRAME_HEIGHT)
+                self.set_nearest_value(cam, 'Width', FRAME_WIDTH)
+                self.set_nearest_value(cam, 'AcquisitionFrameRateAbs', FEATURE_MAX)
 
-        # Keep track of the current frame BEFORE reading from the camera
-        self.current_frame = 0
+                # Try to enable automatic exposure time setting
+                with cam:
+                    try:
+                        cam.ExposureAuto.set('Once')
 
-        # Enable auto exposure time setting if camera supports it
-        try:
-            self.video_object.ExposureAuto.set('Continuous')
-        except (AttributeError, VimbaFeatureError):
-            pass
+                    except (AttributeError, VmbFeatureError):
+                        print('Camera {}: Failed to set Feature \'ExposureAuto\'.'.format(cam.get_id()))
 
-        # Enable white balancing if camera supports it
-        try:
-            self.video_object.BalanceWhiteAuto.set('Continuous')
+                    try:
+                        cam.GainAuto.set('Once')
 
-        except (AttributeError, VimbaFeatureError):
-            pass
+                    except (AttributeError, VmbFeatureError):
+                        print('Camera {}: Failed to set Feature \'GainAuto\'.'.format(cam.get_id()))
 
-        # Try to adjust GeV packet size. This Feature is only available for GigE - Cameras.
-        try:
-            self.video_object.GVSPAdjustPacketSize.run()
-            while not self.video_object.GVSPAdjustPacketSize.is_done():
-                pass
-        except (AttributeError, VimbaFeatureError):
-            pass
+
+                    # try:
+                    #     stream = cam.get_streams()[0]
+                    #     stream.GVSPAdjustPacketSize.run()
+                    #     while not stream.GVSPAdjustPacketSize.is_done():
+                    #         pass
+                    # except (AttributeError, VmbFeatureError):
+                    #     print('Camera {}: Failed to set Feature \'GVSPAdjustPacketSize\'.'.format(cam.get_id()))
+                    # try:
+                    #     cam.set_pixel_format(PixelFormat.BayerBG8)
+                    #
+                    # except (AttributeError, VmbFeatureError):
+                    #     print('Camera {}: Failed to set Feature \'PixelFormat\'.'.format("BayerBG8"))
+
+                    #
+
+        #
+        # # Get reference to the camera
+        # try:
+        #     self.video_object = self.vimba.get_camera_by_id(ip_address)
+        # except VimbaCameraError:
+        #     raise RuntimeError(f'Failed to access camera: \'{ip_address}\'.')
+        #
+        # # Instead of using the context manager, manually initialize the camera
+        # self.video_object.__enter__()
+        #
+        # # Keep track of the current frame BEFORE reading from the camera
+        # self.current_frame = 0
+        #
+        # # Enable auto exposure time setting if camera supports it
+        # try:
+        #     self.video_object.ExposureAuto.set('Continuous')
+        # except (AttributeError, VimbaFeatureError):
+        #     pass
+        #
+        # # Enable white balancing if camera supports it
+        # try:
+        #     self.video_object.BalanceWhiteAuto.set('Continuous')
+        #
+        # except (AttributeError, VimbaFeatureError):
+        #     pass
+        #
+        # # Try to adjust GeV packet size. This Feature is only available for GigE - Cameras.
+        # try:
+        #     self.video_object.GVSPAdjustPacketSize.run()
+        #     while not self.video_object.GVSPAdjustPacketSize.is_done():
+        #         pass
+        # except (AttributeError, VimbaFeatureError):
+        #     pass
 
         # Get properties of the camera
-        self.camera_name = self.video_object.get_name()
-        self.camera_model = self.video_object.get_model()
-        self.camera_identifier = self.video_object.get_id()
-        self.camera_serial = self.video_object.get_serial()
-        self.camera_interface = self.video_object.get_interface_id()
-        self.ip_address = ip_address
+        # self.camera_name = self.video_object.get_name()
+        # self.camera_model = self.video_object.get_model()
+        # self.camera_identifier = self.video_object.get_id()
+        # self.camera_serial = self.video_object.get_serial()
+        # self.camera_interface = self.video_object.get_interface_id()
+        # self.ip_address = ip_address
 
+        # print(self)
+        exit(1)
         # TODO - pixel formats in widget
         # px = self.video_object.get_pixel_formats()
         # print(px)
         # print(self.video_object.get_pixel_format())  # returns the current pixel format
         # set_pixel_format (fmt) # enables you to set a new pixel format
+
+
+    def print_camera(self, cam: Camera):
+        print('/// Camera Name   : {}'.format(cam.get_name()))
+        print('/// Model Name    : {}'.format(cam.get_model()))
+        print('/// Camera ID     : {}'.format(cam.get_id()))
+        print('/// Serial Number : {}'.format(cam.get_serial()))
+        print('/// Interface ID  : {}\n'.format(cam.get_interface_id()))
+        print('/// Interface ID  : {}\n'.format(cam.get_interface_id()))
 
     def eof(self):
         """Overrides eof.
@@ -196,3 +254,43 @@ class VKCameraVimbaDevice(VKCamera):
                                                               self.get_camera_temperature(),
                                                               self.exposure_time(),
                                                               self.fps())
+
+
+    def set_nearest_value(self, cam: Camera, feat_name: str, feat_value: int):
+        # Helper function that tries to set a given value. If setting of the initial value failed
+        # it calculates the nearest valid value and sets the result. This function is intended to
+        # be used with Height and Width Features because not all Cameras allow the same values
+        # for height and width.
+        with cam:
+            feat = cam.get_feature_by_name(feat_name)
+
+            min_, max_ = feat.get_range()
+            print(f"{feat_name} - range: {min_} to {max_}")
+
+            if feat_value == FEATURE_MAX:
+                feat_value = max_
+
+            try:
+                feat.set(feat_value)
+                # print(f"{feat_name} - se to: {feat.get(feat_value)}")
+
+            except VmbFeatureError:
+                min_, max_ = feat.get_range()
+                print(f"{feat_name} - range: {min_} to {max_}")
+                inc = feat.get_increment()
+
+                if feat_value <= min_:
+                    val = min_
+
+                elif feat_value >= max_:
+                    val = max_
+
+                else:
+                    val = (((feat_value - min_) // inc) * inc) + min_
+
+                feat.set(val)
+
+                msg = ('Camera {}: Failed to set value of Feature \'{}\' to \'{}\': '
+                       'Using nearest valid value \'{}\'. Note that, this causes resizing '
+                       'during processing, reducing the frame rate.')
+                Log.get_instance().info(msg.format(cam.get_id(), feat_name, feat_value, val))

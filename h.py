@@ -456,7 +456,6 @@ class Window(QtWidgets.QWidget):
             available_devices.append(camera_model)
             # camera_model.close()
 
-        print("Here")
         camera_model = cameras.VKCameraVimbaDevice(ip_address="10.2.0.10")
         print(camera_model)
         if camera_model.is_available():

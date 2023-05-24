@@ -1,3 +1,5 @@
+import vmbpy
+
 from cameras.camera_base import VKCamera
 from cameras.camera_generic import VKCameraGenericDevice
 from cameras.camera_file import VKCameraVideoFile
@@ -17,7 +19,7 @@ except ImportError:
 
 try:
     from cameras.camera_vimba import VKCameraVimbaDevice
-    import vimba
+    import vmbpy as vimba
     print("#\t\t* Vimba SDK Supported:", vimba.__version__)
 except ImportError:
     print("#\t\t* Vimba library is not supported.")
