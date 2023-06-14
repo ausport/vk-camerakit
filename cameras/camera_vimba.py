@@ -17,12 +17,11 @@ FEATURE_MAX = -1
 def enumerate_vimba_devices():
 
     with VmbSystem.get_instance () as vmb:
-
         cams = vmb.get_all_cameras()
         print(f'{len(cams)} Vimba camera(s) found...')
         for cam in cams:
-            print(cam)
 
+    return cams
 
 class VKCameraVimbaDevice(VKCamera):
 
