@@ -13,6 +13,17 @@ FRAME_HEIGHT = 1088
 FRAME_WIDTH = 1456
 FEATURE_MAX = -1
 
+
+def enumerate_vimba_devices():
+
+    with VmbSystem.get_instance () as vmb:
+
+        cams = vmb.get_all_cameras()
+        print(f'{len(cams)} Vimba camera(s) found...')
+        for cam in cams:
+            print(cam)
+
+
 class VKCameraVimbaDevice(VKCamera):
 
     def __init__(self, ip_address="10.2.0.2", verbose_mode=False, surface_name=None):
