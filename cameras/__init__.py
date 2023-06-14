@@ -19,6 +19,7 @@ except ImportError:
 
 try:
     from cameras.camera_vimba import VKCameraVimbaDevice
+    from cameras.helpers.vimba_utilities import enumerate_vimba_devices
     import vmbpy as vimba
     print("#\t\t* Vimba SDK Supported:", vimba.__version__)
 except ImportError:

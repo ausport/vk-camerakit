@@ -452,16 +452,25 @@ class Window(QtWidgets.QWidget):
         # Try local capture class.
         camera_model = cameras.VKCameraGenericDevice(device=0)
         if camera_model.is_available():
-            print("Found:", camera_model.__class__)
+            print("Generic Camera Found:", camera_model.__class__)
             available_devices.append(camera_model)
-            # camera_model.close()
+            print(camera_model)
 
-        camera_model = cameras.VKCameraVimbaDevice(ip_address="10.2.0.10")
+        # Check for Vimba cameras
+        vimba_cameras = cameras.enumerate_vimba_devices()
+        for camera in vimba_cameras:
+            # Add vimba camera object to VKCamera wrapper.
+            camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
+            # print(camera_model)
+
+        exit(1)
+
         print(camera_model)
         if camera_model.is_available():
             print("Found:", camera_model.__class__)
             available_devices.append(camera_model)
 
+        exit()
         return available_devices
 
     def update_current_camera_device(self, camera):
