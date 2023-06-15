@@ -1,6 +1,7 @@
 from vmbpy import *
 from typing import Optional
 import cv2
+import threading
 
 opencv_display_format = PixelFormat.Bgr8
 
@@ -96,3 +97,33 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
                    'Using nearest valid value \'{}\'. Note that, this causes resizing '
                    'during processing, reducing the frame rate.')
             Log.get_instance().info(msg.format(cam.get_id(), feat_name, feat_value, val))
+
+class Handler:
+    def __init__(self, writer: cv2.VideoWriter):
+        self.shutdown_event = threading.Event()
+        self.writer = writer
+
+    def __call__(self, cam: Camera, stream: Stream, frame: Frame):
+        ENTER_KEY_CODE = 13
+
+        key = cv2.waitKey(1)
+        if key == ENTER_KEY_CODE:
+            self.shutdown_event.set()
+            return
+
+        elif frame.get_status() == FrameStatus.Complete:
+            print('{} acquired {}'.format(cam, frame), flush=True)
+            # Convert frame if it is not already the correct format
+            if frame.get_pixel_format() == opencv_display_format:
+                display = frame
+            else:
+                # This creates a copy of the frame. The original `frame` object can be requeued
+                # safely while `display` is used
+                display = frame.convert_pixel_format(opencv_display_format)
+
+            msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+            if self.writer is not None:
+                self.writer.write(display.as_numpy_ndarray())
+            cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
+
+        cam.queue_frame(frame)
