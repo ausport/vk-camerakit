@@ -11,8 +11,7 @@ vimba_cameras = cameras.enumerate_vimba_devices()
 
 for camera in vimba_cameras:
     # Add vimba camera object to VKCamera wrapper.
-    print("Vimba-Compatible Camera Found:", camera_model.__class__)
     camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
+    print("Vimba-Compatible Camera Found:", camera_model.__class__)
     if camera_model.is_available():
-        # print(camera_model)
         print("Camera is running...")
