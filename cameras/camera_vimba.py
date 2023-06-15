@@ -2,7 +2,7 @@
 import cv2
 from vmbpy import *
 from cameras import VKCamera
-from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format
+from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, Handler
 
 FEATURE_MAX = -1
 
@@ -12,7 +12,7 @@ class VKCameraVimbaDevice(VKCamera):
     See examples: https://github.com/alliedvision/VmbPy
     """
 
-    def __init__(self, device_id, verbose_mode=False, surface_name=None):
+    def __init__(self, device_id, verbose_mode=False, surface_name=None, capture_path=None):
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         print("Initialising Allied Vision device at {0}".format(device_id))
@@ -28,7 +28,12 @@ class VKCameraVimbaDevice(VKCamera):
                                              "CAP_PROP_FPS": FEATURE_MAX,
                                              })
                 setup_pixel_format(cam)
-                # handler = Handler(_video_writer)
+
+                _video_writer = None
+                if capture_path:
+                    FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+                    _video_writer = cv2.VideoWriter(f"{capture_path}/capture_{device_id}.mp4", FOURCC, self.fps(), (self.width(), self.height()), True)
+                self.handler = Handler(_video_writer)
 
             print(self)
 
@@ -74,7 +79,10 @@ class VKCameraVimbaDevice(VKCamera):
 
     def camera_temperature(self):
         """Queries (and returns) the temperature of the camera"""
-        return self.video_object.DeviceTemperature.get()
+        with VmbSystem.get_instance():
+            with get_camera(self.device_id) as cam:
+                return cam.DeviceTemperature.get()
+        pass
 
     def exposure_time(self):
         """Queries (and returns) the current exposure time of the camera. Returned in milliseconds
@@ -87,6 +95,20 @@ class VKCameraVimbaDevice(VKCamera):
         frame = self.video_object.get_frame()
         image = cv2.cvtColor(frame.as_numpy_ndarray(), cv2.COLOR_BAYER_RG2BGR)
         return image
+
+    def start_streaming(self):
+        print(f"Spinning up streaming on device: {self.device_id}")
+        with VmbSystem.get_instance():
+            with get_camera(self.device_id) as cam:
+                print("Connected...")
+                try:
+                    # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
+                    cam.start_streaming(handler=self.handler, buffer_count=10)
+                    self.handler.shutdown_event.wait()
+
+                finally:
+                    cam.stop_streaming()
+
 
     def is_available(self):
         """Returns the current status of an imaging device.
