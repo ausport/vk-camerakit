@@ -3,6 +3,9 @@ from typing import Optional
 import cv2
 import threading
 
+import cameras
+from cameras import VKCamera
+
 opencv_display_format = PixelFormat.Bgr8
 
 FEATURE_MAX = -1
@@ -98,10 +101,13 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
                    'during processing, reducing the frame rate.')
             Log.get_instance().info(msg.format(cam.get_id(), feat_name, feat_value, val))
 
+
 class Handler:
-    def __init__(self, writer: cv2.VideoWriter):
+    def __init__(self, camera: VKCamera, writer: cv2.VideoWriter):
+        # TODO - serialise the handler config into a dict?
         self.shutdown_event = threading.Event()
         self.writer = writer
+        self.parent_camera = camera
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -122,8 +128,13 @@ class Handler:
                 display = frame.convert_pixel_format(opencv_display_format)
 
             msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-            if self.writer is not None:
-                self.writer.write(display.as_numpy_ndarray())
-            cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
+            if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                _display = cv2.rotate(display.as_opencv_image(), self.parent_camera.image_rotation)
+                cv2.imshow(msg.format(cam.get_name()), _display)
+            else:
+                cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
+
+            # if self.writer is not None:
+            #     self.writer.write(display.as_numpy_ndarray())
 
         cam.queue_frame(frame)
