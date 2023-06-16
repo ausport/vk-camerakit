@@ -8,6 +8,12 @@ from cameras.camera_vimba import VKCameraVimbaDevice
 from cameras.helpers.panorama import *
 from cameras.helpers.camera_parser import load_camera_model_from_json as load_camera_model
 
+
+VK_ROTATE_NONE = -1
+VK_ROTATE_90_CLOCKWISE = 0
+VK_ROTATE_180 = 1
+VK_ROTATE_90_COUNTERCLOCKWISE = 2
+
 print("################################################")
 print("#\n#\tVK-CameraKit\n#")
 
