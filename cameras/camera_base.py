@@ -10,6 +10,7 @@ from PIL import Image
 
 from world_models.geometry import ray_intersection
 from world_models import world_model as surface
+import cameras
 
 VK_CAPTURE_MODE_PREVIEW = 0
 VK_CAPTURE_MODE_RECORD = 1
@@ -51,6 +52,8 @@ class VKCamera:
         self.rotation_vector = np.zeros((3, 3))
         self.translation_vector = np.zeros((3, 3))
         self.camera_2d_image_space_location = None
+
+        self.image_rotation = cameras.VK_ROTATE_NONE
 
         # Surface model
         self.surface_model = None
@@ -108,6 +111,25 @@ class VKCamera:
             (float): The CAP_PROP_FPS property.
         """
         return float(self.video_object.get(cv2.CAP_PROP_FPS))
+
+    def image_rotation(self):
+        """The image rotation vector.
+
+        Returns:
+            (int): The CAP_PROP_ROTATION property.
+        """
+        return self.image_rotation
+
+    def set_image_rotation(self, rotate):
+        """
+        The function cv::rotate rotates the array in one of three different ways:
+        *   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90_CLOCKWISE = 0).
+        *   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180 = 1).
+        *   Rotate by 270 degrees clockwise (rotateCode = ROTATE_90_COUNTERCLOCKWISE = 2).
+        self._most_recent_image = cv2.rotate(self._most_recent_image, self._rotation_vector)
+        """
+        assert -1 <= rotate <= 2, "Invalid rotation vector..."
+        self.image_rotation = rotate
 
     def eof(self):
         """Signals end of video file.
@@ -408,6 +430,9 @@ class VKCamera:
             _camera_parameters.update({'rotation_vector': self.rotation_vector.tolist()})
         if hasattr(self, "translation_vector"):
             _camera_parameters.update({'translation_vector': self.translation_vector.tolist()})
+        # Image transform parameters
+        if hasattr(self, "image_rotation"):
+            _camera_parameters.update({'image_rotation': self.image_rotation})
 
         # World model parameters
         if hasattr(self.surface_model, "homography"):
