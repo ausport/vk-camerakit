@@ -33,7 +33,8 @@ class VKCameraVimbaDevice(VKCamera):
                 if capture_path:
                     FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
                     _video_writer = cv2.VideoWriter(f"{capture_path}/capture_{device_id}.mp4", FOURCC, self.fps(), (self.width(), self.height()), True)
-                self.handler = Handler(_video_writer)
+
+                self.handler = Handler(camera=self, writer=_video_writer)
 
             print(self)
 
@@ -178,7 +179,7 @@ class VKCameraVimbaDevice(VKCamera):
         return result
 
     def name(self):
-        return '{} | {}'.format(self.camera_name, self.ip_address)
+        return '{} | {}'.format(self.video_object.get_name(), self.video_object.get_id())
 
     def __str__(self):
         """Overriding str
