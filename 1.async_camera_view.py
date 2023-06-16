@@ -41,5 +41,6 @@ elif len(vimba_cameras) == 0:
 
 camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id(), capture_path=CAPTURE_PATH)
 
-print(camera.camera_temperature())
+camera.set_image_rotation(cameras.VK_ROTATE_180)
+
 camera.start_streaming()
