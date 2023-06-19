@@ -40,6 +40,12 @@ class VKCameraVimbaDevice(VKCamera):
 
             print(self)
 
+    def vimba_instance(self):
+        return VmbSystem.get_instance()
+
+    def vimba_camera(self):
+        return self.video_object
+
     def eof(self):
         """Overrides eof.
 
