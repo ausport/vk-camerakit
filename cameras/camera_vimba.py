@@ -1,8 +1,10 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
+import time
+
 import cv2
 from vmbpy import *
 from cameras import VKCamera
-from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, Handler
+from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaASynchronousHandler
 
 FEATURE_MAX = -1
 
@@ -34,7 +36,7 @@ class VKCameraVimbaDevice(VKCamera):
                     FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
                     _video_writer = cv2.VideoWriter(f"{capture_path}/capture_{device_id}.mp4", FOURCC, self.fps(), (self.width(), self.height()), True)
 
-                self.handler = Handler(camera=self, writer=_video_writer)
+                self.async_handler = VimbaASynchronousHandler(camera=self, writer=_video_writer)
 
             print(self)
 
@@ -104,12 +106,11 @@ class VKCameraVimbaDevice(VKCamera):
                 print("Connected...")
                 try:
                     # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
-                    cam.start_streaming(handler=self.handler, buffer_count=10)
-                    self.handler.shutdown_event.wait()
+                    cam.start_streaming(handler=self.async_handler, buffer_count=10)
+                    self.async_handler.shutdown_event.wait()
 
                 finally:
                     cam.stop_streaming()
-
 
     def is_available(self):
         """Returns the current status of an imaging device.

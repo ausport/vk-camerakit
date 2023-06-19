@@ -102,7 +102,7 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
             Log.get_instance().info(msg.format(cam.get_id(), feat_name, feat_value, val))
 
 
-class Handler:
+class VimbaASynchronousHandler:
     def __init__(self, camera: VKCamera, writer: cv2.VideoWriter):
         # TODO - serialise the handler config into a dict?
         self.shutdown_event = threading.Event()
