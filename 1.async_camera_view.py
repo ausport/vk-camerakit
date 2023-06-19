@@ -39,7 +39,7 @@ if len(vimba_cameras) > 1:
 elif len(vimba_cameras) == 0:
     exit(1)
 
-camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id(), capture_path=CAPTURE_PATH)
+camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id())
 
 camera.set_image_rotation(cameras.VK_ROTATE_180)
 
