@@ -49,3 +49,30 @@ with camera.vimba_instance():
     with camera.vimba_camera() as cam:
         while True:
             f = camera.get_frame()
+
+'''
+    with VmbSystem.get_instance():
+        with get_camera(cam_id) as cam:
+            setup_camera(cam)
+
+            _video_writer = cv2.VideoWriter(f"{CAPTURE_PATH}/capture_{cam.get_id()}.mp4", FOURCC, 25, (1456, 1088), True)
+
+            start_time = time.time()
+            # Acquire 10 frame with a custom timeout (default is 2000ms) per frame acquisition.
+            while True:
+                for frame in cam.get_frame_generator(limit=None, timeout_ms=100):
+                    print('Got {}'.format(frame), flush=True)
+
+                    display = frame.convert_pixel_format(PixelFormat.Bgr8)
+                    _video_writer.write(display.as_numpy_ndarray())
+
+            # End the timer
+            end_time = time.time()
+
+            # Calculate the execution time
+            execution_time = end_time - start_time
+
+            # Print the execution time
+            t = (execution_time*1000.)/FRAMES
+            print(f"The for-loop took {execution_time} seconds to execute at {t} f.p.s.")
+'''
