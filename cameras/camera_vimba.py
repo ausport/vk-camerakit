@@ -101,9 +101,19 @@ class VKCameraVimbaDevice(VKCamera):
         return self.video_object.ExposureTimeAbs.get() / 1e3
 
     def get_frame(self):
-        frame = self.video_object.get_frame()
-        image = cv2.cvtColor(frame.as_numpy_ndarray(), cv2.COLOR_BAYER_RG2BGR)
-        return image
+        """
+        Returns a frame from the Vimba device.
+        NB - get_frame() should be called from within a valid instance.  i.e.:
+
+            with camera.vimba_instance():
+                with camera.vimba_camera() as cam:
+                    while True:
+                        f = camera.get_frame()
+
+        Returns:
+            Vimba frame
+        """
+        return self.video_object.get_frame()
 
     def start_streaming(self):
         print(f"Spinning up streaming on device: {self.device_id}")
