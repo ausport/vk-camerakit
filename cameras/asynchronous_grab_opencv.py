@@ -148,9 +148,8 @@ def setup_pixel_format(cam: Camera):
 
 
 class Handler:
-    def __init__(self, writer: cv2.VideoWriter):
+    def __init__(self):
         self.shutdown_event = threading.Event()
-        self.writer = writer
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -171,7 +170,6 @@ class Handler:
                 display = frame.convert_pixel_format(opencv_display_format)
 
             msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-            self.writer.write(display.as_numpy_ndarray())
             cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
 
         cam.queue_frame(frame)
@@ -190,7 +188,7 @@ def main():
             # setup general camera settings and the pixel format in which frames are recorded
             setup_camera(cam)
             setup_pixel_format(cam)
-            handler = Handler(_video_writer)
+            handler = Handler()
 
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
