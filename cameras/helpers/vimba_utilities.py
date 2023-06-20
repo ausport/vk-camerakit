@@ -134,7 +134,7 @@ class VimbaASynchronousHandler:
             else:
                 cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
 
-            # if self.writer is not None:
-            #     self.writer.write(display.as_numpy_ndarray())
+            if self.writer is not None:
+                self.writer.write(display.as_numpy_ndarray())
 
         cam.queue_frame(frame)

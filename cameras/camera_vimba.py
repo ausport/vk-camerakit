@@ -1,5 +1,6 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
 import time
+import os
 import threading
 
 import cv2
@@ -38,7 +39,7 @@ class VKCameraVimbaDevice(VKCamera):
                 _video_writer = None
                 if True:
                     FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                    _video_writer = cv2.VideoWriter(f"{os.path.expanduser('~/Desktop')}/capture_{device_id}.mp4", FOURCC, self.fps(), (self.width(), self.height()), True)
+                    _video_writer = cv2.VideoWriter(f"{os.path.expanduser('~/Desktop')}/capture_{device_id}.mp4", FOURCC, 25, (1456, 1088), True)
 
                 self.async_handler = VimbaASynchronousHandler(camera=self, writer=_video_writer)
 
