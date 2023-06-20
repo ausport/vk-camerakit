@@ -36,9 +36,9 @@ class VKCameraVimbaDevice(VKCamera):
                 setup_pixel_format(cam)
 
                 _video_writer = None
-                if capture_path:
+                if True:
                     FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                    _video_writer = cv2.VideoWriter(f"{capture_path}/capture_{device_id}.mp4", FOURCC, self.fps(), (self.width(), self.height()), True)
+                    _video_writer = cv2.VideoWriter(f"{os.path.expanduser('~/Desktop')}/capture_{device_id}.mp4", FOURCC, self.fps(), (self.width(), self.height()), True)
 
                 self.async_handler = VimbaASynchronousHandler(camera=self, writer=_video_writer)
 
