@@ -37,6 +37,7 @@ def main():
     print(f'View enabled: {enable_view}')
     print(f'Limit: {limit}')
     print(f'Destination: {destination}')
+    print(f'Flip: {flip}')
 
     if not os.path.exists(destination):
         os.mkdir(destination)
