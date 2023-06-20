@@ -1,8 +1,10 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
 import time
+import threading
 
 import cv2
 from vmbpy import *
+import cameras
 from cameras import VKCamera
 from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaASynchronousHandler
 
@@ -18,6 +20,8 @@ class VKCameraVimbaDevice(VKCamera):
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         print("Initialising Allied Vision device at {0}".format(device_id))
+
+        self.shutdown_event = threading.Event()
 
         with VmbSystem.get_instance():
             with get_camera(device_id) as cam:
@@ -114,6 +118,39 @@ class VKCameraVimbaDevice(VKCamera):
             Vimba frame
         """
         return self.video_object.get_frame()
+
+    def generate_frames(self, vimba_device, w, h, fps, path=None, limit=None, show_frames=False):
+        FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+        _video_writer = cv2.VideoWriter(f"{path}/capture_{vimba_device.get_id()}.mp4", FOURCC, fps, (w, h), True)
+
+        start_time = time.time()
+        loop_counter = 0
+        ENTER_KEY_CODE = 13
+
+        while True:
+            for frame in vimba_device.get_frame_generator(limit=limit, timeout_ms=1000):
+                loop_counter += 1
+                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+                _video_writer.write(converted_frame.as_numpy_ndarray())
+
+                if show_frames:
+                    key = cv2.waitKey(1)
+                    if key == ENTER_KEY_CODE:
+                        self.shutdown_event.set()
+                        return
+
+                    msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                    display = converted_frame.as_opencv_image()
+                    if self.image_rotation is not cameras.VK_ROTATE_NONE:
+                        display = cv2.rotate(display, self.image_rotation)
+
+                    cv2.imshow(msg.format(vimba_device.get_name()), display)
+
+                # Check if one second has passed
+                if time.time() - start_time >= 1:
+                    print("Frames per second in the last one-second interval: {}".format(loop_counter))
+                    loop_counter = 0
+                    start_time = time.time()
 
     def start_streaming(self):
         print(f"Spinning up streaming on device: {self.device_id}")
