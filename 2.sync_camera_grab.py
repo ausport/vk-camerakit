@@ -97,7 +97,6 @@ def main():
     _destination_fps = 25
 
     # NB- Vimba camera capture calls need to exist in a Vimba context.
-    # TODO - put this on a thread..
     with camera.vimba_instance():
         with camera.vimba_camera() as vimba_device:
             if destination:
