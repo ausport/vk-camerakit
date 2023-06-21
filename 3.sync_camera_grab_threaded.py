@@ -31,6 +31,8 @@ def main():
     # Interpret tilde in the destination path, if provided
     if destination:
         destination = expand_tilde(destination)
+        if not os.path.exists(destination):
+            os.mkdir(destination)
 
     # Print the parsed arguments
     print(f'Camera ID: {camera_id}')
@@ -38,9 +40,6 @@ def main():
     print(f'Limit: {limit}')
     print(f'Destination: {destination}')
     print(f'Flip: {flip}')
-
-    if not os.path.exists(destination):
-        os.mkdir(destination)
 
     # Find camera id if selected, otherwise enumerate and user-choice.
     vimba_cameras = []
@@ -83,7 +82,7 @@ def main():
                 else:
                     break
 
-    camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id(), capture_path=CAPTURE_PATH)
+    camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id())
 
     if flip:
         camera.set_image_rotation(cameras.VK_ROTATE_180)
