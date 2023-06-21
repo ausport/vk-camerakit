@@ -2,6 +2,7 @@
 import time
 import os
 import threading
+import numpy as np
 
 import cv2
 from vmbpy import *
@@ -17,7 +18,7 @@ class VKCameraVimbaDevice(VKCamera):
     See examples: https://github.com/alliedvision/VmbPy
     """
 
-    def __init__(self, device_id, verbose_mode=False, surface_name=None, capture_path=None):
+    def __init__(self, device_id, verbose_mode=False, surface_name=None):
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         print("Initialising Allied Vision device at {0}".format(device_id))
@@ -107,7 +108,7 @@ class VKCameraVimbaDevice(VKCamera):
 
     def get_frame(self):
         """
-        Returns a frame from the Vimba device.
+        Returns a frame in opencv-compatible format from the Vimba device.
         NB - get_frame() should be called from within a valid instance.  i.e.:
 
             with camera.vimba_instance():
@@ -118,7 +119,14 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             Vimba frame
         """
-        return self.video_object.get_frame()
+        frame = self.video_object.get_frame()
+        converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+        opencv_image = converted_frame.as_opencv_image()
+
+        if self.image_rotation:
+            opencv_image = cv2.rotate(opencv_image, self.image_rotation)
+
+        return opencv_image
 
     def generate_frames(self, vimba_device, w, h, fps, path=None, limit=None, show_frames=False):
         FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
