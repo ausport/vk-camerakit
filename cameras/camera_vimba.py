@@ -123,7 +123,7 @@ class VKCameraVimbaDevice(VKCamera):
         converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
         opencv_image = converted_frame.as_opencv_image()
 
-        if self.image_rotation:
+        if self.image_rotation >= 0:
             opencv_image = cv2.rotate(opencv_image, self.image_rotation)
 
         return opencv_image
