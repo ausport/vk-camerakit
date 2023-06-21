@@ -37,12 +37,7 @@ class VKCameraVimbaDevice(VKCamera):
                                              })
                 setup_pixel_format(cam)
 
-                _video_writer = None
-                if True:
-                    FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                    _video_writer = cv2.VideoWriter(f"{os.path.expanduser('~/Desktop')}/capture_{device_id}.mp4", FOURCC, 25, (1456, 1088), True)
-
-                self.async_handler = VimbaASynchronousHandler(camera=self, writer=_video_writer)
+                self.async_handler = VimbaASynchronousHandler(camera=self, writer=None)
 
             print(self)
 
@@ -161,18 +156,15 @@ class VKCameraVimbaDevice(VKCamera):
                     loop_counter = 0
                     start_time = time.time()
 
-    def start_streaming(self):
+    def start_streaming(self, vimba_device, w, h, fps, path=None, limit=None, show_frames=False):
         print(f"Spinning up streaming on device: {self.device_id}")
-        with VmbSystem.get_instance():
-            with get_camera(self.device_id) as cam:
-                print("Connected...")
-                try:
-                    # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
-                    cam.start_streaming(handler=self.async_handler, buffer_count=10)
-                    self.async_handler.shutdown_event.wait()
+        try:
+            # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
+            vimba_device.start_streaming(handler=self.async_handler, buffer_count=10)
+            self.async_handler.shutdown_event.wait()
 
-                finally:
-                    cam.stop_streaming()
+        finally:
+            vimba_device.stop_streaming()
 
     def is_available(self):
         """Returns the current status of an imaging device.
