@@ -87,25 +87,28 @@ def main():
                 else:
                     break
 
-    camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id())
+    device_id = vimba_cameras[int(choice)].get_id()
 
-    if flip:
-        camera.set_image_rotation(cameras.VK_ROTATE_180)
+    camera = cameras.VKCameraVimbaDevice(device_id=device_id)
 
-    _destination_width = 1456
-    _destination_height = 1088
-    _destination_fps = 25
+    if destination is not None:
+        destination = os.path.join(destination, f"capture_{device_id}.mp4")
 
     # NB- Vimba camera capture calls need to exist in a Vimba context.
     with camera.vimba_instance():
         with camera.vimba_camera() as vimba_device:
-            if destination:
-                FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                _video_writer = cv2.VideoWriter(f"{destination}/capture_{vimba_device.get_id()}.mp4",
-                                                FOURCC,
-                                                _destination_fps,
-                                                (_destination_width, _destination_height),
-                                                True)
+
+            camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
+                                                   "CAP_PROP_FRAME_HEIGHT": 1088,
+                                                   "CAP_PROP_FPS": 25,
+                                                   })
+
+            if flip:
+                camera.set_capture_parameters(configs={"CAP_PROP_ROTATION": cameras.VK_ROTATE_180})
+
+            _video_writer = None
+            if destination is not None:
+                _video_writer = camera.instantiate_writer_with_path(path=destination)
 
             start_time = time.time()
             loop_counter = 0
@@ -115,7 +118,7 @@ def main():
                 loop_counter += 1
                 opencv_image = camera.get_frame()
 
-                if destination:
+                if _video_writer:
                     # NB: The converted frame is a Vimba frame object, not a cv-compliant numpy array
                     # Convert to ndarray to write to file.
                     _video_writer.write(np.asarray(opencv_image))
