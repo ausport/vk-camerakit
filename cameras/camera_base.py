@@ -300,8 +300,10 @@ class VKCamera:
         Returns:
             (cv2.VideoWriter): an initialised video writer object.
         """
+        assert os.path.exists(os.path.dirname(path)), "Can't instantiate a video writer to a non-existent path."
+
         FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-        return cv2.VideoWriter(path, FOURCC, self.fps(), (self.width(), self.width()), True)
+        return cv2.VideoWriter(path, FOURCC, self.fps(), (self.width(), self.height()), True)
 
 
     def file_type(self):
