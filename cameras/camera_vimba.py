@@ -132,7 +132,7 @@ class VKCameraVimbaDevice(VKCamera):
         ENTER_KEY_CODE = 13
 
         while True:
-            for frame in vimba_device.get_frame_generator(limit=limit, timeout_ms=1000):
+            for frame in vimba_device.get_frame_generator(limit=limit, timeout_ms=2000):
                 loop_counter += 1
                 converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
                 _video_writer.write(converted_frame.as_numpy_ndarray())
@@ -156,7 +156,7 @@ class VKCameraVimbaDevice(VKCamera):
                     loop_counter = 0
                     start_time = time.time()
 
-    def start_streaming(self, vimba_device, w, h, fps, path=None, limit=None, show_frames=False):
+    def start_streaming(self, vimba_device, path=None, limit=None, show_frames=False):
         print(f"Spinning up streaming on device: {self.device_id}")
         try:
             # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
@@ -230,6 +230,9 @@ class VKCameraVimbaDevice(VKCamera):
                 set_nearest_value(self.video_object, 'AcquisitionFrameRateAbs', int(configs["CAP_PROP_FPS"]))
             except (AttributeError, VmbFeatureError):
                 pass
+
+        if "CAP_PROP_ROTATION" in configs:
+            self.set_image_rotation(int(configs["CAP_PROP_ROTATION"]))
 
         return result
 

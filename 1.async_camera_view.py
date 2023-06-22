@@ -40,9 +40,15 @@ elif len(vimba_cameras) == 0:
     exit(1)
 
 camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id())
-camera.set_image_rotation(cameras.VK_ROTATE_180)
 
 # NB- Vimba camera capture calls need to exist in a Vimba context.
 with camera.vimba_instance():
     with camera.vimba_camera() as cam:
-        camera.start_streaming(vimba_device=cam, w=1456, h=1088, fps=25)
+
+        camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1480,
+                                               "CAP_PROP_FRAME_HEIGHT": 1088,
+                                               "CAP_PROP_FPS": 25,
+                                               "CAP_PROP_ROTATION": cameras.VK_ROTATE_180,
+                                               })
+
+        camera.start_streaming(vimba_device=cam)
