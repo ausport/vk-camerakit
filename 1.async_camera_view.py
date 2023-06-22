@@ -1,54 +1,110 @@
 import cameras
 import os
 
-# Check for Vimba cameras
-vimba_cameras = cameras.enumerate_vimba_devices()
-choice = 0
-CAPTURE_PATH = "./capture"
+import argparse
+import os.path
 
-if not os.path.exists(CAPTURE_PATH):
-    os.mkdir(CAPTURE_PATH)
 
-if len(vimba_cameras) > 1:
-    available_devices = []
+def parse_args():
+    parser = argparse.ArgumentParser(description='Command-line argument parser')
+    parser.add_argument('-v', '--view', action='store_true', help='Enable viewing')
+    parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
+    parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
+    parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
+    parser.add_argument('-d', '--destination', default=None, help='Destination path (optional)')
+    return parser.parse_args()
 
-    for camera in vimba_cameras:
-        # Add vimba camera object to VKCamera wrapper.
-        camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
-        print("Vimba-Compatible Camera Found:", camera.__class__)
 
-        if camera_model.is_available():
-            available_devices.append(camera.get_id())
+def expand_tilde(path):
+    return os.path.expanduser(path)
 
-    print("Select an option:")
-    for i, option in enumerate(available_devices):
-        print(f"{i}. {option}")
 
-    while True:
-        choice = input("Enter your choice (0-{0}): ".format(len(available_devices)-1))
+def main():
+    args = parse_args()
+    camera_id = args.camera_id
+    enable_view = args.view
+    limit = args.limit
+    destination = args.destination
+    flip = args.flip
 
-        if choice == "":
-            choice = 0
-            break
+    # Interpret tilde in the destination path, if provided
+    if destination:
+        destination = expand_tilde(destination)
+        if not os.path.exists(destination):
+            os.mkdir(destination)
 
-        if not choice.isdigit() or int(choice) < 0 or int(choice) > len(available_devices):
-            print("Invalid choice. Please try again.")
+    # Print the parsed arguments
+    print(f'Camera ID: {camera_id}')
+    print(f'View enabled: {enable_view}')
+    print(f'Limit: {limit}')
+    print(f'Destination: {destination}')
+    print(f'Flip: {flip}')
+
+    # Find camera id if selected, otherwise enumerate and user-choice.
+    vimba_cameras = []
+    choice = 0
+
+    if camera_id is not None:
+        vimba_cameras.append(cameras.get_camera(camera_id))
+
+    else:
+        # Check for all Vimba cameras
+        available_device_ids = []
+        vimba_cameras = cameras.enumerate_vimba_devices()
+
+        if len(vimba_cameras) == 0:
+            print("No Vimba-compatible devices were found.")
+            exit(1)
+
         else:
-            break
+            for camera in vimba_cameras:
+                # Add vimba camera object to VKCamera wrapper.
+                camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
+                print("Vimba-Compatible Camera Found:", camera.__class__)
 
-elif len(vimba_cameras) == 0:
-    exit(1)
+                if camera_model.is_available():
+                    available_device_ids.append(camera.get_id())
 
-camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id())
+            print("Select an option:")
+            for i, option in enumerate(available_device_ids):
+                print(f"{i}. {option}")
 
-# NB- Vimba camera capture calls need to exist in a Vimba context.
-with camera.vimba_instance():
-    with camera.vimba_camera() as cam:
+            while True:
+                choice = input("Enter your choice (0-{0}): ".format(len(available_device_ids)-1))
 
-        camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1480,
-                                               "CAP_PROP_FRAME_HEIGHT": 1088,
-                                               "CAP_PROP_FPS": 25,
-                                               "CAP_PROP_ROTATION": cameras.VK_ROTATE_180,
-                                               })
+                if choice == "":
+                    choice = 0
+                    break
 
-        camera.start_streaming(vimba_device=cam)
+                if not choice.isdigit() or int(choice) < 0 or int(choice) > len(available_device_ids):
+                    print("Invalid choice. Please try again.")
+                else:
+                    break
+
+    device_id = vimba_cameras[int(choice)].get_id()
+
+    camera = cameras.VKCameraVimbaDevice(device_id=device_id)
+
+    if destination is not None:
+        destination = os.path.join(destination, f"capture_{device_id}.mp4")
+
+    # NB- Vimba camera capture calls need to exist in a Vimba context.
+    with camera.vimba_instance():
+        with camera.vimba_camera() as cam:
+
+            camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
+                                                   "CAP_PROP_FRAME_HEIGHT": 1088,
+                                                   "CAP_PROP_FPS": 25,
+                                                   })
+
+            if flip:
+                camera.set_capture_parameters(configs={"CAP_PROP_ROTATION": cameras.VK_ROTATE_180})
+
+            camera.start_streaming(vimba_context=cam,
+                                   path=destination,
+                                   limit=limit,
+                                   show_frames=enable_view)
+
+
+if __name__ == '__main__':
+    main()
