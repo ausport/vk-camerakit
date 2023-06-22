@@ -123,19 +123,28 @@ class VKCameraVimbaDevice(VKCamera):
 
         return opencv_image
 
-    def generate_frames(self, vimba_device, w, h, fps, path=None, limit=None, show_frames=False):
-        FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-        _video_writer = cv2.VideoWriter(f"{path}/capture_{vimba_device.get_id()}.mp4", FOURCC, fps, (w, h), True)
+    def generate_frames(self, vimba_context, path=None, limit=None, show_frames=False):
+
+        _video_writer = None
+        if path is not None:
+            _video_writer = self.instantiate_writer_with_path(path=path)
 
         start_time = time.time()
         loop_counter = 0
         ENTER_KEY_CODE = 13
 
         while True:
-            for frame in vimba_device.get_frame_generator(limit=limit, timeout_ms=2000):
+            for frame in vimba_context.get_frame_generator(limit=limit, timeout_ms=2000):
                 loop_counter += 1
+
                 converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-                _video_writer.write(converted_frame.as_numpy_ndarray())
+                opencv_image = converted_frame.as_opencv_image()
+
+                if self.image_rotation is not cameras.VK_ROTATE_NONE:
+                    opencv_image = cv2.rotate(opencv_image, self.image_rotation)
+
+                if _video_writer:
+                    _video_writer.write(np.asarray(opencv_image))
 
                 if show_frames:
                     key = cv2.waitKey(1)
@@ -144,17 +153,14 @@ class VKCameraVimbaDevice(VKCamera):
                         return
 
                     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                    display = converted_frame.as_opencv_image()
-                    if self.image_rotation is not cameras.VK_ROTATE_NONE:
-                        display = cv2.rotate(display, self.image_rotation)
-
-                    cv2.imshow(msg.format(vimba_device.get_name()), display)
+                    cv2.imshow(msg.format(vimba_context.get_name()), opencv_image)
 
                 # Check if one second has passed
                 if time.time() - start_time >= 1:
                     print("Frames per second in the last one-second interval: {}".format(loop_counter))
                     loop_counter = 0
                     start_time = time.time()
+
 
     def start_streaming(self, vimba_device, path=None, limit=None, show_frames=False):
         print(f"Spinning up streaming on device: {self.device_id}")
