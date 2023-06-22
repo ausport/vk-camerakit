@@ -4,7 +4,6 @@ import os
 import argparse
 import os.path
 
-CAPTURE_PATH = "./capture"
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Command-line argument parser')
@@ -12,7 +11,7 @@ def parse_args():
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
     parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
-    parser.add_argument('-d', '--destination', default=CAPTURE_PATH, help='Destination path (optional)')
+    parser.add_argument('-d', '--destination', default=None, help='Destination path (optional)')
     return parser.parse_args()
 
 
@@ -82,24 +81,29 @@ def main():
                 else:
                     break
 
-    camera = cameras.VKCameraVimbaDevice(device_id=vimba_cameras[int(choice)].get_id())
+    device_id = vimba_cameras[int(choice)].get_id()
 
-    if flip:
-        camera.set_image_rotation(cameras.VK_ROTATE_180)
+    camera = cameras.VKCameraVimbaDevice(device_id=device_id)
 
-    _destination_width = 1456
-    _destination_height = 1088
-    _destination_fps = 25
+    if destination is not None:
+        destination = os.path.join(destination, f"capture_{device_id}.mp4")
 
     # NB- Vimba camera capture calls need to exist in a Vimba context.
     with camera.vimba_instance():
         with camera.vimba_camera() as cam:
 
-            camera.generate_frames(vimba_device=cam,
-                                   w=_destination_width, h=_destination_height,
+            camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
+                                                   "CAP_PROP_FRAME_HEIGHT": 1088,
+                                                   "CAP_PROP_FPS": 25,
+                                                   })
+
+            if flip:
+                camera.set_capture_parameters(configs={"CAP_PROP_ROTATION": cameras.VK_ROTATE_180})
+
+            camera.generate_frames(vimba_context=cam,
                                    path=destination,
-                                   fps=_destination_fps, limit=limit,
-                                   show_frames=True)
+                                   limit=limit,
+                                   show_frames=enable_view)
 
 
 if __name__ == '__main__':
