@@ -162,15 +162,15 @@ class VKCameraVimbaDevice(VKCamera):
                     start_time = time.time()
 
 
-    def start_streaming(self, vimba_device, path=None, limit=None, show_frames=False):
+    def start_streaming(self, vimba_context, path=None, limit=None, show_frames=False):
         print(f"Spinning up streaming on device: {self.device_id}")
         try:
             # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
-            vimba_device.start_streaming(handler=self.async_handler, buffer_count=10)
+            vimba_context.start_streaming(handler=self.async_handler, buffer_count=10)
             self.async_handler.shutdown_event.wait()
 
         finally:
-            vimba_device.stop_streaming()
+            vimba_context.stop_streaming()
 
     def is_available(self):
         """Returns the current status of an imaging device.
