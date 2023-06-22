@@ -291,6 +291,19 @@ class VKCamera:
 
         return self.camera_2d_image_space_location
 
+
+    def instantiate_writer_with_path(self, path):
+        """Initialise an OpenCV file writer at the specified path.
+
+        Args:
+            path (str): destination for saved video.
+        Returns:
+            (cv2.VideoWriter): an initialised video writer object.
+        """
+        FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+        return cv2.VideoWriter(path, FOURCC, self.fps(), (self.width(), self.width()), True)
+
+
     def file_type(self):
         """Probe file type instance searching by MIME type or file extension.
 
