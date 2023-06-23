@@ -1,6 +1,5 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
 import time
-import os
 import threading
 import numpy as np
 
@@ -37,7 +36,7 @@ class VKCameraVimbaDevice(VKCamera):
                                              })
                 setup_pixel_format(cam)
 
-                self.async_handler = VimbaASynchronousHandler(camera=self, writer=None)
+                self.async_handler = VimbaASynchronousHandler(camera=self)
 
             print(self)
 
@@ -164,6 +163,13 @@ class VKCameraVimbaDevice(VKCamera):
 
     def start_streaming(self, vimba_context, path=None, limit=None, show_frames=False):
         print(f"Spinning up streaming on device: {self.device_id}")
+
+        # Set updated handler properties
+        if path:
+            self.async_handler.writer = self.instantiate_writer_with_path(path=path)
+
+        self.async_handler.show_frames = show_frames
+
         try:
             # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
             vimba_context.start_streaming(handler=self.async_handler, buffer_count=10)
@@ -171,6 +177,8 @@ class VKCameraVimbaDevice(VKCamera):
 
         finally:
             vimba_context.stop_streaming()
+
+
 
     def is_available(self):
         """Returns the current status of an imaging device.
