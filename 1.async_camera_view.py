@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
     parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
+    parser.add_argument('-r', '--fps', type=int, default=25, help='Frame Rate (optional)')
     parser.add_argument('-d', '--destination', default=None, help='Destination path (optional)')
     return parser.parse_args()
 
@@ -26,6 +27,7 @@ def main():
     limit = args.limit
     destination = args.destination
     flip = args.flip
+    fps = args.fps
 
     # Interpret tilde in the destination path, if provided
     if destination:
@@ -39,6 +41,7 @@ def main():
     print(f'Limit: {limit}')
     print(f'Destination: {destination}')
     print(f'Flip: {flip}')
+    print(f'FPS: {fps}')
 
     # Find camera id if selected, otherwise enumerate and user-choice.
     vimba_cameras = []
@@ -94,7 +97,7 @@ def main():
 
             camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
                                                    "CAP_PROP_FRAME_HEIGHT": 1088,
-                                                   "CAP_PROP_FPS": 25,
+                                                   "CAP_PROP_FPS": fps,
                                                    })
 
             if flip:
