@@ -233,6 +233,8 @@ class VKCameraVimbaDevice(VKCamera):
 
         if "CAP_PROP_FPS" in configs:
             try:
+                # self.video_object.TriggerSource.set('FreeRun')
+                self.video_object.TriggerSource.set('FixedRate')
                 set_nearest_value(self.video_object, 'AcquisitionFrameRateAbs', int(configs["CAP_PROP_FPS"]))
             except (AttributeError, VmbFeatureError):
                 pass
