@@ -103,10 +103,11 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
 
 
 class VimbaASynchronousHandler:
-    def __init__(self, camera: VKCamera, writer: cv2.VideoWriter):
+    def __init__(self, camera: VKCamera):
         # TODO - serialise the handler config into a dict?
         self.shutdown_event = threading.Event()
-        self.writer = writer
+        self.writer = None
+        self.show_frames = False
         self.parent_camera = camera
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
@@ -127,12 +128,13 @@ class VimbaASynchronousHandler:
                 # safely while `display` is used
                 display = frame.convert_pixel_format(opencv_display_format)
 
-            msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-            if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                _display = cv2.rotate(display.as_opencv_image(), self.parent_camera.image_rotation)
-                cv2.imshow(msg.format(cam.get_name()), _display)
-            else:
-                cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
+            if self.show_frames:
+                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                    _display = cv2.rotate(display.as_opencv_image(), self.parent_camera.image_rotation)
+                    cv2.imshow(msg.format(cam.get_name()), _display)
+                else:
+                    cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
 
             if self.writer is not None:
                 self.writer.write(display.as_numpy_ndarray())
