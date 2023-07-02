@@ -1,5 +1,6 @@
 import cameras
 import os
+from datetime import datetime
 
 import argparse
 import os.path
@@ -86,7 +87,9 @@ def main():
     camera = cameras.VKCameraVimbaDevice(device_id=device_id)
 
     if destination is not None:
-        destination = os.path.join(destination, f"capture_{device_id}.mp4")
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime("%y%m%d%H%M%S")
+        destination = os.path.join(destination, f"capture_{device_id}_{formatted_datetime}.mp4")
 
     # NB- Vimba camera capture calls need to exist in a Vimba context.
     with camera.vimba_instance():

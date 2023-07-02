@@ -1,5 +1,6 @@
 import cameras
 import os
+from datetime import datetime
 
 import argparse
 import os.path
@@ -12,7 +13,7 @@ def parse_args():
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
     parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
     parser.add_argument('-r', '--fps', type=int, default=25, help='Frame Rate (optional)')
-    parser.add_argument('-d', '--destination', default=None, help='Destination path (optional)')
+    parser.add_argument('-d', '--destination', default=None, help='Destination Directory (optional)')
     return parser.parse_args()
 
 
@@ -89,7 +90,9 @@ def main():
     camera = cameras.VKCameraVimbaDevice(device_id=device_id)
 
     if destination is not None:
-        destination = os.path.join(destination, f"capture_{device_id}.mp4")
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime("%y%m%d%H%M%S")
+        destination = os.path.join(destination, f"capture_{device_id}_{formatted_datetime}.mp4")
 
     # NB- Vimba camera capture calls need to exist in a Vimba context.
     with camera.vimba_instance():
