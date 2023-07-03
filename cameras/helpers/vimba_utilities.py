@@ -126,7 +126,7 @@ class VimbaASynchronousHandler:
             opencv_image = converted_frame.as_opencv_image()
 
             if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                opencv_image = cv2.rotate(opencv_image, self.image_rotation)
+                opencv_image = cv2.rotate(opencv_image, self.parent_camera.image_rotation)
 
             if self.writer:
                 self.writer.write(np.asarray(opencv_image))
