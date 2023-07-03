@@ -1,6 +1,7 @@
 from vmbpy import *
 from typing import Optional
 import cv2
+import numpy as np
 import threading
 
 import cameras
@@ -121,22 +122,22 @@ class VimbaASynchronousHandler:
         elif frame.get_status() == FrameStatus.Complete:
             print('{} acquired {}'.format(cam, frame), flush=True)
             # Convert frame if it is not already the correct format
-            if frame.get_pixel_format() == opencv_display_format:
-                display = frame
-            else:
-                # This creates a copy of the frame. The original `frame` object can be requeued
-                # safely while `display` is used
-                display = frame.convert_pixel_format(opencv_display_format)
+            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+            opencv_image = converted_frame.as_opencv_image()
+
+            if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                opencv_image = cv2.rotate(opencv_image, self.image_rotation)
+
+            if self.writer:
+                self.writer.write(np.asarray(opencv_image))
 
             if self.show_frames:
-                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                    _display = cv2.rotate(display.as_opencv_image(), self.parent_camera.image_rotation)
-                    cv2.imshow(msg.format(cam.get_name()), _display)
-                else:
-                    cv2.imshow(msg.format(cam.get_name()), display.as_opencv_image())
+                key = cv2.waitKey(1)
+                if key == ENTER_KEY_CODE:
+                    self.shutdown_event.set()
+                    return
 
-            if self.writer is not None:
-                self.writer.write(display.as_numpy_ndarray())
+                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                cv2.imshow(msg.format(cam.get_id()), opencv_image)
 
         cam.queue_frame(frame)
