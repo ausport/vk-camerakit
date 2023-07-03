@@ -160,7 +160,6 @@ class VKCameraVimbaDevice(VKCamera):
                     loop_counter = 0
                     start_time = time.time()
 
-
     def start_streaming(self, vimba_context, path=None, limit=None, show_frames=False):
         print(f"Spinning up streaming on device: {self.device_id}")
 
@@ -177,8 +176,6 @@ class VKCameraVimbaDevice(VKCamera):
 
         finally:
             vimba_context.stop_streaming()
-
-
 
     def is_available(self):
         """Returns the current status of an imaging device.
