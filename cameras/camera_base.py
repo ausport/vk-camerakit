@@ -432,6 +432,11 @@ class VKCamera:
         # Camera-specific parameters
         if hasattr(self, "filepath"):
             _camera_parameters.update({'image_path': self.filepath})
+
+        # Device ID (Vimba devices)
+        if hasattr(self, "device_id"):
+            _camera_parameters.update({'device_id': self.device_id})
+
         if hasattr(self, "surface_model"):
             if self.surface_model is not None:
                 _camera_parameters.update({'surface_model': self.surface_model.surface_model_name()})
