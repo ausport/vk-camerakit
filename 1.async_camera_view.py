@@ -12,8 +12,9 @@ def parse_args():
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
     parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
-    parser.add_argument('-r', '--fps', type=int, default=25, help='Frame Rate (optional)')
-    parser.add_argument('-d', '--destination', default=None, help='Destination Directory (optional)')
+    parser.add_argument('-r', '--fps', type=int, default=25, help='Frame rate (optional)')
+    parser.add_argument('-d', '--destination', default=None, help='Destination directory (optional)')
+    parser.add_argument('-g', '--config', default=None, help='Camera configuration file (optional)')
     return parser.parse_args()
 
 
@@ -29,6 +30,7 @@ def main():
     destination = args.destination
     flip = args.flip
     fps = args.fps
+    config = args.config
 
     # Interpret tilde in the destination path, if provided
     if destination:
@@ -43,51 +45,59 @@ def main():
     print(f'Destination: {destination}')
     print(f'Flip: {flip}')
     print(f'FPS: {fps}')
+    print(f'Config: {config}')
 
     # Find camera id if selected, otherwise enumerate and user-choice.
     vimba_cameras = []
     choice = 0
 
-    if camera_id is not None:
-        vimba_cameras.append(cameras.get_camera(camera_id))
-
+    if config is not None:
+        # Load camera by config file (Ignore camera id).
+        camera = cameras.load_camera_model(path=config)
+        device_id = camera.device_id
     else:
-        # Check for all Vimba cameras
-        available_device_ids = []
-        vimba_cameras = cameras.enumerate_vimba_devices()
 
-        if len(vimba_cameras) == 0:
-            print("No Vimba-compatible devices were found.")
-            exit(1)
+        if camera_id is not None:
+            vimba_cameras.append(cameras.get_camera(camera_id))
 
         else:
-            for camera in vimba_cameras:
-                # Add vimba camera object to VKCamera wrapper.
-                camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
-                print("Vimba-Compatible Camera Found:", camera.__class__)
+            # Check for all Vimba cameras
+            available_device_ids = []
+            vimba_cameras = cameras.enumerate_vimba_devices()
 
-                if camera_model.is_available():
-                    available_device_ids.append(camera.get_id())
+            if len(vimba_cameras) == 0:
+                print("No Vimba-compatible devices were found.")
+                exit(1)
 
-            print("Select an option:")
-            for i, option in enumerate(available_device_ids):
-                print(f"{i}. {option}")
+            else:
+                for camera in vimba_cameras:
+                    # Add vimba camera object to VKCamera wrapper.
+                    camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
+                    print("Vimba-Compatible Camera Found:", camera.__class__)
 
-            while True:
-                choice = input("Enter your choice (0-{0}): ".format(len(available_device_ids)-1))
+                    if camera_model.is_available():
+                        available_device_ids.append(camera.get_id())
 
-                if choice == "":
-                    choice = 0
-                    break
+                print("Select an option:")
+                for i, option in enumerate(available_device_ids):
+                    print(f"{i}. {option}")
 
-                if not choice.isdigit() or int(choice) < 0 or int(choice) > len(available_device_ids):
-                    print("Invalid choice. Please try again.")
-                else:
-                    break
+                while True:
+                    choice = input("Enter your choice (0-{0}): ".format(len(available_device_ids)-1))
 
-    device_id = vimba_cameras[int(choice)].get_id()
+                    if choice == "":
+                        choice = 0
+                        break
 
-    camera = cameras.VKCameraVimbaDevice(device_id=device_id)
+                    if not choice.isdigit() or int(choice) < 0 or int(choice) > len(available_device_ids):
+                        print("Invalid choice. Please try again.")
+                    else:
+                        break
+
+        device_id = vimba_cameras[int(choice)].get_id()
+
+        # Initialise specified device
+        camera = cameras.VKCameraVimbaDevice(device_id=device_id)
 
     if destination is not None:
         current_datetime = datetime.now()
