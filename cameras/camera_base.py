@@ -163,7 +163,11 @@ class VKCamera:
         Returns:
             (array): Distortion-corrected image.
         """
-        image = image or self.get_frame()
+        if image is None:
+            image = self.get_frame()
+
+        self.update_camera_properties()
+
         return cv2.undistort(image, self.camera_matrix, self.distortion_matrix, None, None)
 
     def update_camera_properties(self, with_distortion_matrix=None, with_camera_matrix=None):

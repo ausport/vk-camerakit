@@ -125,6 +125,9 @@ class VimbaASynchronousHandler:
             converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
             opencv_image = converted_frame.as_opencv_image()
 
+            # Undistort
+            opencv_image = self.parent_camera.undistorted_image(opencv_image)
+
             if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
                 opencv_image = cv2.rotate(opencv_image, self.parent_camera.image_rotation)
 
