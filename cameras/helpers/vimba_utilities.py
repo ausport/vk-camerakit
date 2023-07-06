@@ -3,6 +3,7 @@ from typing import Optional
 import cv2
 import numpy as np
 import threading
+import time
 
 import cameras
 from cameras import VKCamera
@@ -105,11 +106,11 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
 
 class VimbaASynchronousHandler:
     def __init__(self, camera: VKCamera):
-        # TODO - serialise the handler config into a dict?
         self.shutdown_event = threading.Event()
         self.writer = None
         self.show_frames = False
         self.parent_camera = camera
+        self.start_time = time.time()
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -120,7 +121,6 @@ class VimbaASynchronousHandler:
             return
 
         elif frame.get_status() == FrameStatus.Complete:
-            print('{} acquired {}'.format(cam, frame), flush=True)
             # Convert frame if it is not already the correct format
             converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
             opencv_image = converted_frame.as_opencv_image()
@@ -144,3 +144,10 @@ class VimbaASynchronousHandler:
                 cv2.imshow(msg.format(cam.get_id()), opencv_image)
 
         cam.queue_frame(frame)
+
+        elapsed_time = time.time() - self.start_time
+        milliseconds = elapsed_time * 1000
+        operations_per_second = 1 / elapsed_time
+
+        print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second), flush=True)
+        self.start_time = time.time()
