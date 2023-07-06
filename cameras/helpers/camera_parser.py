@@ -37,6 +37,10 @@ def parse_camera_model_with_dict(data):
         assert "image_path" in data, "Camera file doesn't include an image path..."
         camera_model = cameras.VKCameraVideoFile(filepath=data["image_path"], surface_name=_surface_model_name)
 
+    elif _vk_camera_class == "VKCameraVimbaDevice":
+        assert "device_id" in data, "Camera file doesn't include an image path..."
+        camera_model = cameras.VKCameraVimbaDevice(device_id=data["device_id"], surface_name=_surface_model_name)
+
     elif _vk_camera_class == "VKCameraBlackMagicRAW":
         assert "image_path" in data, "Camera file doesn't include an image path..."
         camera_model = cameras.VKCameraBlackMagicRAW(filepath=data["image_path"], surface_name=_surface_model_name)
