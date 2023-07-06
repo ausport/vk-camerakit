@@ -38,6 +38,7 @@ class VKCameraVimbaDevice(VKCamera):
 
                 self.async_handler = VimbaASynchronousHandler(camera=self)
 
+                self.update_camera_properties()
             print(self)
 
     def vimba_instance(self):
