@@ -137,7 +137,7 @@ class CameraControllerWidget(QWidget):
         else:
             print(self._current_active_device)
 
-        # self.refresh_widget_with_camera_properties()
+        self._parent.update_current_camera_device(camera=self._current_active_device)
 
     # def apply_parameters(self):
     #     """Applies current capture parameters to the capture device.
