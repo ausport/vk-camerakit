@@ -304,7 +304,7 @@ class VKCamera:
         """
         assert os.path.exists(os.path.dirname(path)), "Can't instantiate a video writer to a non-existent path."
 
-        FOURCC = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+        FOURCC = cv2.VideoWriter_fourcc(*"MP4V")
         return cv2.VideoWriter(path, FOURCC, self.fps(), (self.width(), self.height()), True)
 
 
