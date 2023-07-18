@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import threading
 import time
+import queue
 
 import cameras
 from cameras import VKCamera
@@ -107,16 +108,25 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
 class VimbaASynchronousHandler:
     def __init__(self, camera: VKCamera):
         self.shutdown_event = threading.Event()
-        self.writer = None
-        self.show_frames = False
-        self.parent_camera = camera
-        self.start_time = time.time()
+        self._writer = None
+        self._show_frames = False
+        self._parent_camera = camera
+        self._start_time = time.time()
+        self._writer_thread = VimbaVideoWriterThread(video_writer=None)
+
+    def set_video_writer(self, video_writer):
+        self._writer = video_writer
+        self._writer_thread = VimbaVideoWriterThread(video_writer=video_writer)
+
+    def set_show_frames(self, show_frames):
+        self._show_frames = show_frames
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
 
         key = cv2.waitKey(1)
         if key == ENTER_KEY_CODE:
+            # self._writer_thread.stop()
             self.shutdown_event.set()
             return
 
@@ -126,15 +136,17 @@ class VimbaASynchronousHandler:
             opencv_image = converted_frame.as_opencv_image()
 
             # Undistort
-            opencv_image = self.parent_camera.undistorted_image(opencv_image)
+            opencv_image = self._parent_camera.undistorted_image(opencv_image)
 
-            if self.parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                opencv_image = cv2.rotate(opencv_image, self.parent_camera.image_rotation)
+            if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
 
-            if self.writer:
-                self.writer.write(np.asarray(opencv_image))
+            # TODO - shift the writing to a background writer thread + tracking/ML??
+            self._writer_thread(frame=opencv_image)
+            # if self._writer:
+            #     self._writer.write(np.asarray(opencv_image))
 
-            if self.show_frames:
+            if self._show_frames:
                 key = cv2.waitKey(1)
                 if key == ENTER_KEY_CODE:
                     self.shutdown_event.set()
@@ -145,9 +157,46 @@ class VimbaASynchronousHandler:
 
         cam.queue_frame(frame)
 
-        elapsed_time = time.time() - self.start_time
+        elapsed_time = time.time() - self._start_time
         milliseconds = elapsed_time * 1000
         operations_per_second = 1 / elapsed_time
 
         print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second), flush=True)
-        self.start_time = time.time()
+        available_cache = self._writer_thread.available_cache
+        print(f"Available cache: {available_cache}")
+
+        self._start_time = time.time()
+
+
+class VimbaVideoWriterThread:
+    def __init__(self, video_writer):
+        self.video_writer = video_writer
+        self.frame_queue = queue.Queue()
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._write_frames)
+        self.thread.start()
+
+    def __call__(self, frame):
+        if not self.stop_event.is_set():
+            print("Putting a frame..")
+            self.frame_queue.put(frame)
+
+    def _write_frames(self):
+        time.sleep(0.001)
+        # while not self.stop_event.is_set() or not self.frame_queue.empty():
+        #     if not self.frame_queue.empty():
+        #         frame = self.frame_queue.get()
+        #         self.video_writer.write(frame)
+        #         print("Writing")
+        #     else:
+        #         # Sleep briefly to avoid excessive CPU usage
+        #         time.sleep(0.001)
+
+    @property
+    def available_cache(self):
+        return self.frame_queue.maxsize - self.frame_queue.qsize()
+
+    def stop(self):
+        self.stop_event.set()
+        self.thread.join()
+        self.video_writer.release()

@@ -166,9 +166,9 @@ class VKCameraVimbaDevice(VKCamera):
 
         # Set updated handler properties
         if path:
-            self.async_handler.writer = self.instantiate_writer_with_path(path=path)
+            self.async_handler.set_video_writer(video_writer=self.instantiate_writer_with_path(path=path))
 
-        self.async_handler.show_frames = show_frames
+        self.async_handler.set_show_frames(show_frames)
 
         try:
             # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
