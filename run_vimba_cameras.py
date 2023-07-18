@@ -401,7 +401,13 @@ class Window(QtWidgets.QWidget):
         return available_devices
 
     def update_current_camera_device(self, camera):
+        # Update the image model
         self.image_model = camera
+
+        # Apply the current flip setting
+        self.flip_view()
+
+        # Update the display
         self.view_current_frame()
 
     def keyPressEvent(self, event):
@@ -453,7 +459,7 @@ class Window(QtWidgets.QWidget):
 
     def view_current_frame(self):
         with self.image_model.vimba_instance():
-            with self.image_model.vimba_camera() as cam:
+            with self.image_model.vimba_camera():
                 self.image_model.update_camera_properties()
                 self.update_displays()
                 app.processEvents()
@@ -590,15 +596,12 @@ class Window(QtWidgets.QWidget):
         self.flip_image_view = self.btnFlipView.isChecked()
 
         if self.image_model:
-            print("OK")
             with self.image_model.vimba_instance():
                 with self.image_model.vimba_camera() as cam:
 
                     if self.flip_image_view:
-                        print("Flipping")
                         self.image_model.set_capture_parameters(configs={"CAP_PROP_ROTATION": cameras.VK_ROTATE_180})
                     else:
-                        print("Not Flipping")
                         self.image_model.set_capture_parameters(configs={"CAP_PROP_ROTATION": cameras.VK_ROTATE_NONE})
                 self.update_displays()
 
@@ -710,7 +713,6 @@ class Window(QtWidgets.QWidget):
             source = self.image_model
 
             # Get the current image from the imaging source.
-
             with source.vimba_instance():
                 with source.vimba_camera():
                     im_src = source.undistorted_image()
