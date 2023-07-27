@@ -1,3 +1,5 @@
+import sys
+
 from vmbpy import *
 from typing import Optional
 import cv2
@@ -124,36 +126,44 @@ class VimbaASynchronousHandler:
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
 
-        key = cv2.waitKey(1)
-        if key == ENTER_KEY_CODE:
-            # self._writer_thread.stop()
+        # key = cv2.waitKey(1)
+        # if key == ENTER_KEY_CODE:
+        #     self._writer_thread.stop()
+        #     self.shutdown_event.set()
+        #     return'
+        if self._writer_thread.available_cache >= 50:
+            self._writer_thread.stop_event.set()
+            self._writer_thread.thread.join()
             self.shutdown_event.set()
-            return
+            sys.exit(1)
 
-        elif frame.get_status() == FrameStatus.Complete:
+        if frame.get_status() == FrameStatus.Complete:
+            print("Got a frame")
+            self._writer_thread(frame=frame)
+
             # Convert frame if it is not already the correct format
-            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-            opencv_image = converted_frame.as_opencv_image()
+            # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+            # opencv_image = converted_frame.as_opencv_image()
 
-            # Undistort
-            opencv_image = self._parent_camera.undistorted_image(opencv_image)
-
-            if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
-
-            # TODO - shift the writing to a background writer thread + tracking/ML??
-            self._writer_thread(frame=opencv_image)
-            # if self._writer:
-            #     self._writer.write(np.asarray(opencv_image))
-
-            if self._show_frames:
-                key = cv2.waitKey(1)
-                if key == ENTER_KEY_CODE:
-                    self.shutdown_event.set()
-                    return
-
-                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                cv2.imshow(msg.format(cam.get_id()), opencv_image)
+            # # Undistort
+            # opencv_image = self._parent_camera.undistorted_image(opencv_image)
+            #
+            # if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+            #     opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
+            #
+            # # TODO - shift the writing to a background writer thread + tracking/ML??
+            # self._writer_thread(frame=opencv_image)
+            # # if self._writer:
+            # #     self._writer.write(np.asarray(opencv_image))
+            #
+            # if self._show_frames:
+            #     key = cv2.waitKey(1)
+            #     if key == ENTER_KEY_CODE:
+            #         self.shutdown_event.set()
+            #         return
+            #
+            #     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+            #     cv2.imshow(msg.format(cam.get_id()), opencv_image)
 
         cam.queue_frame(frame)
 
@@ -161,7 +171,7 @@ class VimbaASynchronousHandler:
         milliseconds = elapsed_time * 1000
         operations_per_second = 1 / elapsed_time
 
-        print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second), flush=True)
+        # print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second), flush=True)
         available_cache = self._writer_thread.available_cache
         print(f"Available cache: {available_cache}")
 
@@ -183,20 +193,29 @@ class VimbaVideoWriterThread:
 
     def _write_frames(self):
         time.sleep(0.001)
-        # while not self.stop_event.is_set() or not self.frame_queue.empty():
-        #     if not self.frame_queue.empty():
-        #         frame = self.frame_queue.get()
-        #         self.video_writer.write(frame)
-        #         print("Writing")
-        #     else:
-        #         # Sleep briefly to avoid excessive CPU usage
-        #         time.sleep(0.001)
+        while not self.stop_event.is_set() or not self.frame_queue.empty():
+            if not self.frame_queue.empty():
+                frame = self.frame_queue.get()
+                # self.video_writer.write(frame)
+                print("Writing")
+                time.sleep(.1)
+            else:
+                # Sleep briefly to avoid excessive CPU usage
+                time.sleep(0.001)
+                # print("Queue is empty")
+
+        print("The threaded handler is done now..")
+        self.stop_event.set()
+
+        # TODO - thread should be joined from parent instance.
+        # self.thread.join()
+
 
     @property
     def available_cache(self):
-        return self.frame_queue.maxsize - self.frame_queue.qsize()
+        return self.frame_queue.qsize()
 
     def stop(self):
         self.stop_event.set()
         self.thread.join()
-        self.video_writer.release()
+        # self.video_writer.release()
