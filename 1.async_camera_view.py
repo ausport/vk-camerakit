@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
     parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
-    parser.add_argument('-r', '--fps', type=int, default=25, help='Frame rate (optional)')
+    parser.add_argument('-r', '--fps', type=int, default=50, help='Frame rate (optional)')
     parser.add_argument('-d', '--destination', default=None, help='Destination directory (optional)')
     parser.add_argument('-g', '--config', default=None, help='Camera configuration file (optional)')
     return parser.parse_args()
