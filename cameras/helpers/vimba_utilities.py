@@ -144,29 +144,25 @@ class VimbaASynchronousHandler:
 
         if frame.get_status() == FrameStatus.Complete:
             # Convert frame if it is not already the correct format
-            # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-            # opencv_image = converted_frame.as_opencv_image()
+            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+            opencv_image = converted_frame.as_opencv_image()
 
             # Undistort
-            # opencv_image = self._parent_camera.undistorted_image(opencv_image)
+            opencv_image = self._parent_camera.undistorted_image(opencv_image)
 
-            # if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-            #     opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
+            if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
 
-            # TODO - shift the writing to a background writer thread + tracking/ML??
             # Get the current UTC time
             current_utc_time = datetime.utcnow()
-
-            # Format the UTC time as per the desired format
             formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-
             print(f"{formatted_utc_time} Got a frame...")
+
             self._writer_thread(frame=frame)
-            #
-            #
-            #
-            # if self._writer:
-            #     self._writer.write(np.asarray(opencv_image))
+
+            print(self._writer)
+            if self._writer:
+                self._writer.write(np.asarray(opencv_image))
 
             if self._show_frames:
                 converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
