@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import threading
 import time
+from datetime import datetime
 import queue
 
 import cameras
@@ -107,6 +108,10 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
             Log.get_instance().info(msg.format(cam.get_id(), feat_name, feat_value, val))
 
 
+def get_utc_timestamp_ms():
+    return int(time.time() * 1000)
+
+
 class VimbaASynchronousHandler:
     def __init__(self, camera: VKCamera):
         self.shutdown_event = threading.Event()
@@ -114,11 +119,15 @@ class VimbaASynchronousHandler:
         self._show_frames = False
         self._parent_camera = camera
         self._start_time = time.time()
+
+        self.last_execution_timestamp = get_utc_timestamp_ms()
+        self.current_timestamp = get_utc_timestamp_ms()
+
         self._writer_thread = VimbaVideoWriterThread(video_writer=None)
 
     def set_video_writer(self, video_writer):
         self._writer = video_writer
-        self._writer_thread = VimbaVideoWriterThread(video_writer=video_writer)
+        self._writer_thread = VimbaVideoWriterThread(video_writer=self._writer)
 
     def set_show_frames(self, show_frames):
         self._show_frames = show_frames
@@ -126,96 +135,109 @@ class VimbaASynchronousHandler:
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
 
-        # key = cv2.waitKey(1)
-        # if key == ENTER_KEY_CODE:
-        #     self._writer_thread.stop()
-        #     self.shutdown_event.set()
-        #     return'
-        if self._writer_thread.available_cache >= 50:
-            self._writer_thread.stop_event.set()
-            self._writer_thread.thread.join()
+        key = cv2.waitKey(1)
+        if key == ENTER_KEY_CODE:
+            print("Stopping out of loop")
+            self._writer_thread.shutdown_event.set()
             self.shutdown_event.set()
-            sys.exit(1)
+            return
 
         if frame.get_status() == FrameStatus.Complete:
-            print("Got a frame")
-            self._writer_thread(frame=frame)
-
             # Convert frame if it is not already the correct format
             # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
             # opencv_image = converted_frame.as_opencv_image()
 
-            # # Undistort
+            # Undistort
             # opencv_image = self._parent_camera.undistorted_image(opencv_image)
-            #
+
             # if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
             #     opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
+
+            # TODO - shift the writing to a background writer thread + tracking/ML??
+            # Get the current UTC time
+            current_utc_time = datetime.utcnow()
+
+            # Format the UTC time as per the desired format
+            formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+            print(f"{formatted_utc_time} Got a frame...")
+            self._writer_thread(frame=frame)
             #
-            # # TODO - shift the writing to a background writer thread + tracking/ML??
-            # self._writer_thread(frame=opencv_image)
-            # # if self._writer:
-            # #     self._writer.write(np.asarray(opencv_image))
             #
-            # if self._show_frames:
-            #     key = cv2.waitKey(1)
-            #     if key == ENTER_KEY_CODE:
-            #         self.shutdown_event.set()
-            #         return
             #
-            #     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-            #     cv2.imshow(msg.format(cam.get_id()), opencv_image)
+            # if self._writer:
+            #     self._writer.write(np.asarray(opencv_image))
+
+            if self._show_frames:
+                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+                opencv_image = converted_frame.as_opencv_image()
+                key = cv2.waitKey(1)
+                if key == ENTER_KEY_CODE:
+                    print("Stopping in loop")
+                    self._writer_thread.shutdown_event.set()
+                    self.shutdown_event.set()
+                    return
+
+                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                cv2.imshow(msg.format(cam.get_id()), opencv_image)
 
         cam.queue_frame(frame)
 
-        elapsed_time = time.time() - self._start_time
-        milliseconds = elapsed_time * 1000
-        operations_per_second = 1 / elapsed_time
+        # elapsed_time = time.time() - self._start_time
+        # milliseconds = elapsed_time * 1000
+        # operations_per_second = 1 / elapsed_time
 
-        # print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second), flush=True)
-        available_cache = self._writer_thread.available_cache
-        print(f"Available cache: {available_cache}")
+        # self.current_timestamp = get_utc_timestamp_ms()
+        # time_difference_ms = self.current_timestamp - self.last_execution_timestamp
 
-        self._start_time = time.time()
+        # print(f"UTC Timestamp: {self.current_timestamp} ms")
+        # print(f"Time since last execution: {time_difference_ms} ms")
+        # print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second)
+
+
+        # print(f"Cache = {available_cache} - Real FPS: {round(1000./time_difference_ms)} fps", flush=True)
+        # self.last_execution_timestamp = self.current_timestamp
+
+        # self._start_time = time.time()
 
 
 class VimbaVideoWriterThread:
     def __init__(self, video_writer):
         self.video_writer = video_writer
         self.frame_queue = queue.Queue()
-        self.stop_event = threading.Event()
+        self.shutdown_event = threading.Event()
         self.thread = threading.Thread(target=self._write_frames)
         self.thread.start()
 
     def __call__(self, frame):
-        if not self.stop_event.is_set():
-            print("Putting a frame..")
+        if not self.shutdown_event.is_set():
             self.frame_queue.put(frame)
 
     def _write_frames(self):
-        time.sleep(0.001)
-        while not self.stop_event.is_set() or not self.frame_queue.empty():
-            if not self.frame_queue.empty():
-                frame = self.frame_queue.get()
-                # self.video_writer.write(frame)
-                print("Writing")
-                time.sleep(.1)
-            else:
-                # Sleep briefly to avoid excessive CPU usage
-                time.sleep(0.001)
-                # print("Queue is empty")
 
-        print("The threaded handler is done now..")
-        self.stop_event.set()
+        while not self.shutdown_event.is_set() or not self.frame_queue.empty():
 
-        # TODO - thread should be joined from parent instance.
-        # self.thread.join()
+            frame = self.frame_queue.get()
+            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+            opencv_image = converted_frame.as_opencv_image()
 
+            if self.video_writer:
+                print("Writing a frame..")
+                self.video_writer.write(np.asarray(opencv_image))
+
+            print(f"Ate a frame - {self.cache_size} frames left.")
+            time.sleep(0.01)
+
+        else:
+            # Sleep briefly to avoid excessive CPU usage
+            time.sleep(0.001)
+
+        print("Exiting frame writer loop...")
 
     @property
-    def available_cache(self):
+    def cache_size(self):
         return self.frame_queue.qsize()
 
     def stop(self):
-        self.stop_event.set()
         self.thread.join()
-        # self.video_writer.release()
+
