@@ -160,13 +160,13 @@ class VimbaASynchronousHandler:
 
             self._writer_thread(frame=frame)
 
-            print(self._writer)
-            if self._writer:
-                self._writer.write(np.asarray(opencv_image))
+            # print(self._writer)
+            # if self._writer:
+            #     self._writer.write(np.asarray(opencv_image))
 
             if self._show_frames:
-                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-                opencv_image = converted_frame.as_opencv_image()
+                # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+                # opencv_image = converted_frame.as_opencv_image()
                 key = cv2.waitKey(1)
                 if key == ENTER_KEY_CODE:
                     print("Stopping in loop")
@@ -178,23 +178,6 @@ class VimbaASynchronousHandler:
                 cv2.imshow(msg.format(cam.get_id()), opencv_image)
 
         cam.queue_frame(frame)
-
-        # elapsed_time = time.time() - self._start_time
-        # milliseconds = elapsed_time * 1000
-        # operations_per_second = 1 / elapsed_time
-
-        # self.current_timestamp = get_utc_timestamp_ms()
-        # time_difference_ms = self.current_timestamp - self.last_execution_timestamp
-
-        # print(f"UTC Timestamp: {self.current_timestamp} ms")
-        # print(f"Time since last execution: {time_difference_ms} ms")
-        # print('{} acquired {} in {} - {} fps'.format(cam, frame, milliseconds, operations_per_second)
-
-
-        # print(f"Cache = {available_cache} - Real FPS: {round(1000./time_difference_ms)} fps", flush=True)
-        # self.last_execution_timestamp = self.current_timestamp
-
-        # self._start_time = time.time()
 
 
 class VimbaVideoWriterThread:
@@ -211,22 +194,33 @@ class VimbaVideoWriterThread:
 
     def _write_frames(self):
 
-        while not self.shutdown_event.is_set() or not self.frame_queue.empty():
+        while not self.shutdown_event.is_set(): #or not self.frame_queue.empty():
 
-            frame = self.frame_queue.get()
-            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-            opencv_image = converted_frame.as_opencv_image()
+            if not self.frame_queue.empty():
+                frame = self.frame_queue.get()
+                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+                opencv_image = converted_frame.as_opencv_image()
 
-            if self.video_writer:
-                print("Writing a frame..")
-                self.video_writer.write(np.asarray(opencv_image))
+                if self.video_writer:
+                    print("Writing a frame..")
+                    self.video_writer.write(np.asarray(opencv_image))
 
-            print(f"Ate a frame - {self.cache_size} frames left.")
-            time.sleep(0.01)
+                print(f"Ate a frame - {self.cache_size} frames left.")
+                time.sleep(0.011)
 
-        else:
-            # Sleep briefly to avoid excessive CPU usage
-            time.sleep(0.001)
+                if self.frame_queue.empty():
+                    print("Wait for a new frame...")
+                    time.sleep(1.5)
+
+            else:
+                # Sleep briefly to avoid excessive CPU usage
+                time.sleep(0.001)
+
+        # try:
+        #     print("Will try to exit")
+        #     self.thread.join(timeout=1)
+        # except:
+        #     raise InterruptedError
 
         print("Exiting frame writer loop...")
 
