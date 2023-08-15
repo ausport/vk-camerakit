@@ -112,7 +112,7 @@ def get_utc_timestamp_ms():
     return int(time.time() * 1000)
 
 
-class VimbaASynchronousHandler:
+class VimbaASynchronousStreamHandler:
     def __init__(self, camera: VKCamera):
         self.shutdown_event = threading.Event()
         self._writer = None
@@ -123,14 +123,20 @@ class VimbaASynchronousHandler:
         self.last_execution_timestamp = get_utc_timestamp_ms()
         self.current_timestamp = get_utc_timestamp_ms()
 
-        self._writer_thread = VimbaVideoWriterThread(video_writer=None)
+        self._writer_thread = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=None)
 
     def set_video_writer(self, video_writer):
         self._writer = video_writer
-        self._writer_thread = VimbaVideoWriterThread(video_writer=self._writer)
+        self._writer_thread = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=self._writer)
 
     def set_show_frames(self, show_frames):
         self._show_frames = show_frames
+
+    def stop(self):
+        # TODO - gracefully join the frame handler
+        # ASynchFrameHandler, ASynchStreamHandler
+        print("Will stop my ASynchFrameHandler thread...")
+        pass
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -156,7 +162,7 @@ class VimbaASynchronousHandler:
             # Get the current UTC time
             current_utc_time = datetime.utcnow()
             formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            print(f"{formatted_utc_time} Got a frame...")
+            print(f"{formatted_utc_time} Got a frame...{self._writer_thread.cache_size} frames are still queued...")
 
             self._writer_thread(frame=frame)
 
@@ -180,8 +186,9 @@ class VimbaASynchronousHandler:
         cam.queue_frame(frame)
 
 
-class VimbaVideoWriterThread:
-    def __init__(self, video_writer):
+class VimbaASynchronousFrameHandler:
+    def __init__(self, parent_async_handler, video_writer):
+        self.parent = parent_async_handler
         self.video_writer = video_writer
         self.frame_queue = queue.Queue()
         self.shutdown_event = threading.Event()
@@ -198,36 +205,29 @@ class VimbaVideoWriterThread:
 
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
-                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-                opencv_image = converted_frame.as_opencv_image()
+                # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+                # opencv_image = converted_frame.as_opencv_image()
 
-                if self.video_writer:
-                    print("Writing a frame..")
-                    self.video_writer.write(np.asarray(opencv_image))
+                # if self.video_writer:
+                #     print("Writing a frame..")
+                #     self.video_writer.write(np.asarray(opencv_image))
 
                 print(f"Ate a frame - {self.cache_size} frames left.")
-                time.sleep(0.011)
+                time.sleep(0.111)
 
                 if self.frame_queue.empty():
                     print("Wait for a new frame...")
-                    time.sleep(1.5)
+                    time.sleep(0.001)
+                    if self.parent.shutdown_event.is_set():
+                        self.shutdown_event.set()
 
             else:
                 # Sleep briefly to avoid excessive CPU usage
                 time.sleep(0.001)
-
-        # try:
-        #     print("Will try to exit")
-        #     self.thread.join(timeout=1)
-        # except:
-        #     raise InterruptedError
 
         print("Exiting frame writer loop...")
 
     @property
     def cache_size(self):
         return self.frame_queue.qsize()
-
-    def stop(self):
-        self.thread.join()
 

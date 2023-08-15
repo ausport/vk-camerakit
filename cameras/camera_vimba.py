@@ -7,7 +7,7 @@ import cv2
 from vmbpy import *
 import cameras
 from cameras import VKCamera
-from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaASynchronousHandler
+from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaASynchronousStreamHandler
 
 FEATURE_MAX = -1
 
@@ -36,7 +36,7 @@ class VKCameraVimbaDevice(VKCamera):
                                              })
                 setup_pixel_format(cam)
 
-                self.async_handler = VimbaASynchronousHandler(camera=self)
+                self.async_handler = VimbaASynchronousStreamHandler(camera=self)
 
                 self.update_camera_properties()
             print(self)
@@ -177,6 +177,21 @@ class VKCameraVimbaDevice(VKCamera):
 
         finally:
             vimba_context.stop_streaming()
+
+    def stop_streaming(self):
+        if self.async_handler.shutdown_event.set() is False:
+            self.async_handler.shutdown_event.set()
+
+            # TODO - safe shutting down of the child thread responsible for handling remaining frames in the cache should be triggered from the shutdown event code.
+            print(f"{self.device_id}: Shutting down the streaming...")
+
+            # TODO - create a async handler function to return whether the frame handler is busy.
+            #  While loop until not busy.
+
+            # TODO - resolve the naming convention - VimbaASynchronousStreamHandler, VimbaASynchronousFrameHandler
+
+            # TODO - fix image to video function.
+
 
     def is_available(self):
         """Returns the current status of an imaging device.

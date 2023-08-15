@@ -1,3 +1,5 @@
+import time
+import threading
 import cameras
 import os
 from datetime import datetime
@@ -116,11 +118,31 @@ def main():
             if flip:
                 camera.set_capture_parameters(configs={"CAP_PROP_ROTATION": cameras.VK_ROTATE_180})
 
-            camera.start_streaming(vimba_context=cam,
-                                   path=destination,
-                                   limit=limit,
-                                   show_frames=enable_view)
+            # camera.start_streaming(vimba_context=cam,
+            #                        path=destination,
+            #                        limit=limit,
+            #                        show_frames=enable_view)
 
+            # Create a thread to run the streaming function
+            streaming_thread = threading.Thread(target=camera.start_streaming,
+                                                args=(cam,
+                                                destination,
+                                                limit,
+                                                enable_view))
+
+            streaming_thread.start()
+
+            n = 0
+            while True:
+                print("Doing something...")
+                time.sleep(1)
+                n += 1
+                if n > 2:
+                    camera.stop_streaming()
+                    streaming_thread.join()
+                    break
+
+            print("Streaming thread has finished.")
 
 if __name__ == '__main__':
     main()
