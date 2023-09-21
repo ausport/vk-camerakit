@@ -102,8 +102,7 @@ class VKCameraVimbaDevice(VKCamera):
         return self.video_object.ExposureTimeAbs.get() / 1e3
 
     def get_frame(self):
-        """
-        Returns a frame in opencv-compatible format from the Vimba device.
+        """Returns a frame in opencv-compatible format from the Vimba device.
         NB - get_frame() should be called from within a valid instance.  i.e.:
 
             with camera.vimba_instance():
@@ -124,7 +123,24 @@ class VKCameraVimbaDevice(VKCamera):
         return opencv_image
 
     def generate_frames(self, vimba_context, path=None, limit=None, show_frames=False):
+        """A synchronous image acquisition routine which will show and write frames
+        streaming from the connected image device.
 
+        The Frame generator acquires a new frame with each execution. Frames may only be used inside
+        their respective loop iteration. If a frame must be used outside the loop iteration, a copy
+        of the frame must be created (e.g. via `copy.deepcopy(frame)`).
+
+        Args:
+            vimba_context:  a valid Vimba camera instance
+            path:           destination for saved video.
+            limit:          the number of images the generator shall acquire (>0). If limit is None,
+                            the generator will produce an unlimited amount of images and must be
+                            stopped by the user supplied code.
+            show_frames:    show frames in a window.
+
+        Returns:
+            None
+        """
         _video_writer = None
         if path is not None:
             _video_writer = self.instantiate_writer_with_path(path=path)
@@ -161,7 +177,21 @@ class VKCameraVimbaDevice(VKCamera):
                     loop_counter = 0
                     start_time = time.time()
 
-    def start_streaming(self, vimba_context, path=None, limit=None, show_frames=False):
+    def start_streaming(self, vimba_context, path=None, show_frames=False):
+        """An asynchronous image acquisition routine which will show and write frames
+        streaming from the connected image device.
+
+        A VimbaASynchronousStreamHandler object (self.async_handler) is created at instantiation,
+        which manages threaded frame inference and other operations.
+
+        Args:
+            vimba_context:  a valid Vimba camera instance
+            path:           destination for saved video.
+            show_frames:    show frames in a window.
+
+        Returns:
+            None
+        """
         print(f"Spinning up streaming on device: {self.device_id}")
 
         # Set updated handler properties
@@ -179,6 +209,13 @@ class VKCameraVimbaDevice(VKCamera):
             vimba_context.stop_streaming()
 
     def stop_streaming(self):
+        """Terminate threaded asynchronous image acquisition.
+
+        Args:
+            (None)
+        Returns:
+            None
+        """
         if self.async_handler.shutdown_event.set() is False:
             self.async_handler.shutdown_event.set()
 

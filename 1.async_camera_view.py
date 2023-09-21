@@ -127,7 +127,6 @@ def main():
             streaming_thread = threading.Thread(target=camera.start_streaming,
                                                 args=(cam,
                                                 destination,
-                                                limit,
                                                 enable_view))
 
             streaming_thread.start()
