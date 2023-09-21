@@ -304,8 +304,28 @@ class VKCamera:
         """
         assert os.path.exists(os.path.dirname(path)), "Can't instantiate a video writer to a non-existent path."
 
-        FOURCC = cv2.VideoWriter_fourcc(*"MP4V")
-        return cv2.VideoWriter(path, FOURCC, self.fps(), (self.width(), self.height()), True)
+        # List of possible codec options in order of preference
+        codec_options = ['h264', 'mp4v', 'xvid', 'mjpg', 'avc1', 'vp9']
+
+        # Initialize variables to check if codec is supported and selected
+        selected_codec = None
+        out = None
+
+        # Iterate through codec options and select the first supported one
+        for codec in codec_options:
+            fourcc = cv2.VideoWriter_fourcc(*codec)
+            out = cv2.VideoWriter(path, fourcc, self.fps(), (self.width(), self.height()))
+            if out.isOpened():
+                selected_codec = codec
+                break
+
+        if selected_codec is None:
+            print("Error: None of the specified codecs are supported.")
+            return None
+        else:
+            print(f"Selected codec '{selected_codec}' is supported. Writing frames to the video...")
+
+        return out
 
 
     def file_type(self):
