@@ -305,7 +305,7 @@ class VKCamera:
         assert os.path.exists(os.path.dirname(path)), "Can't instantiate a video writer to a non-existent path."
 
         # List of possible codec options in order of preference
-        codec_options = ['h264', 'mp4v', 'xvid', 'mjpg', 'avc1', 'vp9']
+        codec_options = ['mp4v', 'h264', 'xvid', 'mjpg', 'avc1', 'vp9']
 
         # Initialize variables to check if codec is supported and selected
         selected_codec = None

@@ -123,11 +123,11 @@ class VimbaASynchronousStreamHandler:
         self.last_execution_timestamp = get_utc_timestamp_ms()
         self.current_timestamp = get_utc_timestamp_ms()
 
-        self._writer_thread = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=None)
+        self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=None)
 
     def set_video_writer(self, video_writer):
         self._writer = video_writer
-        self._writer_thread = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=self._writer)
+        self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=self._writer)
 
     def set_show_frames(self, show_frames):
         self._show_frames = show_frames
@@ -144,44 +144,39 @@ class VimbaASynchronousStreamHandler:
         key = cv2.waitKey(1)
         if key == ENTER_KEY_CODE:
             print("Stopping out of loop")
-            self._writer_thread.shutdown_event.set()
+            self._frame_handler.shutdown_event.set()
             self.shutdown_event.set()
             return
 
         if frame.get_status() == FrameStatus.Complete:
+
+            # Since we might want to perform several operation on each frame (e.g. write, CV,...)
+            # we convert the image to opencv format here, and only once.
+
             # Convert frame if it is not already the correct format
             converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-            opencv_image = converted_frame.as_opencv_image()
-
-            # Undistort
-            opencv_image = self._parent_camera.undistorted_image(opencv_image)
+            undistorted_opencv_image = self._parent_camera.undistorted_image(converted_frame.as_opencv_image())
 
             if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                opencv_image = cv2.rotate(opencv_image, self._parent_camera.image_rotation)
+                undistorted_opencv_image = cv2.rotate(undistorted_opencv_image, self._parent_camera.image_rotation)
 
             # Get the current UTC time
             current_utc_time = datetime.utcnow()
             formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            print(f"{formatted_utc_time} Got a frame...{self._writer_thread.cache_size} frames are still queued...")
+            print(f"{formatted_utc_time} The stream handler got a frame...{self._frame_handler.cache_size} frames are still queued...")
 
-            self._writer_thread(frame=frame)
-
-            # print(self._writer)
-            # if self._writer:
-            #     self._writer.write(np.asarray(opencv_image))
+            self._frame_handler(frame=undistorted_opencv_image)
 
             if self._show_frames:
-                # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-                # opencv_image = converted_frame.as_opencv_image()
                 key = cv2.waitKey(1)
                 if key == ENTER_KEY_CODE:
                     print("Stopping in loop")
-                    self._writer_thread.shutdown_event.set()
+                    self._frame_handler.shutdown_event.set()
                     self.shutdown_event.set()
                     return
 
                 msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                cv2.imshow(msg.format(cam.get_id()), opencv_image)
+                cv2.imshow(msg.format(cam.get_id()), undistorted_opencv_image)
 
         cam.queue_frame(frame)
 
@@ -196,6 +191,7 @@ class VimbaASynchronousFrameHandler:
         self.thread.start()
 
     def __call__(self, frame):
+        print("The frame handler received a new frame....")
         if not self.shutdown_event.is_set():
             self.frame_queue.put(frame)
 

@@ -133,7 +133,7 @@ def main():
 
             n = 0
             while True:
-                print("Doing something...")
+                print("Doing something else...")
                 time.sleep(1)
                 n += 1
                 if n > 2:
