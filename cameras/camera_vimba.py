@@ -195,9 +195,7 @@ class VKCameraVimbaDevice(VKCamera):
         print(f"Spinning up streaming on device: {self.device_id}")
 
         # Set updated handler properties
-        if path:
-            self.async_handler.set_video_writer(video_writer=self.instantiate_writer_with_path(path=path))
-
+        self.async_handler.set_video_writer(video_writer=self.instantiate_writer_with_path(path=path))
         self.async_handler.set_show_frames(show_frames)
 
         try:
