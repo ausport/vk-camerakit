@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('-v', '--view', action='store_true', help='Enable viewing')
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
-    parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
+    parser.add_argument('-l', '--limit', type=int, default=None, help='Capture time in seconds (optional)')
     parser.add_argument('-r', '--fps', type=int, default=50, help='Frame rate (optional)')
     parser.add_argument('-d', '--destination', default=None, help='Destination directory (optional)')
     parser.add_argument('-g', '--config', default=None, help='Camera configuration file (optional)')
@@ -43,7 +43,7 @@ def main():
     # Print the parsed arguments
     print(f'Camera ID: {camera_id}')
     print(f'View enabled: {enable_view}')
-    print(f'Limit: {limit}')
+    print(f'Capture time: {limit} seconds')
     print(f'Destination: {destination}')
     print(f'Flip: {flip}')
     print(f'FPS: {fps}')
@@ -136,7 +136,7 @@ def main():
                 print("Doing something else...")
                 time.sleep(1)
                 n += 1
-                if n > 2:
+                if n > limit:
                     camera.stop_streaming()
                     streaming_thread.join()
                     break

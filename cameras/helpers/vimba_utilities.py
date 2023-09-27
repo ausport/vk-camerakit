@@ -208,8 +208,8 @@ class VimbaASynchronousFrameHandler:
                 #     print("Writing a frame..")
                 #     self.video_writer.write(np.asarray(opencv_image))
 
-                print(f"Ate a frame - {self.cache_size} frames left.")
-                time.sleep(0.111)
+                print(f"Ate a frame {frame.size} - {self.cache_size} frames left.")
+                time.sleep(0.1)
 
                 if self.frame_queue.empty():
                     print("Wait for a new frame...")

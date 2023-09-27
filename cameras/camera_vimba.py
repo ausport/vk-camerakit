@@ -225,8 +225,6 @@ class VKCameraVimbaDevice(VKCamera):
             # TODO - create a async handler function to return whether the frame handler is busy.
             #  While loop until not busy.
 
-            # TODO - resolve the naming convention - VimbaASynchronousStreamHandler, VimbaASynchronousFrameHandler
-
             # TODO - fix image to video function.
 
 
