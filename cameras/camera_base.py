@@ -302,6 +302,10 @@ class VKCamera:
         Returns:
             (cv2.VideoWriter): an initialised video writer object.
         """
+
+        if path is None:
+            return None
+
         assert os.path.exists(os.path.dirname(path)), "Can't instantiate a video writer to a non-existent path."
 
         # List of possible codec options in order of preference
