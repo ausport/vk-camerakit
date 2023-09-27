@@ -2,6 +2,7 @@ import time
 import threading
 import cameras
 import os
+import math
 from datetime import datetime
 
 import argparse
@@ -13,7 +14,7 @@ def parse_args():
     parser.add_argument('-v', '--view', action='store_true', help='Enable viewing')
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
-    parser.add_argument('-l', '--limit', type=int, default=None, help='Capture time in seconds (optional)')
+    parser.add_argument('-l', '--limit', type=int, default=math.inf, help='Capture time in seconds (optional)')
     parser.add_argument('-r', '--fps', type=int, default=50, help='Frame rate (optional)')
     parser.add_argument('-d', '--destination', default=None, help='Destination directory (optional)')
     parser.add_argument('-g', '--config', default=None, help='Camera configuration file (optional)')
