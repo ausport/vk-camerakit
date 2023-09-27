@@ -137,7 +137,6 @@ class VimbaASynchronousStreamHandler:
 
         key = cv2.waitKey(1)
         if key == ENTER_KEY_CODE:
-            print("Stopping out of loop")
             self._frame_handler.shutdown_event.set()
             self.shutdown_event.set()
             return
@@ -164,7 +163,6 @@ class VimbaASynchronousStreamHandler:
             if self._show_frames:
                 key = cv2.waitKey(1)
                 if key == ENTER_KEY_CODE:
-                    print("Stopping in loop")
                     self._frame_handler.shutdown_event.set()
                     self.shutdown_event.set()
                     return
