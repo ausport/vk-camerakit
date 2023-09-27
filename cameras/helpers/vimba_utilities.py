@@ -132,12 +132,6 @@ class VimbaASynchronousStreamHandler:
     def set_show_frames(self, show_frames):
         self._show_frames = show_frames
 
-    def stop(self):
-        # TODO - gracefully join the frame handler
-        # ASynchFrameHandler, ASynchStreamHandler
-        print("Will stop my ASynchFrameHandler thread...")
-        pass
-
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
 
@@ -163,9 +157,9 @@ class VimbaASynchronousStreamHandler:
             # Get the current UTC time
             current_utc_time = datetime.utcnow()
             formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            print(f"{formatted_utc_time} The stream handler got a frame...{self._frame_handler.cache_size} frames are still queued...")
 
             self._frame_handler(frame=undistorted_opencv_image)
+            print(f"{formatted_utc_time} The stream handler got a frame...{self._frame_handler.cache_size} frames are still queued...")
 
             if self._show_frames:
                 key = cv2.waitKey(1)
@@ -191,37 +185,36 @@ class VimbaASynchronousFrameHandler:
         self.thread.start()
 
     def __call__(self, frame):
-        print("The frame handler received a new frame....")
         if not self.shutdown_event.is_set():
             self.frame_queue.put(frame)
 
     def _write_frames(self):
+        time.sleep(0.1)
+        print(self.shutdown_event.is_set())
 
         while not self.shutdown_event.is_set(): #or not self.frame_queue.empty():
 
-            if not self.frame_queue.empty():
-                frame = self.frame_queue.get()
-                # converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-                # opencv_image = converted_frame.as_opencv_image()
-
-                # if self.video_writer:
-                #     print("Writing a frame..")
-                #     self.video_writer.write(np.asarray(opencv_image))
-
-                print(f"Ate a frame {frame.size} - {self.cache_size} frames left.")
-                time.sleep(0.1)
+            if self.frame_queue.empty():
+                # Wait briefly to avoid excessive CPU usage
+                time.sleep(1)
 
                 if self.frame_queue.empty():
-                    print("Wait for a new frame...")
-                    time.sleep(0.001)
-                    if self.parent.shutdown_event.is_set():
-                        self.shutdown_event.set()
+                    if self.video_writer:
+                        if self.video_writer.isOpened():
+                            self.video_writer.release()
+
+                    self.shutdown_event.set()
 
             else:
-                # Sleep briefly to avoid excessive CPU usage
-                time.sleep(0.001)
+                # NB: The frame should already be in ndarray form.
+                undistorted_opencv_image = self.frame_queue.get()
+                print(f"Ate a frame {undistorted_opencv_image.size} - {self.cache_size} frames left.")
 
-        print("Exiting frame writer loop...")
+                if self.video_writer:
+                    self.video_writer.write(np.asarray(undistorted_opencv_image))
+
+                time.sleep(0.1)
+
 
     @property
     def cache_size(self):
