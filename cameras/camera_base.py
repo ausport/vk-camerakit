@@ -140,13 +140,12 @@ class VKCamera:
         return int(self.video_object.get(cv2.CAP_PROP_POS_FRAMES)) >= int(self.video_object.get(cv2.CAP_PROP_FRAME_COUNT))
 
     def is_available(self):
-        """Returns the current status of an imaging device.
-        NB: Non-imaging camera classes (file-based) will raise an exception.
+        """Returns the current status of an imaging file/device.
 
         Returns:
             (bool): True if imaging device is available.
         """
-        if self.__class__.__name__ in ["VKCameraGenericDevice", "VKCameraVimbaDevice"]:
+        if self.__class__.__name__ in ["VKCameraGenericDevice", "VKCameraVimbaDevice", "VKCameraVideoFile"]:
             return self.video_object.isOpened()
         else:
             raise NotImplementedError
