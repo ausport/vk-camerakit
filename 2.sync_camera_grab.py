@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('-v', '--view', action='store_true', help='Enable viewing')
     parser.add_argument('-f', '--flip', action='store_true', help='Flip viewing')
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
-    parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
+    parser.add_argument('-l', '--limit', type=int, default=math.inf, help='Limit captured frames (optional)')
     parser.add_argument('-d', '--destination', default=None, help='Destination path (optional)')
     parser.add_argument('-r', '--fps', type=int, default=50, help='Frame rate (optional)')
     parser.add_argument('-s', '--use_streaming', action='store_true', help='Enable Vimba streaming mode (optional)')
@@ -135,29 +135,43 @@ def main():
                 streaming_thread.start()
 
             while True:
-                loop_counter += 1
+
+                """
+                Retrieve a frame from the Vimba device.
+                If streaming option is set, the async handler will
+                accrue a frame buffer at the desired fps.
+                If streaming option is not set, the camera will
+                return individual frames in series, which will be independent
+                of any specified frame capture rate.
+                """
+
                 opencv_image = camera.get_frame()
 
-                if _video_writer:
-                    # NB: The converted frame is a Vimba frame object, not a cv-compliant numpy array
-                    # Convert to ndarray to write to file.
-                    _video_writer.write(np.asarray(opencv_image))
-                    pass
+                # Pause a moment
+                time.sleep(0.5)
+                if opencv_image is not None:
+                    loop_counter += 1
 
-                if enable_view:
-                    key = cv2.waitKey(1)
-                    if key == ENTER_KEY_CODE:
-                        shutdown_event.set()
-                        return
+                if loop_counter > limit:
+                    if streaming:
+                        camera.stop_streaming()
+                        streaming_thread.join()
+                    break
 
-                    msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                    cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
-
-                # Check if one second has passed
-                if time.time() - start_time >= 1:
-                    print("Frames per second in the last one-second interval: {}".format(loop_counter))
-                    loop_counter = 0
-                    start_time = time.time()
+                # if _video_writer:
+                #     # NB: The converted frame is a Vimba frame object, not a cv-compliant numpy array
+                #     # Convert to ndarray to write to file.
+                #     _video_writer.write(np.asarray(opencv_image))
+                #     pass
+                #
+                # if enable_view:
+                #     key = cv2.waitKey(1)
+                #     if key == ENTER_KEY_CODE:
+                #         shutdown_event.set()
+                #         return
+                #
+                #     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                #     cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
 
 if __name__ == '__main__':
     main()
