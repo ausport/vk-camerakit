@@ -127,6 +127,15 @@ class VimbaASynchronousStreamHandler:
     def set_show_frames(self, show_frames):
         self._show_frames = show_frames
 
+    def has_queued_frames(self):
+        return self._frame_handler.cache_size > 0
+
+    def is_streaming(self):
+        return self._parent_camera.video_object.is_streaming()
+
+    def next_frame(self):
+        return self._frame_handler.next_frame_from_queue()
+
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
         ENTER_KEY_CODE = 13
 
@@ -171,37 +180,31 @@ class VimbaASynchronousStreamHandler:
 class VimbaASynchronousFrameHandler:
     def __init__(self, parent_async_handler, video_writer):
         self.parent = parent_async_handler
-        self.video_writer = video_writer
+        # self.video_writer = video_writer
         self.frame_queue = queue.Queue()
         self.shutdown_event = threading.Event()
-        self.thread = threading.Thread(target=self._write_frames)
-        self.thread.start()
+        # self.thread = threading.Thread(target=self._write_frames)
+        # self.thread.start()
 
     def __call__(self, frame):
         if not self.shutdown_event.is_set():
             self.frame_queue.put(frame)
 
-    def _write_frames(self):
-        time.sleep(0.1)
-        print(self.shutdown_event.is_set())
+    def next_frame_from_queue(self):
+        """
+        Retrieve a frame from the queue.
 
-        while not self.shutdown_event.is_set(): #or not self.frame_queue.empty():
-
-            if self.frame_queue.empty():
-                # Wait briefly to avoid excessive CPU usage
-                time.sleep(1)
-
-                if self.frame_queue.empty():
-                    if self.video_writer:
-                        if self.video_writer.isOpened():
-                            self.video_writer.release()
-
-                    self.shutdown_event.set()
-
-            else:
-                # NB: The frame should already be in ndarray form.
-                undistorted_opencv_image = self.frame_queue.get()
-                print(f"Ate a frame {undistorted_opencv_image.size} - {self.cache_size} frames left.")
+        Returns:
+            An undistorted opencv-compatible frame in ndarray form.
+        """
+        print(f"Retrieving a frame using get_frame - {self.cache_size-1} frames will be left.")
+        print(f"self.parent.is_streaming: {self.parent.is_streaming()}")
+        if self.frame_queue.empty():
+            print("...empty!")
+            return None
+        else:
+            print("...frames are here!!")
+            return self.frame_queue.get()
 
                 if self.video_writer:
                     self.video_writer.write(np.asarray(undistorted_opencv_image))
