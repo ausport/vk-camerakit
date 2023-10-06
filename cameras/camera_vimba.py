@@ -121,6 +121,13 @@ class VKCameraVimbaDevice(VKCamera):
 
     def get_frame(self):
         """Returns a frame in opencv-compatible format from the Vimba device.
+
+        If operating in VIMBA_CAPTURE_MODE_ASYNCRONOUS mode, a queued frame
+        will be returned.
+
+        If operating in VIMBA_CAPTURE_MODE_SYNCRONOUS mode, a new frame
+        will be polled from the Vimba camera device.
+
         NB - get_frame() should be called from within a valid instance.  i.e.:
 
             with camera.vimba_instance():
@@ -131,14 +138,29 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             Vimba frame
         """
-        frame = self.video_object.get_frame()
-        converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-        opencv_image = converted_frame.as_opencv_image()
 
-        if self.image_rotation >= 0:
-            opencv_image = cv2.rotate(opencv_image, self.image_rotation)
+        if self._streaming_mode == VIMBA_CAPTURE_MODE_ASYNCRONOUS:
 
-        return opencv_image
+            while True:
+                # Wait for frames to be available.
+                if self.async_stream_handler.has_queued_frames():
+                    break
+
+                # TODO - add a timeout (2 seconds??)
+                # Give the streamer a chance to queue frames.
+                time.sleep(0.1)
+
+            # Get a frame from the streaming async handler.
+            return self.async_stream_handler.next_frame()
+        else:
+            frame = self.video_object.get_frame()
+            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+            opencv_image = converted_frame.as_opencv_image()
+
+            if self.image_rotation >= 0:
+                opencv_image = cv2.rotate(opencv_image, self.image_rotation)
+
+            return opencv_image
 
     def generate_frames(self, vimba_context, path=None, limit=None, show_frames=False):
         """A synchronous image acquisition routine which will show and write frames
@@ -196,7 +218,7 @@ class VKCameraVimbaDevice(VKCamera):
                     start_time = time.time()
 
     def start_streaming(self, vimba_context, path=None, show_frames=False):
-        """An asynchronous image acquisition routine which will show and write frames
+        """An asynchronous image acquisition routine which will queue frames
         streaming from the connected image device.
 
         A VimbaASynchronousStreamHandler object (self.async_handler) is created at instantiation,
