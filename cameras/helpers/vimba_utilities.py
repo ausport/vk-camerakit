@@ -120,9 +120,9 @@ class VimbaASynchronousStreamHandler:
         self._parent_camera = camera
         self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=None)
 
-    def set_video_writer(self, video_writer):
-        self._writer = video_writer
-        self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=self._writer)
+    # def set_video_writer(self, video_writer):
+    #     self._writer = video_writer
+    #     self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=self._writer)
 
     def set_show_frames(self, show_frames):
         self._show_frames = show_frames
@@ -164,15 +164,15 @@ class VimbaASynchronousStreamHandler:
             self._frame_handler(frame=undistorted_opencv_image)
             print(f"{formatted_utc_time} The stream handler got a frame...{self._frame_handler.cache_size} frames are still queued...")
 
-            if self._show_frames:
-                key = cv2.waitKey(1)
-                if key == ENTER_KEY_CODE:
-                    self._frame_handler.shutdown_event.set()
-                    self.shutdown_event.set()
-                    return
-
-                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                cv2.imshow(msg.format(cam.get_id()), undistorted_opencv_image)
+            # if self._show_frames:
+            #     key = cv2.waitKey(1)
+            #     if key == ENTER_KEY_CODE:
+            #         self._frame_handler.shutdown_event.set()
+            #         self.shutdown_event.set()
+            #         return
+            #
+            #     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+            #     cv2.imshow(msg.format(cam.get_id()), undistorted_opencv_image)
 
         cam.queue_frame(frame)
 
@@ -206,10 +206,32 @@ class VimbaASynchronousFrameHandler:
             print("...frames are here!!")
             return self.frame_queue.get()
 
-                if self.video_writer:
-                    self.video_writer.write(np.asarray(undistorted_opencv_image))
-
-                time.sleep(0.1)
+    # def _write_frames(self):
+    #     time.sleep(0.1)
+    #     print(self.shutdown_event.is_set())
+    #
+    #     while not self.shutdown_event.is_set(): #or not self.frame_queue.empty():
+    #
+    #         if self.frame_queue.empty():
+    #             # Wait briefly to avoid excessive CPU usage
+    #             time.sleep(1)
+    #
+    #             if self.frame_queue.empty():
+    #                 if self.video_writer:
+    #                     if self.video_writer.isOpened():
+    #                         self.video_writer.release()
+    #
+    #                 self.shutdown_event.set()
+    #
+    #         else:
+    #             # NB: The frame should already be in ndarray form.
+    #             undistorted_opencv_image = self.frame_queue.get()
+    #             print(f"Ate a frame {undistorted_opencv_image.size} - {self.cache_size} frames left.")
+    #
+    #             if self.video_writer:
+    #                 self.video_writer.write(np.asarray(undistorted_opencv_image))
+    #
+    #             time.sleep(0.1)
 
 
     @property
