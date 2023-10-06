@@ -149,8 +149,6 @@ class VimbaASynchronousStreamHandler:
 
             # Since we might want to perform several operation on each frame (e.g. write, CV,...)
             # we convert the image to opencv format here, and only once.
-
-            # Convert frame if it is not already the correct format
             converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
             undistorted_opencv_image = self._parent_camera.undistorted_image(converted_frame.as_opencv_image())
 
@@ -158,11 +156,12 @@ class VimbaASynchronousStreamHandler:
                 undistorted_opencv_image = cv2.rotate(undistorted_opencv_image, self._parent_camera.image_rotation)
 
             # Get the current UTC time
-            current_utc_time = datetime.utcnow()
-            formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            # current_utc_time = datetime.utcnow()
+            # formatted_utc_time = current_utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
+            # Queue the frame with the frame handler
             self._frame_handler(frame=undistorted_opencv_image)
-            print(f"{formatted_utc_time} The stream handler got a frame...{self._frame_handler.cache_size} frames are still queued...")
+            # print(f"{formatted_utc_time} The stream handler got a frame...{self._frame_handler.cache_size} frames are still queued...")
 
             # if self._show_frames:
             #     key = cv2.waitKey(1)
