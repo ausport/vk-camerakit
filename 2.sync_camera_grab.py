@@ -4,6 +4,7 @@ import cameras
 import os
 from datetime import datetime
 import time
+from tqdm import tqdm
 import cv2
 import threading
 import numpy as np
@@ -121,57 +122,55 @@ def main():
             if destination is not None:
                 _video_writer = camera.instantiate_writer_with_path(path=destination)
 
-            loop_counter = 0
             ENTER_KEY_CODE = 13
             streaming_thread = None
 
             # Create a non-blocking thread to run the streaming function
             if camera.streaming_mode() == cameras.VIMBA_CAPTURE_MODE_ASYNCRONOUS:
-                print("Setup streaming mode")
                 streaming_thread = threading.Thread(target=camera.start_streaming,
                                                     args=(vimba_device,
                                                           None,
                                                           False))
                 streaming_thread.start()
 
-            while True:
-
-                """
-                Retrieve a frame from the Vimba device.
-                If streaming option is set, the async handler will
-                accrue a frame buffer at the desired fps.
-                If streaming option is not set, the camera will
-                return individual frames in series, which will be independent
-                of any specified frame capture rate.
-                """
-
-                opencv_image = camera.get_frame()
-
-                # Pause a moment
+            """
+            Retrieve a frame from the Vimba device.
+            If streaming option is set, the async handler will
+            accrue a frame buffer at the desired fps.
+            If streaming option is not set, the camera will
+            return individual frames in series, which will be independent
+            of any specified frame capture rate.
+            """
+            for _ in tqdm(range(limit), desc="Capturing Frames", ascii=True, ncols=100):
+                # Pause a moment to allow frames to cache..
                 time.sleep(0.5)
-                if opencv_image is not None:
-                    loop_counter += 1
+                camera.get_frame()
 
-                if loop_counter > limit:
-                    if streaming:
-                        camera.stop_streaming()
-                        streaming_thread.join()
-                    break
+            # Stop the camera streaming
+            if streaming:
+                camera.stop_streaming()
+                streaming_thread.join()
 
-                # if _video_writer:
-                #     # NB: The converted frame is a Vimba frame object, not a cv-compliant numpy array
-                #     # Convert to ndarray to write to file.
-                #     _video_writer.write(np.asarray(opencv_image))
-                #     pass
-                #
-                # if enable_view:
-                #     key = cv2.waitKey(1)
-                #     if key == ENTER_KEY_CODE:
-                #         shutdown_event.set()
-                #         return
-                #
-                #     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                #     cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
+            # Handle remaining frames
+            print(f"{camera.cache_size} remaining frames are cached.")
+
+            for _ in tqdm(range(camera.cache_size), desc="Reading Cached Frames", ascii=True, ncols=100):
+                opencv_image = camera.get_frame()
+                if enable_view:
+                    key = cv2.waitKey(1)
+                    if key == ENTER_KEY_CODE:
+                        shutdown_event.set()
+                        return
+
+                    msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                    cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
+
+                if _video_writer:
+                    # NB: The converted frame is a Vimba frame object, not a cv-compliant numpy array
+                    # Convert to ndarray to write to file.
+                    _video_writer.write(np.asarray(opencv_image))
+                    pass
+
 
 if __name__ == '__main__':
     main()
