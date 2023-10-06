@@ -39,8 +39,6 @@ def main():
     fps = args.fps
     streaming = cameras.VIMBA_CAPTURE_MODE_ASYNCRONOUS if args.use_streaming else cameras.VIMBA_CAPTURE_MODE_SYNCRONOUS
 
-    shutdown_event = threading.Event()
-
     # Interpret tilde in the destination path, if provided
     if destination:
         destination = expand_tilde(destination)
@@ -159,17 +157,13 @@ def main():
                 if enable_view:
                     key = cv2.waitKey(1)
                     if key == ENTER_KEY_CODE:
-                        shutdown_event.set()
-                        return
-
+                        break
                     msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
                     cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
 
                 if _video_writer:
-                    # NB: The converted frame is a Vimba frame object, not a cv-compliant numpy array
                     # Convert to ndarray to write to file.
                     _video_writer.write(np.asarray(opencv_image))
-                    pass
 
 
 if __name__ == '__main__':
