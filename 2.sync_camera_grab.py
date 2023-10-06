@@ -1,3 +1,5 @@
+import math
+
 import cameras
 import os
 from datetime import datetime
@@ -17,6 +19,8 @@ def parse_args():
     parser.add_argument('-c', '--camera_id', default=None, help='Camera ID (optional)')
     parser.add_argument('-l', '--limit', type=int, default=None, help='Limit integer (optional)')
     parser.add_argument('-d', '--destination', default=None, help='Destination path (optional)')
+    parser.add_argument('-r', '--fps', type=int, default=50, help='Frame rate (optional)')
+    parser.add_argument('-s', '--use_streaming', action='store_true', help='Enable Vimba streaming mode (optional)')
     return parser.parse_args()
 
 
@@ -31,6 +35,8 @@ def main():
     limit = args.limit
     destination = args.destination
     flip = args.flip
+    fps = args.fps
+    streaming = cameras.VIMBA_CAPTURE_MODE_ASYNCRONOUS if args.use_streaming else cameras.VIMBA_CAPTURE_MODE_SYNCRONOUS
 
     shutdown_event = threading.Event()
 
@@ -46,6 +52,8 @@ def main():
     print(f'Limit: {limit}')
     print(f'Destination: {destination}')
     print(f'Flip: {flip}')
+    print(f'FPS: {fps}')
+    print(f'Streaming Mode: {streaming}')
 
     # Find camera id if selected, otherwise enumerate and user-choice.
     vimba_cameras = []
@@ -90,7 +98,7 @@ def main():
 
     device_id = vimba_cameras[int(choice)].get_id()
 
-    camera = cameras.VKCameraVimbaDevice(device_id=device_id)
+    camera = cameras.VKCameraVimbaDevice(device_id=device_id, streaming_mode=streaming)
 
     if destination is not None:
         current_datetime = datetime.now()
@@ -103,7 +111,7 @@ def main():
 
             camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
                                                    "CAP_PROP_FRAME_HEIGHT": 1088,
-                                                   "CAP_PROP_FPS": 25,
+                                                   "CAP_PROP_FPS": fps,
                                                    })
 
             if flip:
@@ -113,9 +121,18 @@ def main():
             if destination is not None:
                 _video_writer = camera.instantiate_writer_with_path(path=destination)
 
-            start_time = time.time()
             loop_counter = 0
             ENTER_KEY_CODE = 13
+            streaming_thread = None
+
+            # Create a non-blocking thread to run the streaming function
+            if camera.streaming_mode() == cameras.VIMBA_CAPTURE_MODE_ASYNCRONOUS:
+                print("Setup streaming mode")
+                streaming_thread = threading.Thread(target=camera.start_streaming,
+                                                    args=(vimba_device,
+                                                          None,
+                                                          False))
+                streaming_thread.start()
 
             while True:
                 loop_counter += 1

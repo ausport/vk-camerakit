@@ -2,6 +2,7 @@
 import time
 import threading
 import numpy as np
+import sys
 
 import cv2
 from vmbpy import *
@@ -11,18 +12,25 @@ from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup
 
 FEATURE_MAX = -1
 
+VIMBA_CAPTURE_MODE_SYNCRONOUS = 0
+VIMBA_CAPTURE_MODE_ASYNCRONOUS = 1
 
 class VKCameraVimbaDevice(VKCamera):
     """
     See examples: https://github.com/alliedvision/VmbPy
     """
 
-    def __init__(self, device_id, verbose_mode=False, surface_name=None):
+    def __init__(self, device_id,
+                 streaming_mode=VIMBA_CAPTURE_MODE_SYNCRONOUS,
+                 verbose_mode=False,
+                 surface_name=None):
+
         super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
 
         print("Initialising Allied Vision device at {0}".format(device_id))
 
         self.shutdown_event = threading.Event()
+        self._streaming_mode = streaming_mode
 
         with VmbSystem.get_instance():
             with get_camera(device_id) as cam:
@@ -36,7 +44,7 @@ class VKCameraVimbaDevice(VKCamera):
                                              })
                 setup_pixel_format(cam)
 
-                self.async_handler = VimbaASynchronousStreamHandler(camera=self)
+                self.async_stream_handler = VimbaASynchronousStreamHandler(camera=self)
 
                 self.update_camera_properties()
             print(self)
@@ -100,6 +108,16 @@ class VKCameraVimbaDevice(VKCamera):
         When queried, the result is in microseconds
         """
         return self.video_object.ExposureTimeAbs.get() / 1e3
+
+    def streaming_mode(self):
+        return self._streaming_mode
+
+    def streaming_mode_name(self):
+        if self._streaming_mode == VIMBA_CAPTURE_MODE_SYNCRONOUS:
+            return "Synchronous Capture Mode"
+        elif self._streaming_mode == VIMBA_CAPTURE_MODE_ASYNCRONOUS:
+            return "Asynchronous Capture Mode"
+        return "N/A"
 
     def get_frame(self):
         """Returns a frame in opencv-compatible format from the Vimba device.
@@ -195,13 +213,18 @@ class VKCameraVimbaDevice(VKCamera):
         print(f"Spinning up streaming on device: {self.device_id}")
 
         # Set updated handler properties
-        self.async_handler.set_video_writer(video_writer=self.instantiate_writer_with_path(path=path))
-        self.async_handler.set_show_frames(show_frames)
+        # self.async_stream_handler.set_video_writer(video_writer=self.instantiate_writer_with_path(path=path))
+        # self.async_stream_handler.set_show_frames(show_frames)
 
         try:
-            # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
-            vimba_context.start_streaming(handler=self.async_handler, buffer_count=10)
-            self.async_handler.shutdown_event.wait()
+            vimba_context.start_streaming(handler=self.async_stream_handler)
+
+            while not self.async_stream_handler.is_streaming():
+                pass
+
+            print("Spun!!")
+            time.sleep(10)
+            self.async_stream_handler.shutdown_event.wait()
 
         finally:
             vimba_context.stop_streaming()
@@ -214,17 +237,8 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             None
         """
-        if self.async_handler.shutdown_event.set() is False:
-            self.async_handler.shutdown_event.set()
-
-            # TODO - safe shutting down of the child thread responsible for handling remaining frames in the cache should be triggered from the shutdown event code.
-            print(f"{self.device_id}: Shutting down the streaming...")
-
-            # TODO - create a async handler function to return whether the frame handler is busy.
-            #  While loop until not busy.
-
-            # TODO - fix image to video function.
-
+        if self.async_stream_handler.shutdown_event.set() is False:
+            self.async_stream_handler.shutdown_event.set()
 
     def is_available(self):
         """Returns the current status of an imaging device.
@@ -317,4 +331,5 @@ class VKCameraVimbaDevice(VKCamera):
                        f"\n\tWidth            : {self.width()}" \
                        f"\n\tHeight           : {self.height()}" \
                        f"\n\tTemperature      : {self.camera_temperature()} C" \
-                       f"\n\tFrame Rate       : {self.fps()} f.p.s."
+                       f"\n\tFrame Rate       : {self.fps()} f.p.s." \
+                       f"\n\tCapture Mode     : {self.streaming_mode_name()}"

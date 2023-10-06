@@ -118,11 +118,6 @@ class VimbaASynchronousStreamHandler:
         self._writer = None
         self._show_frames = False
         self._parent_camera = camera
-        self._start_time = time.time()
-
-        self.last_execution_timestamp = get_utc_timestamp_ms()
-        self.current_timestamp = get_utc_timestamp_ms()
-
         self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self, video_writer=None)
 
     def set_video_writer(self, video_writer):
