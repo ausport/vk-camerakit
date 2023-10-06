@@ -130,6 +130,10 @@ class VimbaASynchronousStreamHandler:
     def has_queued_frames(self):
         return self._frame_handler.cache_size > 0
 
+    @property
+    def cache_size(self):
+        return self._frame_handler.cache_size
+
     def is_streaming(self):
         return self._parent_camera.video_object.is_streaming()
 
@@ -196,13 +200,9 @@ class VimbaASynchronousFrameHandler:
         Returns:
             An undistorted opencv-compatible frame in ndarray form.
         """
-        print(f"Retrieving a frame using get_frame - {self.cache_size-1} frames will be left.")
-        print(f"self.parent.is_streaming: {self.parent.is_streaming()}")
         if self.frame_queue.empty():
-            print("...empty!")
             return None
         else:
-            print("...frames are here!!")
             return self.frame_queue.get()
 
     # def _write_frames(self):

@@ -119,6 +119,10 @@ class VKCameraVimbaDevice(VKCamera):
             return "Asynchronous Capture Mode"
         return "N/A"
 
+    @property
+    def cache_size(self):
+        return self.async_stream_handler.cache_size
+
     def get_frame(self):
         """Returns a frame in opencv-compatible format from the Vimba device.
 
@@ -244,8 +248,6 @@ class VKCameraVimbaDevice(VKCamera):
             while not self.async_stream_handler.is_streaming():
                 pass
 
-            print("Spun!!")
-            time.sleep(10)
             self.async_stream_handler.shutdown_event.wait()
 
         finally:
