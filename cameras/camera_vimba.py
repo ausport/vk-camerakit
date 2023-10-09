@@ -303,6 +303,12 @@ class VKCameraVimbaDevice(VKCamera):
         except (AttributeError, VmbFeatureError):
             print('Camera {}: Failed to set Feature \'GainAuto\'.'.format(self.video_object.get_id()))
 
+        # Set continuous white balance
+        try:
+            self.video_object.BalanceWhiteAuto.set('Continuous')
+        except (AttributeError, VmbFeatureError):
+            print('Camera {}: Failed to set Feature \'BalanceWhiteAuto\'.'.format(self.video_object.get_id()))
+
         try:
             stream = self.video_object.get_streams()[0]
             stream.GVSPAdjustPacketSize.run()
