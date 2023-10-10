@@ -144,6 +144,9 @@ data to the GPU from within an open Vmb context triggers a very large volume of 
 
 As a short-term hack, turn off the trace log reporting in the Vimba library as follows:
 
+```
+[path to Vimba source]/vmbpy/util/tracer.py
+```
 ```python
 class TraceEnable:
     """Decorator: Adds an entry of LogLevel. Trace on entry and exit of the wrapped function.
