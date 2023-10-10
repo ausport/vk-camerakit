@@ -135,4 +135,33 @@ Resolve this by re-installing `xcb`:
 sudo apt install libxcb-xinerama0 
 ```
 
+#### A final note on Allied Vision Cameras
 
+Vimba cameras operate within a context in order to more reliably manage threaded operations.
+
+Meanwhile, aspects of the `vk-trackingkit` system operate on the GPU.  Calls using Torch to upload
+data to the GPU from within an open Vmb context triggers a very large volume of trace messages by the Vimba drivers.
+
+As a short-term hack, turn off the trace log reporting in the Vimba library as follows:
+
+```python
+class TraceEnable:
+    """Decorator: Adds an entry of LogLevel. Trace on entry and exit of the wrapped function.
+    On exit, the log entry contains information if the function was left normally or with an
+    exception.
+    """
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # if _Tracer.is_log_enabled():
+            if False:
+                with _Tracer(func, *args, **kwargs):
+                    result = func(*args, **kwargs)
+
+                return result
+
+            else:
+                return func(*args, **kwargs)
+
+        return wrapper
+```
