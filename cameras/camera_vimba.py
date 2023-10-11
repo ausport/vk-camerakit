@@ -31,11 +31,12 @@ class VKCameraVimbaDevice(VKCamera):
 
         self.shutdown_event = threading.Event()
         self._streaming_mode = streaming_mode
+        self._device_id = device_id
 
         with VmbSystem.get_instance():
             with get_camera(device_id) as cam:
                 self.video_object = cam
-                self.device_id = device_id
+                self._device_id = device_id
 
                 # Set defaults as maximums (-1)
                 self.set_capture_parameters({"CAP_PROP_FRAME_WIDTH": FEATURE_MAX,
@@ -118,6 +119,10 @@ class VKCameraVimbaDevice(VKCamera):
         elif self._streaming_mode == VIMBA_CAPTURE_MODE_ASYNCRONOUS:
             return "Asynchronous Capture Mode"
         return "N/A"
+
+    @property
+    def device_id(self):
+        return self._device_id
 
     @property
     def cache_size(self):
