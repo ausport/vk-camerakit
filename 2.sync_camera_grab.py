@@ -149,21 +149,21 @@ def main():
                 camera.stop_streaming()
                 streaming_thread.join()
 
-            # Handle remaining frames
-            print(f"{camera.cache_size} remaining frames are cached.")
+    # Handle remaining frames
+    print(f"{camera.cache_size} remaining frames are cached.")
 
-            for _ in tqdm(range(camera.cache_size), desc="Reading Cached Frames", ascii=True, ncols=100):
-                opencv_image = camera.get_frame()
-                if enable_view:
-                    key = cv2.waitKey(1)
-                    if key == ENTER_KEY_CODE:
-                        break
-                    msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                    cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
+    for _ in tqdm(range(camera.cache_size), desc="Reading Cached Frames", ascii=True, ncols=100):
+        opencv_image = camera.get_frame()
+        if enable_view:
+            key = cv2.waitKey(1)
+            if key == ENTER_KEY_CODE:
+                break
+            msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+            cv2.imshow(msg.format(vimba_device.get_name()), opencv_image)
 
-                if _video_writer:
-                    # Convert to ndarray to write to file.
-                    _video_writer.write(np.asarray(opencv_image))
+        if _video_writer:
+            # Convert to ndarray to write to file.
+            _video_writer.write(np.asarray(opencv_image))
 
 
 if __name__ == '__main__':
