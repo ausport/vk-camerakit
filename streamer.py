@@ -1,7 +1,7 @@
 import cameras
 import time
 import threading
-# from vmbpy import *
+from vmbpy import *
 
 all_cameras = [
     cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE931", streaming_mode=True),
@@ -11,9 +11,16 @@ all_cameras = [
 # Create and start threads for each camera
 camera_threads = []
 
-for camera in all_cameras:
-    with camera.vimba_instance():
+
+with VmbSystem.get_instance():
+    for camera in all_cameras:
+        print(camera.device_id ,"-->", camera.video_object.get_interface_id())
         with camera.vimba_camera() as vimba_device:
+
+            camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
+                                                   "CAP_PROP_FRAME_HEIGHT": 1088,
+                                                   "CAP_PROP_FPS": 50,
+                                                   })
 
             streaming_thread = None
 
@@ -26,18 +33,19 @@ for camera in all_cameras:
 
                 camera_threads.append(streaming_thread)
                 streaming_thread.start()
+                time.sleep(0.1)
 
-            time.sleep(2)
+    while True:
+        time.sleep(1)
 
-            camera.stop_streaming()
-            streaming_thread.join()
+        for camera in all_cameras:
+            with camera.vimba_camera() as vimba_device:
+                print(camera.device_id, "-->", camera.cache_size)
 
-print("\nHere...")
 
-exit(1)
-
-while True:
-    time.sleep(1)
-    for camera in all_cameras:
-        print(camera.device_id, "-->", camera.cache_size)
-
+#             camera.stop_streaming()
+#             streaming_thread.join()
+#
+# print("\nHere...")
+#
+# exit(1)
