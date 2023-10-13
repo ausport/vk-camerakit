@@ -1,25 +1,26 @@
 import cameras
 import time
 import threading
+from multiprocessing import Process
 from vmbpy import *
 
 all_cameras = [
-    cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE931", streaming_mode=True),
-    cameras.VKCameraVimbaDevice(device_id="DEV_000F3102321D", streaming_mode=True),
+    cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE930", streaming_mode=True),
+    cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE932", streaming_mode=True),
 ]
 
 # Create and start threads for each camera
 camera_threads = []
 
 
-with VmbSystem.get_instance():
-    for camera in all_cameras:
+def stream(camera):
+    with VmbSystem.get_instance():
         print(camera.device_id ,"-->", camera.video_object.get_interface_id())
         with camera.vimba_camera() as vimba_device:
 
             camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
                                                    "CAP_PROP_FRAME_HEIGHT": 1088,
-                                                   "CAP_PROP_FPS": 50,
+                                                   "CAP_PROP_FPS": 25,
                                                    })
 
             streaming_thread = None
@@ -33,19 +34,19 @@ with VmbSystem.get_instance():
 
                 camera_threads.append(streaming_thread)
                 streaming_thread.start()
-                time.sleep(0.1)
-
-    while True:
-        time.sleep(1)
-
-        for camera in all_cameras:
-            with camera.vimba_camera() as vimba_device:
+                time.sleep(5)
                 print(camera.device_id, "-->", camera.cache_size)
+                camera.stop_streaming()
+                streaming_thread.join()
 
 
-#             camera.stop_streaming()
-#             streaming_thread.join()
-#
-# print("\nHere...")
-#
-# exit(1)
+process1 = Process(target=stream, args=(all_cameras[0],))
+process2 = Process(target=stream, args=(all_cameras[1],))
+
+process1.start()
+process2.start()
+
+# Wait for processes to finish
+process1.join()
+process2.join()
+
