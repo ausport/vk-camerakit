@@ -123,9 +123,7 @@ class VimbaASynchronousStreamHandler:
         return self._frame_handler.next_frame_from_queue()
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
-        n = cam.get_streams()
-        print(cam.get_id(), print(len(n)))
-        print("stream.is_streaming():", stream.is_streaming())
+
         if frame.get_status() == FrameStatus.Complete:
             # We convert the image to opencv format here, and only once.
             converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
