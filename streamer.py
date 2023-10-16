@@ -7,8 +7,8 @@ from multiprocessing import Process, Queue
 from vmbpy import *
 
 all_cameras = [
-    cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE930", streaming_mode=True),
-    cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE932", streaming_mode=True),
+    cameras.VKCameraVimbaDevice(device_id="DEV_000F315DE931", streaming_mode=True),
+    cameras.VKCameraVimbaDevice(device_id="DEV_000F3102321D", streaming_mode=True),
 ]
 
 
@@ -19,7 +19,7 @@ def stream(camera, frame_queue):
 
             camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,
                                                    "CAP_PROP_FRAME_HEIGHT": 1088,
-                                                   "CAP_PROP_FPS": 25,
+                                                   "CAP_PROP_FPS": 99,
                                                    })
 
             # Create a non-blocking thread to run the streaming function
@@ -28,13 +28,13 @@ def stream(camera, frame_queue):
                                                       None,
                                                       False))
 
-            if camera.device_id == "DEV_000F315DE930":
+            if camera.device_id == "DEV_000F315DE931":
                 # Let one of the cameras lag behind...
                 time.sleep(5)
 
             streaming_thread.start()
 
-            while camera.cache_size < 200:
+            while camera.cache_size < 300:
                 if camera.cache_size % 20 == 0:
                     print(f"{camera.device_id} has queued {camera.cache_size} frames..")
                     time.sleep(0.5)
@@ -61,8 +61,9 @@ if __name__ == '__main__':
     process1.start()
     process2.start()
 
+    print("Will kill in 20 seconds")
     while True:
-        time.sleep(10)
+        time.sleep(20)
         print("Killing 1")
         process1.kill()
         print("Killing 2")
