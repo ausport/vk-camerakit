@@ -17,11 +17,12 @@ VK_CAPTURE_MODE_RECORD = 1
 
 
 class VKCamera:
-    def __init__(self, surface_name=None, verbose_mode=False):
+    def __init__(self, configs=None, surface_name=None, verbose_mode=False):
         """Constructor for generic image source class.
         Use subclassed instances of this class
 
         Args:
+            configs (dict): Camera properties.
             surface_name (str): Surface model name.
             verbose_mode (bool): Additional class detail logging.
 

@@ -22,10 +22,11 @@ class VKCameraVimbaDevice(VKCamera):
 
     def __init__(self, device_id,
                  streaming_mode=VIMBA_CAPTURE_MODE_SYNCRONOUS,
+                 configs=None,
                  verbose_mode=False,
                  surface_name=None):
 
-        super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
+        super().__init__(surface_name=surface_name, configs=configs, verbose_mode=verbose_mode)
 
         print("Initialising Allied Vision device at {0}".format(device_id))
 
@@ -38,11 +39,15 @@ class VKCameraVimbaDevice(VKCamera):
                 self.video_object = cam
                 self._device_id = device_id
 
-                # Set defaults as maximums (-1)
-                self.set_capture_parameters({"CAP_PROP_FRAME_WIDTH": FEATURE_MAX,
-                                             "CAP_PROP_FRAME_HEIGHT": FEATURE_MAX,
-                                             "CAP_PROP_FPS": FEATURE_MAX,
-                                             })
+                if configs is None:
+                    # Set defaults as maximums (-1)
+                    self.set_capture_parameters({"CAP_PROP_FRAME_WIDTH": FEATURE_MAX,
+                                                 "CAP_PROP_FRAME_HEIGHT": FEATURE_MAX,
+                                                 "CAP_PROP_FPS": FEATURE_MAX,
+                                                 })
+                # Override defaults with any custom settings
+                self.set_capture_parameters(configs)
+
                 setup_pixel_format(cam)
 
                 self.async_stream_handler = VimbaASynchronousStreamHandler(camera=self)

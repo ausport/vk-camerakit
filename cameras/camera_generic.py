@@ -6,14 +6,17 @@ from cameras import VKCamera
 
 class VKCameraGenericDevice(VKCamera):
 
-    def __init__(self, device=0, verbose_mode=False, surface_name=None):
-        super().__init__(surface_name=surface_name, verbose_mode=verbose_mode)
+    def __init__(self, device=0, configs=None, verbose_mode=False, surface_name=None):
+        super().__init__(configs=configs, surface_name=surface_name, verbose_mode=verbose_mode)
 
         print(f"Searching for generic OpenCV-compatible capture device at {device}")
 
         self.video_object = cv2.VideoCapture(device)
         if self.video_object.isOpened():
             self.device = device
+
+        if configs is not None:
+            self.set_capture_parameters(configs)
 
     def eof(self):
         """Overrides eof.
