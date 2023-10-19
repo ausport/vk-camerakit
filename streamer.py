@@ -12,7 +12,7 @@ all_cameras = [
 ]
 
 
-def stream(camera, frame_queue):
+def stream(camera):
     with VmbSystem.get_instance():
         print(camera.device_id ,"-->", camera.video_object.get_interface_id())
         with camera.vimba_camera() as vimba_device:
@@ -47,16 +47,14 @@ def stream(camera, frame_queue):
                 frame = camera.get_frame()
                 if camera.cache_size % 20 == 0:
                     print(f"{camera.device_id} still has {camera.cache_size} frames..")
-                frame_queue.put(frame)
 
             print(f"{camera.device_id} has completed..")
 
 
 if __name__ == '__main__':
-    frame_queue = Queue()
 
-    process1 = Process(target=stream, args=(all_cameras[0], frame_queue))
-    process2 = Process(target=stream, args=(all_cameras[1], frame_queue))
+    process1 = Process(target=stream, args=(all_cameras[0],))
+    process2 = Process(target=stream, args=(all_cameras[1],))
 
     process1.start()
     process2.start()
