@@ -1,3 +1,5 @@
+import multiprocessing
+
 from vmbpy import *
 from typing import Optional
 import cv2
@@ -8,8 +10,117 @@ import cameras
 from cameras import VKCamera
 
 
-def enumerate_vimba_devices():
+class VimbaStreamControllerProcess:
+    def __init__(self, camera: VKCamera, image_queue):
 
+        self._kill_switch = None
+
+        with VmbSystem.get_instance():
+            print(camera.device_id ,"-->", camera.video_object.get_interface_id())
+            self._camera = camera
+
+            with camera.vimba_camera() as vimba_device:
+                self._async_stream_handler = VimbaASynchronousStreamHandler(camera=self._camera)
+
+                # Create a non-blocking thread to run the streaming function
+                self._streamer_thread = threading.Thread(target=self.start_streaming,
+                                                         args=(vimba_device,))
+
+    def start_streaming(self, vimba_context):
+        """This is the primary streaming loop.  It should be threaded."""
+
+        try:
+            vimba_context.start_streaming(handler=self._async_stream_handler)
+
+            while not self._camera.video_object.is_streaming():
+                pass
+
+            self._async_stream_handler.shutdown_event.wait()
+
+        except Exception as e:
+            print(f"A streaming error occurred: {e}")
+            vimba_context.stop_streaming()
+
+    def run(self, stop_event):
+        """Commence the parallel streaming process.  Wait here until the kill switch is thrown."""
+
+        with VmbSystem.get_instance():
+            with self._camera.vimba_camera():
+                # Start streaming within the vimba instance block...
+                self._streamer_thread.start()
+                # ...and stay here on a parallel process.
+                while not stop_event.is_set():
+                    pass
+
+                print(f"Shutting down {self._camera.device_id} with {self._camera.cache_size} frames in the cache..")
+                self._async_stream_handler.shutdown_event.set()
+
+    def has_queued_frames(self):
+        return self._async_stream_handler.has_queued_frames()
+
+    def cache_size(self):
+        return self._async_stream_handler.cache_size()
+
+    def next_frame(self):
+        return self._async_stream_handler.next_frame()
+
+
+class VimbaASynchronousStreamHandler:
+    def __init__(self, camera: VKCamera):
+        self.shutdown_event = threading.Event()
+        self._parent_camera = camera
+        self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self)
+
+    def has_queued_frames(self):
+        return self._frame_handler.cache_size() > 0
+
+    def cache_size(self):
+        return self._frame_handler.cache_size()
+
+    def next_frame(self):
+        return self._frame_handler.next_frame_from_queue()
+
+    def __call__(self, cam: Camera, stream: Stream, frame: Frame):
+
+        if frame.get_status() == FrameStatus.Complete:
+
+            # We convert the image to opencv format here, and only once.
+            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+            undistorted_opencv_image = self._parent_camera.undistorted_image(converted_frame.as_opencv_image())
+
+            if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                undistorted_opencv_image = cv2.rotate(undistorted_opencv_image, self._parent_camera.image_rotation)
+
+            # Queue the frame with the frame handler
+            self._frame_handler(frame=undistorted_opencv_image)
+
+        cam.queue_frame(frame)
+
+
+class VimbaASynchronousFrameHandler:
+    def __init__(self, parent_async_handler):
+        self.parent = parent_async_handler
+        self.frame_queue = queue.Queue()
+        self.shutdown_event = threading.Event()
+
+    def __call__(self, frame):
+        if not self.shutdown_event.is_set():
+            self.frame_queue.put(frame)
+
+    def next_frame_from_queue(self):
+        """
+        Return a valid opencv frame from the queue.
+        """
+        if self.frame_queue.empty():
+            return None
+        else:
+            return self.frame_queue.get()
+
+    def cache_size(self):
+        return self.frame_queue.qsize()
+
+
+def enumerate_vimba_devices():
     with VmbSystem.get_instance () as vmb:
         cams = vmb.get_all_cameras()
         print(f'\n{len(cams)} Vimba camera(s) found...')
@@ -101,63 +212,4 @@ def set_nearest_value(cam: Camera, feat_name: str, feat_value: int):
                    'Using nearest valid value \'{}\'. Note that, this causes resizing '
                    'during processing, reducing the frame rate.')
             Log.get_instance().info(msg.format(cam.get_id(), feat_name, feat_value, val))
-
-
-class VimbaASynchronousStreamHandler:
-    def __init__(self, camera: VKCamera):
-        self.shutdown_event = threading.Event()
-        self._parent_camera = camera
-        self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self)
-
-    def has_queued_frames(self):
-        return self._frame_handler.cache_size > 0
-
-    @property
-    def cache_size(self):
-        return self._frame_handler.cache_size
-
-    def is_streaming(self):
-        return self._parent_camera.video_object.is_streaming()
-
-    def next_frame(self):
-        return self._frame_handler.next_frame_from_queue()
-
-    def __call__(self, cam: Camera, stream: Stream, frame: Frame):
-
-        if frame.get_status() == FrameStatus.Complete:
-            # We convert the image to opencv format here, and only once.
-            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-            undistorted_opencv_image = self._parent_camera.undistorted_image(converted_frame.as_opencv_image())
-
-            if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                undistorted_opencv_image = cv2.rotate(undistorted_opencv_image, self._parent_camera.image_rotation)
-
-            # Queue the frame with the frame handler
-            self._frame_handler(frame=undistorted_opencv_image)
-
-        cam.queue_frame(frame)
-
-
-class VimbaASynchronousFrameHandler:
-    def __init__(self, parent_async_handler):
-        self.parent = parent_async_handler
-        self.frame_queue = queue.Queue()
-        self.shutdown_event = threading.Event()
-
-    def __call__(self, frame):
-        if not self.shutdown_event.is_set():
-            self.frame_queue.put(frame)
-
-    def next_frame_from_queue(self):
-        """
-        Return a valid opencv frame from the queue.
-        """
-        if self.frame_queue.empty():
-            return None
-        else:
-            return self.frame_queue.get()
-
-    @property
-    def cache_size(self):
-        return self.frame_queue.qsize()
 

@@ -1,14 +1,15 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
+import multiprocessing
 import time
 import threading
+from multiprocessing import Process
 import numpy as np
-import sys
 
 import cv2
 from vmbpy import *
 import cameras
 from cameras import VKCamera
-from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaASynchronousStreamHandler
+from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaStreamControllerProcess
 
 FEATURE_MAX = -1
 
@@ -39,21 +40,34 @@ class VKCameraVimbaDevice(VKCamera):
                 self.video_object = cam
                 self._device_id = device_id
 
-                if configs is None:
-                    # Set defaults as maximums (-1)
-                    self.set_capture_parameters({"CAP_PROP_FRAME_WIDTH": FEATURE_MAX,
-                                                 "CAP_PROP_FRAME_HEIGHT": FEATURE_MAX,
-                                                 "CAP_PROP_FPS": FEATURE_MAX,
-                                                 })
-                # Override defaults with any custom settings
-                self.set_capture_parameters(configs)
+                # Set defaults as maximums (-1)
+                self.set_capture_parameters({"CAP_PROP_FRAME_WIDTH": FEATURE_MAX,
+                                             "CAP_PROP_FRAME_HEIGHT": FEATURE_MAX,
+                                             "CAP_PROP_FPS": FEATURE_MAX,
+                                             })
+
+                if configs is not None:
+                    # Override defaults with any custom settings
+                    self.set_capture_parameters(configs)
 
                 setup_pixel_format(cam)
 
-                self.async_stream_handler = VimbaASynchronousStreamHandler(camera=self)
-
                 self.update_camera_properties()
-            print(self)
+                print(self)
+
+            # Firstly create a threaded stream controller that will loop
+            # on a background thread, and accumulate frames to a queue.
+            self._image_queue = multiprocessing.Queue()
+            self._stream_controller = VimbaStreamControllerProcess(camera=self,
+                                                                   image_queue=self._image_queue)
+
+            # Secondly, since we may want to create multiple background threads,
+            # and multiple camera-wise fame queues, we have to put each of these on
+            # it`s own process (it's not possible to queue frames from multiple
+            # cameras on the same process).
+            self._stream_controller_kill_switch = multiprocessing.Event()
+            self._stream_controller_process = Process(target=self._stream_controller.run,
+                                                      args=(self._stream_controller_kill_switch,))
 
     def vimba_instance(self):
         return VmbSystem.get_instance()
@@ -131,7 +145,7 @@ class VKCameraVimbaDevice(VKCamera):
 
     @property
     def cache_size(self):
-        return self.async_stream_handler.cache_size
+        return self._stream_controller.cache_size()
 
     def get_frame(self):
         """Returns a frame in opencv-compatible format from the Vimba device.
@@ -157,7 +171,7 @@ class VKCameraVimbaDevice(VKCamera):
 
             while True:
                 # Wait for frames to be available.
-                if self.async_stream_handler.has_queued_frames():
+                if self._stream_controller.has_queued_frames():
                     break
 
                 # TODO - add a timeout (2 seconds??)
@@ -165,7 +179,8 @@ class VKCameraVimbaDevice(VKCamera):
                 time.sleep(0.1)
 
             # Get a frame from the streaming async handler.
-            return self.async_stream_handler.next_frame()
+            return self._stream_controller.next_frame()
+
         else:
             frame = self.video_object.get_frame()
             converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
@@ -176,103 +191,16 @@ class VKCameraVimbaDevice(VKCamera):
 
             return opencv_image
 
-    def generate_frames(self, vimba_context, path=None, limit=None, show_frames=False):
-        """A synchronous image acquisition routine which will show and write frames
-        streaming from the connected image device.
-
-        The Frame generator acquires a new frame with each execution. Frames may only be used inside
-        their respective loop iteration. If a frame must be used outside the loop iteration, a copy
-        of the frame must be created (e.g. via `copy.deepcopy(frame)`).
-
-        Args:
-            vimba_context:  a valid Vimba camera instance
-            path:           destination for saved video.
-            limit:          the number of images the generator shall acquire (>0). If limit is None,
-                            the generator will produce an unlimited amount of images and must be
-                            stopped by the user supplied code.
-            show_frames:    show frames in a window.
-
-        Returns:
-            None
-        """
-        _video_writer = None
-        if path is not None:
-            _video_writer = self.instantiate_writer_with_path(path=path)
-
-        start_time = time.time()
-        loop_counter = 0
-        ENTER_KEY_CODE = 13
-
-        while True:
-            for frame in vimba_context.get_frame_generator(limit=limit, timeout_ms=2000):
-                loop_counter += 1
-
-                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-                opencv_image = converted_frame.as_opencv_image()
-
-                if self.image_rotation is not cameras.VK_ROTATE_NONE:
-                    opencv_image = cv2.rotate(opencv_image, self.image_rotation)
-
-                if _video_writer:
-                    _video_writer.write(np.asarray(opencv_image))
-
-                if show_frames:
-                    key = cv2.waitKey(1)
-                    if key == ENTER_KEY_CODE:
-                        self.shutdown_event.set()
-                        return
-
-                    msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-                    cv2.imshow(msg.format(vimba_context.get_name()), opencv_image)
-
-                # Check if one second has passed
-                if time.time() - start_time >= 1:
-                    print("Frames per second in the last one-second interval: {}".format(loop_counter))
-                    loop_counter = 0
-                    start_time = time.time()
-
-    def start_streaming(self, vimba_context, path=None, show_frames=False):
+    def start_streaming(self):
         """An asynchronous image acquisition routine which will queue frames
-        streaming from the connected image device.
+        streaming from the connected image device."""
+        self._stream_controller_process.start()
 
-        A VimbaASynchronousStreamHandler object (self.async_handler) is created at instantiation,
-        which manages threaded frame inference and other operations.
-
-        Args:
-            vimba_context:  a valid Vimba camera instance
-            path:           destination for saved video.
-            show_frames:    show frames in a window.
-
-        Returns:
-            None
-        """
-        print(f"Spinning up streaming on device: {self.device_id}")
-
-        # Set updated handler properties
-        # self.async_stream_handler.set_video_writer(video_writer=self.instantiate_writer_with_path(path=path))
-        # self.async_stream_handler.set_show_frames(show_frames)
-
-        try:
-            vimba_context.start_streaming(handler=self.async_stream_handler)
-
-            while not self.async_stream_handler.is_streaming():
-                pass
-
-            self.async_stream_handler.shutdown_event.wait()
-
-        finally:
-            vimba_context.stop_streaming()
 
     def stop_streaming(self):
-        """Terminate threaded asynchronous image acquisition.
-
-        Args:
-            (None)
-        Returns:
-            None
-        """
-        if self.async_stream_handler.shutdown_event.set() is False:
-            self.async_stream_handler.shutdown_event.set()
+        """Terminate threaded asynchronous image acquisition."""
+        self._stream_controller_kill_switch.set()
+        self._stream_controller_process.join()
 
     def is_available(self):
         """Returns the current status of an imaging device.
