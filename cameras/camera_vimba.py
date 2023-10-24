@@ -363,7 +363,7 @@ class VKCameraVimbaDevice(VKCamera):
         """
         with VmbSystem.get_instance():
             with get_camera(self.device_id):
-                return f"\nEthernet Camera Source:" \
+                return f"\nVimba-Compatible Camera Source:" \
                        f"\n\tCamera Name      : {self.video_object.get_name()}"  \
                        f"\n\tModel Name       : {self.video_object.get_model()}" \
                        f"\n\tCamera ID        : {self.video_object.get_id()}" \
@@ -372,4 +372,4 @@ class VKCameraVimbaDevice(VKCamera):
                        f"\n\tHeight           : {self.height()}" \
                        f"\n\tTemperature      : {self.camera_temperature()} C" \
                        f"\n\tFrame Rate       : {self.fps()} f.p.s." \
-                       f"\n\tCapture Mode     : {self.streaming_mode_name()}"
+                       f"\n\tCapture Mode     : {self.streaming_mode_name()}\n"
