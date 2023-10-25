@@ -1,5 +1,6 @@
 import cameras
 import time
+import os
 from tqdm import tqdm
 
 
@@ -33,13 +34,11 @@ time.sleep(10)
 # Stop the device streaming, but the frames are still retained in cache.
 for camera in my_cameras:
     camera.stop_streaming()
-    print(f"{camera.device_id}: We are done...{camera.cache_size}")
 
-# for _ in tqdm(range(camera.cache_size()), desc=f"Capturing Frames ({camera.device_id})", ascii=True, ncols=100):
-#     frame = camera.get_frame()
+for camera in my_cameras:
+    file_path = os.path.join(os.getcwd(), f"CAPTURE_{camera.device_id}.mp4")
+    print(f"Writing {camera.device_id} frames to {file_path}")
+    camera.save_cache_to_video(path=file_path)
 
-# Other possible functions:
-# camera.save_cache_to_video()
-# camera.save_cache_to_images()
 
 
