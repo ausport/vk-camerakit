@@ -14,6 +14,7 @@ if len(available_vimba_devices) == 0:
 
 # Load a VKCamera object.
 camera = cameras.VKCameraVimbaDevice(device_id=available_vimba_devices[0].get_id(),
+                                     configs={"CAP_PROP_FPS": 25},
                                      streaming_mode=True)
 
 # Start the device streaming to a cache.
@@ -21,7 +22,7 @@ camera = cameras.VKCameraVimbaDevice(device_id=available_vimba_devices[0].get_id
 camera.start_streaming()
 
 # Wait for a while....
-time.sleep(5)
+time.sleep(10)
 
 # Stop the device streaming, but the frames are still retained in cache.
 camera.stop_streaming()
