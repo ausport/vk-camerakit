@@ -4,7 +4,7 @@ from vmbpy import *
 from typing import Optional
 import cv2
 import threading
-import queue
+from multiprocessing import Queue
 
 import cameras
 from cameras import VKCamera
@@ -20,7 +20,8 @@ class VimbaStreamControllerProcess:
             self._camera = camera
 
             with camera.vimba_camera() as vimba_device:
-                self._async_stream_handler = VimbaASynchronousStreamHandler(camera=self._camera)
+                self._async_stream_handler = VimbaASynchronousStreamHandler(camera=self._camera,
+                                                                            image_queue=image_queue)
 
                 # Create a non-blocking thread to run the streaming function
                 self._streamer_thread = threading.Thread(target=self.start_streaming,
@@ -51,8 +52,7 @@ class VimbaStreamControllerProcess:
                 # ...and stay here on a parallel process.
                 while not stop_event.is_set():
                     pass
-
-                print(f"Shutting down {self._camera.device_id} with {self._camera.cache_size} frames in the cache..")
+                # Kill the streaming process.
                 self._async_stream_handler.shutdown_event.set()
 
     def has_queued_frames(self):
@@ -66,9 +66,10 @@ class VimbaStreamControllerProcess:
 
 
 class VimbaASynchronousStreamHandler:
-    def __init__(self, camera: VKCamera):
+    def __init__(self, camera: VKCamera, image_queue: Queue):
         self.shutdown_event = threading.Event()
         self._parent_camera = camera
+        self._image_queue = image_queue
         self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self)
 
     def has_queued_frames(self):
@@ -100,7 +101,7 @@ class VimbaASynchronousStreamHandler:
 class VimbaASynchronousFrameHandler:
     def __init__(self, parent_async_handler):
         self.parent = parent_async_handler
-        self.frame_queue = queue.Queue()
+        self.frame_queue = Queue()
         self.shutdown_event = threading.Event()
 
     def __call__(self, frame):
