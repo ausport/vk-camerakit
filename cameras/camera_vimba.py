@@ -199,7 +199,9 @@ class VKCameraVimbaDevice(VKCamera):
     def stop_streaming(self):
         """Terminate threaded asynchronous image acquisition."""
         self._stream_controller_kill_switch.set()
-        self._stream_controller_process.join()
+
+    def close(self):
+        self._stream_controller_process.kill()
 
     def is_available(self):
         """Returns the current status of an imaging device.
