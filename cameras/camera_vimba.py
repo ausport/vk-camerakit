@@ -3,11 +3,9 @@ import multiprocessing
 import time
 import threading
 from multiprocessing import Process
-import numpy as np
 
 import cv2
 from vmbpy import *
-import cameras
 from cameras import VKCamera
 from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaStreamControllerProcess
 
@@ -69,7 +67,8 @@ class VKCameraVimbaDevice(VKCamera):
             self._stream_controller_process = Process(target=self._stream_controller.run,
                                                       args=(self._stream_controller_kill_switch,))
 
-    def vimba_instance(self):
+    @staticmethod
+    def vimba_instance():
         return VmbSystem.get_instance()
 
     def vimba_camera(self):
