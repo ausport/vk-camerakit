@@ -49,6 +49,10 @@ class VKCameraVimbaDevice(VKCamera):
                     # Override defaults with any custom settings
                     self.set_capture_parameters(configs)
 
+                self._fps = float(cam.AcquisitionFrameRateAbs.get())
+                self._width = int(cam.Width.get())
+                self._height = int(cam.Height.get())
+
                 setup_pixel_format(cam)
 
                 self.update_camera_properties()
@@ -89,9 +93,7 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (float): The CAP_PROP_FPS property.
         """
-        with self.vimba_instance():
-            with self.video_object as camera:
-                return float(camera.AcquisitionFrameRateAbs.get())
+        return self._fps
 
     def width(self):
         """The pixel width of the video resource.
@@ -99,9 +101,7 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_WIDTH property.
         """
-        with self.vimba_instance():
-            with self.video_object as camera:
-                return camera.Width.get()
+        return self._width
 
     def height(self):
         """The pixel height of the video resource.
@@ -109,9 +109,7 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_HEIGHT property.
         """
-        with self.vimba_instance():
-            with self.video_object as camera:
-                return camera.Height.get()
+        return self._height
 
     def frame_count(self):
         """The number of frames in the video resource.
