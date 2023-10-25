@@ -15,7 +15,7 @@ class VimbaStreamControllerProcess:
         self._kill_switch = None
 
         with VmbSystem.get_instance():
-            print(camera.device_id ,"-->", camera.video_object.get_interface_id())
+            print(camera.device_id,"-->", camera.video_object.get_interface_id())
             self._camera = camera
 
             with camera.vimba_camera() as vimba_device:
@@ -49,8 +49,7 @@ class VimbaStreamControllerProcess:
                 # Start streaming within the vimba instance block...
                 self._streamer_thread.start()
                 # ...and stay here on a parallel process.
-                while not stop_event.is_set():
-                    pass
+                stop_event.wait()
                 # Kill the streaming process.
                 self._async_stream_handler.shutdown_event.set()
 
