@@ -1,4 +1,3 @@
-import multiprocessing
 
 from vmbpy import *
 from typing import Optional
