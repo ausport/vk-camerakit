@@ -1,10 +1,11 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
-import multiprocessing
+
 import time
 import threading
-from multiprocessing import Process
+from multiprocessing import Process, Event, Queue
 
 import cv2
+import numpy as np
 from vmbpy import *
 from cameras import VKCamera
 from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaStreamControllerProcess
@@ -55,7 +56,7 @@ class VKCameraVimbaDevice(VKCamera):
 
             # Firstly create a threaded stream controller that will loop
             # on a background thread, and accumulate frames to a queue.
-            self._image_queue = multiprocessing.Queue()
+            self._image_queue = Queue()
             self._stream_controller = VimbaStreamControllerProcess(camera=self,
                                                                    image_queue=self._image_queue)
 
@@ -63,7 +64,7 @@ class VKCameraVimbaDevice(VKCamera):
             # and multiple camera-wise fame queues, we have to put each of these on
             # it`s own process (it's not possible to queue frames from multiple
             # cameras on the same process).
-            self._stream_controller_kill_switch = multiprocessing.Event()
+            self._stream_controller_kill_switch = Event()
             self._stream_controller_process = Process(target=self._stream_controller.run,
                                                       args=(self._stream_controller_kill_switch,))
 
@@ -88,7 +89,9 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (float): The CAP_PROP_FPS property.
         """
-        return float(self.video_object.AcquisitionFrameRateAbs.get())
+        with self.vimba_instance():
+            with self.video_object as camera:
+                return float(camera.AcquisitionFrameRateAbs.get())
 
     def width(self):
         """The pixel width of the video resource.
@@ -96,7 +99,9 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_WIDTH property.
         """
-        return self.video_object.Width.get()
+        with self.vimba_instance():
+            with self.video_object as camera:
+                return camera.Width.get()
 
     def height(self):
         """The pixel height of the video resource.
@@ -104,7 +109,9 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_HEIGHT property.
         """
-        return self.video_object.Height.get()
+        with self.vimba_instance():
+            with self.video_object as camera:
+                return camera.Height.get()
 
     def frame_count(self):
         """The number of frames in the video resource.
@@ -112,7 +119,7 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
         """
-        return 1
+        return self.cache_size
 
     def camera_temperature(self):
         """Queries (and returns) the temperature of the camera"""
@@ -199,6 +206,17 @@ class VKCameraVimbaDevice(VKCamera):
     def stop_streaming(self):
         """Terminate threaded asynchronous image acquisition."""
         self._stream_controller_kill_switch.set()
+
+    def save_cache_to_video(self, path):
+        """Dump cache to a video file"""
+        try:
+            video_writer = self.instantiate_writer_with_path(path)
+            while self.cache_size > 0:
+                cached_frame = self.get_frame()
+                video_writer.write(np.asarray(cached_frame))
+
+        except Exception as e:
+            print(f"An error occurred in camera_vimba::save_cache_to_video: {e}")
 
     def close(self):
         self._stream_controller_process.kill()
