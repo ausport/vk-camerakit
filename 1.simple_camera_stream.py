@@ -1,6 +1,5 @@
 import cameras
 import time
-from tqdm import tqdm
 
 
 """
@@ -14,7 +13,6 @@ if len(available_vimba_devices) == 0:
 
 # Load a VKCamera object.
 camera = cameras.VKCameraVimbaDevice(device_id=available_vimba_devices[0].get_id(),
-                                     configs={"CAP_PROP_FPS": 50},
                                      streaming_mode=True)
 
 # Start the device streaming to a cache.
@@ -22,18 +20,11 @@ camera = cameras.VKCameraVimbaDevice(device_id=available_vimba_devices[0].get_id
 camera.start_streaming()
 
 # Wait for a while....
-time.sleep(10)
+time.sleep(2)
 
 # Stop the device streaming, but the frames are still retained in cache.
 camera.stop_streaming()
 
-for _ in tqdm(range(camera.cache_size), desc=f"Capturing Frames ({camera.device_id})", ascii=True, ncols=100):
-    frame = camera.get_frame()
+camera.save_cache_to_video(path="/home/stuart/Desktop/save_cache.mp4")
 
 camera.close()
-
-# Other possible functions:
-# camera.save_cache_to_video()
-# camera.save_cache_to_images()
-
-
