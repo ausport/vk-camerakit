@@ -159,11 +159,5 @@ class CameraControllerWidget(QWidget):
     #     self._parent.update_current_camera_device(camera=self._current_active_device)
 
     def save_video(self):
+        pass
 
-        # path = QFileDialog.getSaveFileName(self, 'Export Panorama Composite',
-        #                                    self._current_active_device.name(),
-        #                                    "mp4(*.mp4)")
-
-        self._current_active_device.save_video(video_export_path="/home/stuart/Desktop/test.mp4",
-                                               size=(self._current_active_device.width(), self._current_active_device.height()),
-                                               fps=self._current_active_device.fps())

@@ -61,7 +61,6 @@ class VKCamera:
         if surface_name is not None:
             self.surface_model = surface.VKWorldModel(sport=surface_name)
 
-        self.capture_mode = VK_CAPTURE_MODE_PREVIEW
         self._video_writer = None
 
         if verbose_mode:
@@ -355,17 +354,6 @@ class VKCamera:
         img = Image.fromarray(_frame)
         img.save(dest_path)
 
-    def set_capture_mode(self, mode):
-        """External method to stop record mode.
-
-        Args:
-            mode (int): VK_CAPTURE_MODE_RECORD or VK_CAPTURE_MODE_PREVIEW
-        Returns:
-            None
-        """
-        assert mode == VK_CAPTURE_MODE_RECORD or mode == VK_CAPTURE_MODE_PREVIEW
-        self.capture_mode = mode
-
     def save_video(self, video_export_path, size=(1920,1080), fps=25):
         """Saves current camera model imagery in mp4 format.
 
@@ -390,37 +378,7 @@ class VKCamera:
             # thread.daemon = True
             thread.start()
             time.sleep(2)
-            self.capture_mode = VK_CAPTURE_MODE_PREVIEW
-            # thread.join()
 
-            # while self.capture_mode == VK_CAPTURE_MODE_RECORD:
-            #     _frame = self.get_frame()
-            #     cv2.cvtColor(_frame, cv2.COLOR_BGR2RGB, _frame)
-            #
-            #     # old_image_height, old_image_width, channels = _frame.shape
-            #     # _padded = np.full((new_image_height, new_image_width, channels), (0, 0, 0), dtype=np.uint8)
-            #     #
-            #     # # compute center offset
-            #     # x_center = (new_image_width - old_image_width) // 2
-            #     # y_center = (new_image_height - old_image_height) // 2
-            #     #
-            #     # # copy img image into center of result image
-            #     # _padded[y_center:y_center + old_image_height, x_center:x_center + old_image_width] = _frame
-            #     # _padded = cv2.cvtColor(np.array(_padded), cv2.COLOR_RGB2BGR)
-            #     # _padded = cv2.resize(_padded, dsize=size, interpolation=cv2.INTER_CUBIC)
-            #     _video_writer.write(_frame)
-            #
-            #     if self.eof():
-            #         break
-
-    def cap_loop(self):
-        print("Starting queue")
-        while self.capture_mode == VK_CAPTURE_MODE_RECORD:
-            _frame = self.get_frame()
-            self._video_writer.write(_frame)
-            print(time.time())
-        print("Exiting queue")
-        self._video_writer.release()
 
     def export_json(self, json_path):
         """Export current camera model in json format.
