@@ -229,54 +229,57 @@ class VKCameraVimbaDevice(VKCamera):
         assert type(configs) is dict, "WTF!!  set_capture_parameters: A dict was expected but not received..."
         result = True
 
-        # Set continuous exposure
-        try:
-            self.video_object.ExposureAuto.set('Continuous')
-        except (AttributeError, VmbFeatureError):
-            print('Camera {}: Failed to set Feature \'ExposureAuto\'.'.format(self.video_object.get_id()))
+        with VmbSystem.get_instance():
+            with self.video_object:
 
-        # Set continuous gain
-        try:
-            self.video_object.GainAuto.set('Continuous')
-        except (AttributeError, VmbFeatureError):
-            print('Camera {}: Failed to set Feature \'GainAuto\'.'.format(self.video_object.get_id()))
+                # Set continuous exposure
+                try:
+                    self.video_object.ExposureAuto.set('Continuous')
+                except (AttributeError, VmbFeatureError):
+                    print('Camera {}: Failed to set Feature \'ExposureAuto\'.'.format(self.video_object.get_id()))
 
-        # Set continuous white balance
-        try:
-            self.video_object.BalanceWhiteAuto.set('Continuous')
-        except (AttributeError, VmbFeatureError):
-            print('Camera {}: Failed to set Feature \'BalanceWhiteAuto\'.'.format(self.video_object.get_id()))
+                # Set continuous gain
+                try:
+                    self.video_object.GainAuto.set('Continuous')
+                except (AttributeError, VmbFeatureError):
+                    print('Camera {}: Failed to set Feature \'GainAuto\'.'.format(self.video_object.get_id()))
 
-        try:
-            stream = self.video_object.get_streams()[0]
-            stream.GVSPAdjustPacketSize.run()
-            while not stream.GVSPAdjustPacketSize.is_done():
-                pass
-        except (AttributeError, VmbFeatureError):
-            print('Camera {}: Failed to set Feature \'GVSPAdjustPacketSize\'.'.format(self.video_object.get_id()))
+                # Set continuous white balance
+                try:
+                    self.video_object.BalanceWhiteAuto.set('Continuous')
+                except (AttributeError, VmbFeatureError):
+                    print('Camera {}: Failed to set Feature \'BalanceWhiteAuto\'.'.format(self.video_object.get_id()))
 
-        if "CAP_PROP_FRAME_WIDTH" in configs:
-            try:
-                set_nearest_value(self.video_object, 'Width', int(configs["CAP_PROP_FRAME_WIDTH"]))
-            except (AttributeError, VmbFeatureError):
-                pass
+                try:
+                    stream = self.video_object.get_streams()[0]
+                    stream.GVSPAdjustPacketSize.run()
+                    while not stream.GVSPAdjustPacketSize.is_done():
+                        pass
+                except (AttributeError, VmbFeatureError):
+                    print('Camera {}: Failed to set Feature \'GVSPAdjustPacketSize\'.'.format(self.video_object.get_id()))
 
-        if "CAP_PROP_FRAME_HEIGHT" in configs:
-            try:
-                set_nearest_value(self.video_object, 'Height', int(configs["CAP_PROP_FRAME_HEIGHT"]))
-            except (AttributeError, VmbFeatureError):
-                pass
+                if "CAP_PROP_FRAME_WIDTH" in configs:
+                    try:
+                        set_nearest_value(self.video_object, 'Width', int(configs["CAP_PROP_FRAME_WIDTH"]))
+                    except (AttributeError, VmbFeatureError):
+                        pass
 
-        if "CAP_PROP_FPS" in configs:
-            try:
-                # self.video_object.TriggerSource.set('FreeRun')
-                self.video_object.TriggerSource.set('FixedRate')
-                set_nearest_value(self.video_object, 'AcquisitionFrameRateAbs', int(configs["CAP_PROP_FPS"]))
-            except (AttributeError, VmbFeatureError):
-                pass
+                if "CAP_PROP_FRAME_HEIGHT" in configs:
+                    try:
+                        set_nearest_value(self.video_object, 'Height', int(configs["CAP_PROP_FRAME_HEIGHT"]))
+                    except (AttributeError, VmbFeatureError):
+                        pass
 
-        if "CAP_PROP_ROTATION" in configs:
-            self.set_image_rotation(int(configs["CAP_PROP_ROTATION"]))
+                if "CAP_PROP_FPS" in configs:
+                    try:
+                        # self.video_object.TriggerSource.set('FreeRun')
+                        self.video_object.TriggerSource.set('FixedRate')
+                        set_nearest_value(self.video_object, 'AcquisitionFrameRateAbs', int(configs["CAP_PROP_FPS"]))
+                    except (AttributeError, VmbFeatureError):
+                        pass
+
+                if "CAP_PROP_ROTATION" in configs:
+                    self.set_image_rotation(int(configs["CAP_PROP_ROTATION"]))
 
         return result
 
