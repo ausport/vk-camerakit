@@ -3,120 +3,68 @@ from vmbpy import *
 from typing import Optional
 import cv2
 import threading
-from multiprocessing import Queue
+import queue
+import copy
 
 import cameras
 from cameras import VKCamera
 
 
-class VimbaStreamControllerProcess:
-    def __init__(self, camera: VKCamera, image_queue):
+class VimbaFrameController(threading.Thread):
+    def __init__(self, camera: VKCamera, image_queue: queue.Queue):
+        threading.Thread.__init__(self)
 
-        self._kill_switch = None
-
-        with VmbSystem.get_instance():
-            print(camera.device_id,"-->", camera.video_object.get_interface_id())
-            self._camera = camera
-
-            with camera.vimba_camera() as vimba_device:
-                self._async_stream_handler = VimbaASynchronousStreamHandler(camera=self._camera,
-                                                                            image_queue=image_queue)
-
-                # Create a non-blocking thread to run the streaming function
-                self._streamer_thread = threading.Thread(target=self.start_streaming,
-                                                         args=(vimba_device,))
-
-    def start_streaming(self, vimba_context):
-        """This is the primary streaming loop.  It should be threaded."""
-
-        try:
-            vimba_context.start_streaming(handler=self._async_stream_handler)
-
-            while not self._camera.video_object.is_streaming():
-                pass
-
-            self._async_stream_handler.shutdown_event.wait()
-
-        except Exception as e:
-            print(f"A streaming error occurred: {e}")
-            vimba_context.stop_streaming()
-
-    def run(self, stop_event):
-        """Commence the parallel streaming process.  Wait here until the kill switch is thrown."""
-
-        with VmbSystem.get_instance():
-            with self._camera.vimba_camera():
-                # Start streaming within the vimba instance block...
-                self._streamer_thread.start()
-                # ...and stay here on a parallel process.
-                stop_event.wait()
-                # Kill the streaming process.
-                self._async_stream_handler.shutdown_event.set()
-
-    def has_queued_frames(self):
-        return self._async_stream_handler.has_queued_frames()
-
-    def cache_size(self):
-        return self._async_stream_handler.cache_size()
-
-    def next_frame(self):
-        return self._async_stream_handler.next_frame()
-
-
-class VimbaASynchronousStreamHandler:
-    def __init__(self, camera: VKCamera, image_queue: Queue):
-        self.shutdown_event = threading.Event()
-        self._parent_camera = camera
         self._image_queue = image_queue
-        self._frame_handler = VimbaASynchronousFrameHandler(parent_async_handler=self)
+        self._lock = threading.Lock()
+        self._kill_switch = threading.Event()
+        self._camera = camera
 
-    def has_queued_frames(self):
-        return self._frame_handler.cache_size() > 0
-
-    def cache_size(self):
-        return self._frame_handler.cache_size()
-
-    def next_frame(self):
-        return self._frame_handler.next_frame_from_queue()
+        with VmbSystem.get_instance():
+            print(camera.device_id, "-->", camera.video_object.get_interface_id())
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
 
         if frame.get_status() == FrameStatus.Complete:
-
-            # We convert the image to opencv format here, and only once.
-            converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
-            undistorted_opencv_image = self._parent_camera.undistorted_image(converted_frame.as_opencv_image())
-
-            if self._parent_camera.image_rotation is not cameras.VK_ROTATE_NONE:
-                undistorted_opencv_image = cv2.rotate(undistorted_opencv_image, self._parent_camera.image_rotation)
-
-            # Queue the frame with the frame handler
-            self._frame_handler(frame=undistorted_opencv_image)
+            frame_copy = copy.deepcopy(frame)
+            self._image_queue.put_nowait(frame_copy)
 
         cam.queue_frame(frame)
 
+    def run(self):
+        """Commence the threaded streaming process.  Wait here until the kill switch is thrown."""
+        with VmbSystem.get_instance():
+            with self._camera.vimba_camera() as vimba_device:
+                # Start streaming within the vimba instance block...
+                vimba_device.start_streaming(self)
+                # ...and stay here on a parallel process.
+                self._kill_switch.wait()
 
-class VimbaASynchronousFrameHandler:
-    def __init__(self, parent_async_handler):
-        self.parent = parent_async_handler
-        self.frame_queue = Queue()
-        self.shutdown_event = threading.Event()
+    def stop(self):
+        self._kill_switch.set()
 
-    def __call__(self, frame):
-        if not self.shutdown_event.is_set():
-            self.frame_queue.put(frame)
-
-    def next_frame_from_queue(self):
-        """
-        Return a valid opencv frame from the queue.
-        """
-        if self.frame_queue.empty():
-            return None
-        else:
-            return self.frame_queue.get()
+    def has_queued_frames(self):
+        with self._lock:
+            return self._image_queue.qsize() > 0
 
     def cache_size(self):
-        return self.frame_queue.qsize()
+        with self._lock:
+            return self._image_queue.qsize()
+
+    def next_frame(self):
+        with self._lock:
+            if self._image_queue.empty():
+                return None
+            else:
+                frame = self._image_queue.get_nowait()
+
+                # We convert the image to opencv format here, and only once.
+                converted_frame = frame.convert_pixel_format(PixelFormat.Bgr8)
+                undistorted_opencv_image = self._camera.undistorted_image(converted_frame.as_opencv_image())
+
+                if self._camera.image_rotation is not cameras.VK_ROTATE_NONE:
+                    undistorted_opencv_image = cv2.rotate(undistorted_opencv_image, self._camera.image_rotation)
+
+                return undistorted_opencv_image
 
 
 def enumerate_vimba_devices():

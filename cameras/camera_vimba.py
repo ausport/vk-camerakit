@@ -1,19 +1,18 @@
 """Camera controller for video capture from Allied Vision video camera (uses Vimba SDK)"""
-
+import queue
 import time
-import threading
-from multiprocessing import Process, Event, Queue
 
 import cv2
 import numpy as np
 from vmbpy import *
 from cameras import VKCamera
-from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaStreamControllerProcess
+from cameras.helpers.vimba_utilities import set_nearest_value, get_camera, setup_pixel_format, VimbaFrameController
 
 FEATURE_MAX = -1
 
 VIMBA_CAPTURE_MODE_SYNCRONOUS = 0
 VIMBA_CAPTURE_MODE_ASYNCRONOUS = 1
+
 
 class VKCameraVimbaDevice(VKCamera):
     """
@@ -30,7 +29,6 @@ class VKCameraVimbaDevice(VKCamera):
 
         print("Initialising Allied Vision device at {0}".format(device_id))
 
-        self.shutdown_event = threading.Event()
         self._streaming_mode = streaming_mode
         self._device_id = device_id
 
@@ -58,19 +56,11 @@ class VKCameraVimbaDevice(VKCamera):
                 self.update_camera_properties()
                 print(self)
 
-            # Firstly create a threaded stream controller that will loop
+            # Create a frame controller that will loop
             # on a background thread, and accumulate frames to a queue.
-            self._image_queue = Queue()
-            self._stream_controller = VimbaStreamControllerProcess(camera=self,
-                                                                   image_queue=self._image_queue)
-
-            # Secondly, since we may want to create multiple background threads,
-            # and multiple camera-wise fame queues, we have to put each of these on
-            # it`s own process (it's not possible to queue frames from multiple
-            # cameras on the same process).
-            self._stream_controller_kill_switch = Event()
-            self._stream_controller_process = Process(target=self._stream_controller.run,
-                                                      args=(self._stream_controller_kill_switch,))
+            self._frame_queue = queue.Queue()
+            self._frame_controller = VimbaFrameController(camera=self,
+                                                          image_queue=self._frame_queue)
 
     @staticmethod
     def vimba_instance():
@@ -85,7 +75,7 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (bool): True if video device is currently capturing.
         """
-        return False
+        return self.cache_size == 0
 
     def fps(self):
         """The frames per second of the video resource.
@@ -149,7 +139,7 @@ class VKCameraVimbaDevice(VKCamera):
 
     @property
     def cache_size(self):
-        return self._stream_controller.cache_size()
+        return self._frame_controller.cache_size()
 
     def get_frame(self):
         """Returns a frame in opencv-compatible format from the Vimba device.
@@ -175,7 +165,7 @@ class VKCameraVimbaDevice(VKCamera):
 
             while True:
                 # Wait for frames to be available.
-                if self._stream_controller.has_queued_frames():
+                if self._frame_controller.has_queued_frames():
                     break
 
                 # TODO - add a timeout (2 seconds??)
@@ -183,7 +173,7 @@ class VKCameraVimbaDevice(VKCamera):
                 time.sleep(0.1)
 
             # Get a frame from the streaming async handler.
-            return self._stream_controller.next_frame()
+            return self._frame_controller.next_frame()
 
         else:
             frame = self.video_object.get_frame()
@@ -198,12 +188,11 @@ class VKCameraVimbaDevice(VKCamera):
     def start_streaming(self):
         """An asynchronous image acquisition routine which will queue frames
         streaming from the connected image device."""
-        self._stream_controller_process.start()
-
+        self._frame_controller.start()
 
     def stop_streaming(self):
         """Terminate threaded asynchronous image acquisition."""
-        self._stream_controller_kill_switch.set()
+        self._frame_controller.stop()
 
     def save_cache_to_video(self, path):
         """Dump cache to a video file"""
@@ -215,9 +204,6 @@ class VKCameraVimbaDevice(VKCamera):
 
         except Exception as e:
             print(f"An error occurred in camera_vimba::save_cache_to_video: {e}")
-
-    def close(self):
-        self._stream_controller_process.kill()
 
     def is_available(self):
         """Returns the current status of an imaging device.
