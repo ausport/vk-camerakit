@@ -19,7 +19,7 @@ class VimbaFrameController(threading.Thread):
         self._kill_switch = threading.Event()
         self._camera = camera
 
-        with VmbSystem.get_instance():
+        with cameras.VIMBA_INSTANCE():
             print(camera.device_id, "-->", camera.video_object.get_interface_id())
 
     def __call__(self, cam: Camera, stream: Stream, frame: Frame):
@@ -32,7 +32,7 @@ class VimbaFrameController(threading.Thread):
 
     def run(self):
         """Commence the threaded streaming process.  Wait here until the kill switch is thrown."""
-        with VmbSystem.get_instance():
+        with cameras.VIMBA_INSTANCE():
             with self._camera.vimba_camera() as vimba_device:
                 # Start streaming within the vimba instance block...
                 vimba_device.start_streaming(self)
@@ -68,14 +68,14 @@ class VimbaFrameController(threading.Thread):
 
 
 def enumerate_vimba_devices():
-    with VmbSystem.get_instance () as vmb:
+    with cameras.VIMBA_INSTANCE() as vmb:
         cams = vmb.get_all_cameras()
         print(f'\n{len(cams)} Vimba camera(s) found...')
     return cams
 
 
 def get_camera(camera_id: Optional[str]) -> Camera:
-    with VmbSystem.get_instance() as vmb:
+    with cameras.VIMBA_INSTANCE() as vmb:
         if camera_id:
             try:
                 return vmb.get_camera_by_id(camera_id)

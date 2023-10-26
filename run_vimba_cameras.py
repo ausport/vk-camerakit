@@ -458,7 +458,7 @@ class Window(QtWidgets.QWidget):
             self.view_current_frame()
 
     def view_current_frame(self):
-        with self.image_model.vimba_instance():
+        with cameras.VIMBA_INSTANCE():
             with self.image_model.vimba_camera():
                 self.image_model.update_camera_properties()
                 self.update_displays()
@@ -596,7 +596,7 @@ class Window(QtWidgets.QWidget):
         self.flip_image_view = self.btnFlipView.isChecked()
 
         if self.image_model:
-            with self.image_model.vimba_instance():
+            with cameras.VIMBA_INSTANCE():
                 with self.image_model.vimba_camera() as cam:
 
                     if self.flip_image_view:
@@ -648,7 +648,7 @@ class Window(QtWidgets.QWidget):
         # Initialise camera and world models from file.
         self.image_model = cameras.load_camera_model(path=config_path)
 
-        with self.image_model.vimba_instance():
+        with cameras.VIMBA_INSTANCE():
             with self.image_model.vimba_camera() as cam:
 
                 self.cboSurfaces.setCurrentText(self.image_model.surface_model.surface_model_name())
@@ -677,7 +677,7 @@ class Window(QtWidgets.QWidget):
         self.image_model.focal_length = self.sliderFocalLength.value()
         print("Updating focal length:{0}".format(self.image_model.focal_length))
         # Update the camera matrix with new focal length.
-        with self.image_model.vimba_instance():
+        with cameras.VIMBA_INSTANCE():
             with self.image_model.vimba_camera() as cam:
                 self.image_model.update_camera_properties()
 
@@ -713,7 +713,7 @@ class Window(QtWidgets.QWidget):
             source = self.image_model
 
             # Get the current image from the imaging source.
-            with source.vimba_instance():
+            with cameras.VIMBA_INSTANCE():
                 with source.vimba_camera():
                     im_src = source.undistorted_image()
 

@@ -7,7 +7,7 @@ from cameras.camera_panoramic import VKCameraPanorama
 from cameras.camera_vimba import VKCameraVimbaDevice
 from cameras.helpers.panorama import *
 from cameras.helpers.camera_parser import load_camera_model_from_json as load_camera_model
-from cameras.camera_vimba import VIMBA_CAPTURE_MODE_ASYNCRONOUS, VIMBA_CAPTURE_MODE_SYNCRONOUS
+from cameras.camera_vimba import VIMBA_CAPTURE_MODE_ASYNCRONOUS, VIMBA_CAPTURE_MODE_SYNCRONOUS, VIMBA_INSTANCE
 
 VK_ROTATE_NONE = -1
 VK_ROTATE_90_CLOCKWISE = 0

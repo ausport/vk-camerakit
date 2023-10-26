@@ -105,7 +105,7 @@ def main():
         destination = os.path.join(destination, f"capture_{device_id}_{formatted_datetime}.mp4")
 
     # NB- Vimba camera capture calls need to exist in a Vimba context.
-    with camera.vimba_instance():
+    with cameras.VIMBA_INSTANCE():
         with camera.vimba_camera() as vimba_device:
 
             camera.set_capture_parameters(configs={"CAP_PROP_FRAME_WIDTH": 1456,

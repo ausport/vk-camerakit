@@ -13,6 +13,8 @@ FEATURE_MAX = -1
 VIMBA_CAPTURE_MODE_SYNCRONOUS = 0
 VIMBA_CAPTURE_MODE_ASYNCRONOUS = 1
 
+def VIMBA_INSTANCE():
+    return VmbSystem.get_instance()
 
 class VKCameraVimbaDevice(VKCamera):
     """
@@ -32,7 +34,7 @@ class VKCameraVimbaDevice(VKCamera):
         self._streaming_mode = streaming_mode
         self._device_id = device_id
 
-        with VmbSystem.get_instance():
+        with VIMBA_INSTANCE():
             with get_camera(device_id) as cam:
                 self.video_object = cam
                 self._device_id = device_id
@@ -61,10 +63,6 @@ class VKCameraVimbaDevice(VKCamera):
             self._frame_queue = queue.Queue()
             self._frame_controller = VimbaFrameController(camera=self,
                                                           image_queue=self._frame_queue)
-
-    @staticmethod
-    def vimba_instance():
-        return VmbSystem.get_instance()
 
     def vimba_camera(self):
         return self.video_object
@@ -111,7 +109,7 @@ class VKCameraVimbaDevice(VKCamera):
 
     def camera_temperature(self):
         """Queries (and returns) the temperature of the camera"""
-        with VmbSystem.get_instance():
+        with VIMBA_INSTANCE():
             with get_camera(self.device_id) as cam:
                 return cam.DeviceTemperature.get()
         pass
@@ -152,7 +150,7 @@ class VKCameraVimbaDevice(VKCamera):
 
         NB - get_frame() should be called from within a valid instance.  i.e.:
 
-            with camera.vimba_instance():
+            with cameras.VIMBA_INSTANCE():
                 with camera.vimba_camera() as cam:
                     while True:
                         f = camera.get_frame()
@@ -232,7 +230,7 @@ class VKCameraVimbaDevice(VKCamera):
         assert type(configs) is dict, "WTF!!  set_capture_parameters: A dict was expected but not received..."
         result = True
 
-        with VmbSystem.get_instance():
+        with VIMBA_INSTANCE():
             with self.video_object:
 
                 # Set continuous exposure
@@ -295,7 +293,7 @@ class VKCameraVimbaDevice(VKCamera):
         Returns:
             (str): A string summary of the object
         """
-        with VmbSystem.get_instance():
+        with VIMBA_INSTANCE():
             with get_camera(self.device_id):
                 return f"\nVimba-Compatible Camera Source:" \
                        f"\n\tCamera Name      : {self.video_object.get_name()}"  \

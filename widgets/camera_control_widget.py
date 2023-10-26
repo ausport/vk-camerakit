@@ -130,7 +130,7 @@ class CameraControllerWidget(QWidget):
         self._current_active_device = self._devices[_i]
 
         if type(self._current_active_device.__class__) == type(cameras.VKCameraVimbaDevice):
-            with self._current_active_device.vimba_instance():
+            with cameras.VIMBA_INSTANCE():
                 with self._current_active_device.vimba_camera() as cam:
                     print(cam)
 
