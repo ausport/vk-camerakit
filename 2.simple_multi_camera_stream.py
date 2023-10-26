@@ -22,6 +22,7 @@ for device in available_vimba_devices:
 
     my_cameras.append(camera)
 
+"""Note that multiple cameras require a with vimba instance statement block"""
 with VmbSystem.get_instance():
     # Start the device streaming to a cache.
     # Note, we can get a frame at any time, but here we just wait a few seconds.
