@@ -192,6 +192,11 @@ class VKCameraVimbaDevice(VKCamera):
         """Terminate threaded asynchronous image acquisition."""
         self._frame_controller.stop()
 
+    @property
+    def is_streaming(self):
+        """Terminate threaded asynchronous image acquisition."""
+        return self.video_object.is_streaming()
+
     def save_cache_to_video(self, path):
         """Dump cache to a video file"""
         try:
