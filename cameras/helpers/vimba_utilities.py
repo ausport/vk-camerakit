@@ -18,6 +18,7 @@ class VimbaFrameController(threading.Thread):
         self._lock = threading.Lock()
         self._kill_switch = threading.Event()
         self._camera = camera
+        self._pre_rolling_mode = False
 
         with cameras.VIMBA_INSTANCE():
             print(camera.device_id, "-->", camera.video_object.get_interface_id())
@@ -26,7 +27,9 @@ class VimbaFrameController(threading.Thread):
 
         if frame.get_status() == FrameStatus.Complete:
             frame_copy = copy.deepcopy(frame)
-            self._image_queue.put_nowait(frame_copy)
+            if not self._pre_rolling_mode:
+                # Don't start queuing frames while in preroll.
+                self._image_queue.put_nowait(frame_copy)
 
         cam.queue_frame(frame)
 
@@ -41,6 +44,9 @@ class VimbaFrameController(threading.Thread):
 
     def stop(self):
         self._kill_switch.set()
+
+    def set_pre_roll_mode(self, preroll):
+        self._pre_rolling_mode = preroll
 
     def has_queued_frames(self):
         with self._lock:

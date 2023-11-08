@@ -31,7 +31,9 @@ class VKCameraVimbaDevice(VKCamera):
 
         print("Initialising Allied Vision device at {0}".format(device_id))
 
+        # Asynchronous mode (VIMBA_CAPTURE_MODE_ASYNCRONOUS) or frame grab mode (VIMBA_CAPTURE_MODE_SYNCRONOUS)
         self._streaming_mode = streaming_mode
+        # Device hardware address.
         self._device_id = device_id
 
         with VIMBA_INSTANCE():
@@ -183,10 +185,22 @@ class VKCameraVimbaDevice(VKCamera):
 
             return opencv_image
 
+    def pre_roll(self):
+        """Begin asynchronous image acquisition, but do not cache the frames (yet).
+
+        Optional function to allow camera pre-rolling.
+        Designed to allow more precise commencement of image
+        caching."""
+        self._frame_controller.set_pre_roll_mode(True)
+        self._frame_controller.start()
+
     def start_streaming(self):
         """An asynchronous image acquisition routine which will queue frames
         streaming from the connected image device."""
-        self._frame_controller.start()
+        if self._frame_controller.is_alive():
+            self._frame_controller.set_pre_roll_mode(False)
+        else:
+            self._frame_controller.start()
 
     def stop_streaming(self):
         """Terminate threaded asynchronous image acquisition."""
@@ -194,7 +208,7 @@ class VKCameraVimbaDevice(VKCamera):
 
     @property
     def is_streaming(self):
-        """Terminate threaded asynchronous image acquisition."""
+        """Verifies that the vimba device is streaming."""
         return self.video_object.is_streaming()
 
     def save_cache_to_video(self, path):
