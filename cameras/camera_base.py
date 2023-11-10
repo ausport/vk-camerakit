@@ -150,6 +150,10 @@ class VKCamera:
         else:
             raise NotImplementedError
 
+    @property
+    def device_id(self):
+        raise NotImplementedError
+
     def surface_model(self):
         return self.surface_model
 
