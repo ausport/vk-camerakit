@@ -6,14 +6,10 @@ import filetype
 import json
 import numpy as np
 import os
-from PIL import Image
 
 from world_models.geometry import ray_intersection
 from world_models import world_model as surface
 import cameras
-
-VK_CAPTURE_MODE_PREVIEW = 0
-VK_CAPTURE_MODE_RECORD = 1
 
 
 class VKCamera:
@@ -66,6 +62,12 @@ class VKCamera:
         if verbose_mode:
             print(self)
 
+    def device_id(self):
+        """Camera device identifier.
+         This method MUST be overridden by child classes
+        """
+        raise NotImplementedError
+
     def get_frame(self):
         """Takes the next available frame from the relevant camera object.
          This method MUST be overridden by child classes
@@ -112,26 +114,6 @@ class VKCamera:
         """
         return float(self.video_object.get(cv2.CAP_PROP_FPS))
 
-    # TODO - rotation should be handled by set_capture_parameters
-    # def image_rotation(self):
-    #     """The image rotation vector.
-    #
-    #     Returns:
-    #         (int): The CAP_PROP_ROTATION property.
-    #     """
-    #     return self.image_rotation
-    #
-    # def set_image_rotation(self, rotate):
-    #     """
-    #     The function cv::rotate rotates the array in one of three different ways:
-    #     *   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90_CLOCKWISE = 0).
-    #     *   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180 = 1).
-    #     *   Rotate by 270 degrees clockwise (rotateCode = ROTATE_90_COUNTERCLOCKWISE = 2).
-    #     self._most_recent_image = cv2.rotate(self._most_recent_image, self._rotation_vector)
-    #     """
-    #     assert -1 <= rotate <= 2, "Invalid rotation vector..."
-    #     self.image_rotation = rotate
-
     def eof(self):
         """Signals end of video file.
 
@@ -139,6 +121,12 @@ class VKCamera:
             (bool): True if end of file.
         """
         return int(self.video_object.get(cv2.CAP_PROP_POS_FRAMES)) >= int(self.video_object.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def cache_size(self):
+        """Returns the size of the frame cache.
+         This method MUST be overridden by child classes
+        """
+        raise NotImplementedError
 
     def is_available(self):
         """Returns the current status of an imaging file/device.
@@ -151,12 +139,17 @@ class VKCamera:
         else:
             raise NotImplementedError
 
-    @property
-    def device_id(self):
+    def camera_temperature(self):
+        """Returns device temperature is available.
+         This method MUST be overridden by child classes
+        """
         raise NotImplementedError
 
-    def surface_model(self):
-        return self.surface_model
+    def exposure_time(self):
+        """Returns the current exposure time of the device if available.
+         This method MUST be overridden by child classes
+        """
+        raise NotImplementedError
 
     def undistorted_image(self, image=None):
         """Undistorted input image with camera matrices.
@@ -171,6 +164,9 @@ class VKCamera:
             image = self.get_frame()
 
         return cv2.undistort(image, self.camera_matrix, self.distortion_matrix, None, None)
+
+    def surface_model(self):
+        return self.surface_model
 
     def update_camera_properties(self, with_distortion_matrix=None, with_camera_matrix=None):
         """Recalculates the camera intrinsics matrix.
@@ -297,7 +293,6 @@ class VKCamera:
 
         return self.camera_2d_image_space_location
 
-
     def instantiate_writer_with_path(self, path):
         """Initialise an OpenCV file writer at the specified path.
 
@@ -335,7 +330,6 @@ class VKCamera:
 
         return out
 
-
     def file_type(self):
         """Probe file type instance searching by MIME type or file extension.
 
@@ -348,42 +342,6 @@ class VKCamera:
             return kind.extension, kind.MIME
         else:
             return None, None
-
-    def save_frame(self, dest_path='./image.png'):
-        """Grabs a frame and saves it to file.
-
-        Args:
-            dest_path (str): destination for saved image.
-        """
-        _frame = self.get_frame()
-        img = Image.fromarray(_frame)
-        img.save(dest_path)
-
-    def save_video(self, video_export_path, size=(1920,1080), fps=25):
-        """Saves current camera model imagery in mp4 format.
-
-        Args:
-            video_export_path (str): destination path.
-            size(tuple): output size - default 1920 x 1080
-            fps(float): desired frame rate.
-        Returns:
-            None
-        """
-        if os.path.exists(os.path.split(video_export_path)[0]):
-            fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-            # pad out to a 16:9 aspect ratio
-            new_image_width = self.width()
-            new_image_height = int(new_image_width / 16) * 9
-            self._video_writer = cv2.VideoWriter(str(video_export_path), fourcc, fps, size, True)
-
-            self.capture_mode = VK_CAPTURE_MODE_RECORD
-            from threading import Thread
-
-            thread = Thread(target=self.cap_loop)
-            # thread.daemon = True
-            thread.start()
-            time.sleep(2)
-
 
     def export_json(self, json_path):
         """Export current camera model in json format.
@@ -409,8 +367,8 @@ class VKCamera:
 
     def camera_model_json(self):
         """Serialise the existing model parameters.
-        Note that we store all of the world model parameters here too.
-        Deserialisation should return a configured surface model.
+        Note that we store all world model parameters here too.
+        De-serialisation should return a configured surface model.
 
         Returns:
             Serialised camera model.
