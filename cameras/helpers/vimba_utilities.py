@@ -36,7 +36,7 @@ class VimbaFrameController(threading.Thread):
     def run(self):
         """Commence the threaded streaming process.  Wait here until the kill switch is thrown."""
         with cameras.VIMBA_INSTANCE():
-            with self._camera.vimba_camera() as vimba_device:
+            with self._camera.video_object as vimba_device:
                 # Start streaming within the vimba instance block...
                 vimba_device.start_streaming(self)
                 # ...and stay here on a parallel process.
