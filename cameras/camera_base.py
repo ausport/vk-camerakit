@@ -122,6 +122,25 @@ class VKCamera:
         """
         return int(self.video_object.get(cv2.CAP_PROP_POS_FRAMES)) >= int(self.video_object.get(cv2.CAP_PROP_FRAME_COUNT))
 
+    def image_rotation(self):
+        """The image rotation vector.
+
+        Returns:
+            (int): The CAP_PROP_ROTATION property.
+        """
+        return self.image_rotation
+
+    def set_image_rotation(self, rotate):
+        """
+        The function cv::rotate rotates the array in one of three different ways:
+        *   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90_CLOCKWISE = 0).
+        *   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180 = 1).
+        *   Rotate by 270 degrees clockwise (rotateCode = ROTATE_90_COUNTERCLOCKWISE = 2).
+        self._most_recent_image = cv2.rotate(self._most_recent_image, self._rotation_vector)
+        """
+        assert -1 <= rotate <= 2, "Invalid rotation vector..."
+        self.image_rotation = rotate
+
     def cache_size(self):
         """Returns the size of the frame cache.
          This method MUST be overridden by child classes
