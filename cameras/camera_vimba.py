@@ -13,8 +13,10 @@ FEATURE_MAX = -1
 VIMBA_CAPTURE_MODE_SYNCRONOUS = 0
 VIMBA_CAPTURE_MODE_ASYNCRONOUS = 1
 
+
 def VIMBA_INSTANCE():
     return VmbSystem.get_instance()
+
 
 class VKCameraVimbaDevice(VKCamera):
     """
@@ -66,80 +68,9 @@ class VKCameraVimbaDevice(VKCamera):
             self._frame_controller = VimbaFrameController(camera=self,
                                                           image_queue=self._frame_queue)
 
-    def vimba_camera(self):
-        return self.video_object
-
-    def eof(self):
-        """Overrides eof.
-
-        Returns:
-            (bool): True if video device is currently capturing.
-        """
-        return self.cache_size == 0
-
-    def fps(self):
-        """The frames per second of the video resource.
-
-        Returns:
-            (float): The CAP_PROP_FPS property.
-        """
-        return self._fps
-
-    def width(self):
-        """The pixel width of the video resource.
-
-        Returns:
-            (int): The CAP_PROP_FRAME_WIDTH property.
-        """
-        return self._width
-
-    def height(self):
-        """The pixel height of the video resource.
-
-        Returns:
-            (int): The CAP_PROP_FRAME_HEIGHT property.
-        """
-        return self._height
-
-    def frame_count(self):
-        """The number of frames in the video resource.
-
-        Returns:
-            (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
-        """
-        return self.cache_size
-
-    def camera_temperature(self):
-        """Queries (and returns) the temperature of the camera"""
-        with VIMBA_INSTANCE():
-            with get_camera(self.device_id) as cam:
-                return cam.DeviceTemperature.get()
-        pass
-
-    def exposure_time(self):
-        """Queries (and returns) the current exposure time of the camera. Returned in milliseconds
-
-        When queried, the result is in microseconds
-        """
-        return self.video_object.ExposureTimeAbs.get() / 1e3
-
-    def streaming_mode(self):
-        return self._streaming_mode
-
-    def streaming_mode_name(self):
-        if self._streaming_mode == VIMBA_CAPTURE_MODE_SYNCRONOUS:
-            return "Synchronous Capture Mode"
-        elif self._streaming_mode == VIMBA_CAPTURE_MODE_ASYNCRONOUS:
-            return "Asynchronous Capture Mode"
-        return "N/A"
-
     @property
     def device_id(self):
         return self._device_id
-
-    @property
-    def cache_size(self):
-        return self._frame_controller.cache_size()
 
     def get_frame(self):
         """Returns a frame in opencv-compatible format from the Vimba device.
@@ -185,6 +116,83 @@ class VKCameraVimbaDevice(VKCamera):
 
             return opencv_image
 
+    def frame_count(self):
+        """The number of frames in the video resource.
+
+        Returns:
+            (int): The CAP_PROP_FRAME_COUNT property - zero if a live camera.
+        """
+        return self.cache_size
+
+    def width(self):
+        """The pixel width of the video resource.
+
+        Returns:
+            (int): The CAP_PROP_FRAME_WIDTH property.
+        """
+        return self._width
+
+    def height(self):
+        """The pixel height of the video resource.
+
+        Returns:
+            (int): The CAP_PROP_FRAME_HEIGHT property.
+        """
+        return self._height
+
+    def fps(self):
+        """The frames per second of the video resource.
+
+        Returns:
+            (float): The CAP_PROP_FPS property.
+        """
+        return self._fps
+
+    def eof(self):
+        """Overrides eof.
+
+        Returns:
+            (bool): True if video device is currently capturing.
+        """
+        return self.cache_size == 0
+
+    def cache_size(self):
+        return self._frame_controller.cache_size()
+
+    def is_available(self):
+        """Returns the current status of an imaging device.
+        NB: Overrides default method.
+
+        Returns:
+            (bool): True if imaging device is available.
+        """
+        try:
+            if self.video_object.get_serial() is not None:
+                return True
+        except (AttributeError, VmbFeatureError):
+            return False
+
+    def camera_temperature(self):
+        """Queries (and returns) the temperature of the camera"""
+        with VIMBA_INSTANCE():
+            with get_camera(self.device_id) as cam:
+                return cam.DeviceTemperature.get()
+        pass
+
+    def exposure_time(self):
+        """Returns the current exposure time of the device if available in milliseconds"""
+        return self.video_object.ExposureTimeAbs.get() / 1e3
+
+    def streaming_mode(self):
+        return self._streaming_mode
+
+    def streaming_mode_name(self):
+        if self._streaming_mode == VIMBA_CAPTURE_MODE_SYNCRONOUS:
+            return "Synchronous Capture Mode"
+        elif self._streaming_mode == VIMBA_CAPTURE_MODE_ASYNCRONOUS:
+            return "Asynchronous Capture Mode"
+        return "N/A"
+
     def pre_roll(self):
         """Begin asynchronous image acquisition, but do not cache the frames (yet).
 
@@ -221,19 +229,6 @@ class VKCameraVimbaDevice(VKCamera):
 
         except Exception as e:
             print(f"An error occurred in camera_vimba::save_cache_to_video: {e}")
-
-    def is_available(self):
-        """Returns the current status of an imaging device.
-        NB: Overrides default method.
-
-        Returns:
-            (bool): True if imaging device is available.
-        """
-        try:
-            if self.video_object.get_serial() is not None:
-                return True
-        except (AttributeError, VmbFeatureError):
-            return False
 
     def set_capture_parameters(self, configs: dict):
         """Updates capture device properties for Vimba cameras.
@@ -302,6 +297,9 @@ class VKCameraVimbaDevice(VKCamera):
                     self.set_image_rotation(int(configs["CAP_PROP_ROTATION"]))
 
         return result
+
+    # def vimba_camera(self):
+    #     return self.video_object
 
     def name(self):
         return '{} | {}'.format(self.video_object.get_name(), self.video_object.get_id())
