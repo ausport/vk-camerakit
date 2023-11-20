@@ -6,3 +6,5 @@ PyQt5==5.15.6
 VimbaPython==1.2.1
 pybraw~=2.1.0
 torchvision~=0.10.0a0
+prettytable~=3.7.0
+colorama~=0.4.6
