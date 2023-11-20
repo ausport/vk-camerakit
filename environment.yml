@@ -37,5 +37,7 @@ dependencies:
       - torchvision==0.10.1
       - wget==3.2
       - yolov5
+      - prettytable~=3.7.0
+      - colorama~=0.4.6
 prefix: /home/stuart/miniconda3/envs/vkcamerakit
 
