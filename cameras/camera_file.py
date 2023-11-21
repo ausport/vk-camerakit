@@ -78,6 +78,7 @@ class VKCameraVideoFile(VKCamera):
         """Terminate threaded asynchronous image acquisition."""
         self._frame_controller.stop()
         self._streaming = False
+
     def is_streaming(self):
         """Verifies that the device is streaming."""
         return self._streaming

@@ -67,6 +67,7 @@ class VKCameraVimbaDevice(VKCamera):
             self._frame_queue = queue.Queue()
             self._frame_controller = VimbaFrameController(camera=self,
                                                           image_queue=self._frame_queue)
+            self._streaming = False
 
     @property
     def device_id(self):
@@ -201,6 +202,7 @@ class VKCameraVimbaDevice(VKCamera):
         caching."""
         self._frame_controller.set_pre_roll_mode(True)
         self._frame_controller.start()
+        self._streaming = True
 
     def start_streaming(self):
         """An asynchronous image acquisition routine which will queue frames
@@ -213,11 +215,11 @@ class VKCameraVimbaDevice(VKCamera):
     def stop_streaming(self):
         """Terminate threaded asynchronous image acquisition."""
         self._frame_controller.stop()
+        self._streaming = False
 
-    @property
     def is_streaming(self):
-        """Verifies that the vimba device is streaming."""
-        return self.video_object.is_streaming()
+        """Verifies that the device is streaming."""
+        return self._streaming
 
     def save_cache_to_video(self, path):
         """Dump cache to a video file"""
