@@ -461,16 +461,9 @@ class Window(QtWidgets.QWidget):
         for camera in vimba_cameras:
             # Add vimba camera object to VKCamera wrapper.
             camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
-            # print(camera_model)
-
-        exit(1)
-
-        print(camera_model)
-        if camera_model.is_available():
-            print("Found:", camera_model.__class__)
             available_devices.append(camera_model)
+            print(camera_model)
 
-        exit()
         return available_devices
 
     def update_current_camera_device(self, camera):
