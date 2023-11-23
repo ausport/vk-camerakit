@@ -1,5 +1,6 @@
 import vmbpy
 
+import cameras.helpers.camera_parser
 from cameras.camera_base import VKCamera
 from cameras.camera_generic import VKCameraGenericDevice
 from cameras.camera_file import VKCameraVideoFile
@@ -32,3 +33,7 @@ except ImportError:
     print("#\t\t* Vimba library is not supported.")
 
 print("#\n################################################\n")
+
+
+def camera_with_calibration_file(calibration_file):
+    return cameras.helpers.camera_parser.load_camera_model_from_json(path=calibration_file)
