@@ -182,7 +182,11 @@ class VKCamera:
         if image is None:
             image = self.get_frame()
 
-        return cv2.undistort(image, self.camera_matrix, self.distortion_matrix, None, None)
+        # Save time if there is no undistort requirement.
+        if np.all(self.distortion_matrix == 0):
+            return image
+        else:
+            return cv2.undistort(image, self.camera_matrix, self.distortion_matrix, None, None)
 
     def surface_model(self):
         return self.surface_model
