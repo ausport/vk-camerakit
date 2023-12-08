@@ -40,6 +40,7 @@ dependencies:
       - prettytable~=3.7.0
       - colorama~=0.4.6
       - tqdm~=4.64.0
-      - cairosvg
+      - pycairo=1.23.0
+      - cairosvg=2.6.0
 prefix: /home/stuart/miniconda3/envs/vkcamerakit
 
