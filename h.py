@@ -13,7 +13,7 @@ import time
 import cameras
 import world_models
 # import observers
-import tracking
+# import tracking
 import widgets
 # import scenes
 
@@ -456,13 +456,13 @@ class Window(QtWidgets.QWidget):
             available_devices.append(camera_model)
             print(camera_model)
 
-        # Check for Vimba cameras
-        vimba_cameras = cameras.enumerate_vimba_devices()
-        for camera in vimba_cameras:
-            # Add vimba camera object to VKCamera wrapper.
-            camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
-            available_devices.append(camera_model)
-            print(camera_model)
+        # # Check for Vimba cameras
+        # vimba_cameras = cameras.enumerate_vimba_devices()
+        # for camera in vimba_cameras:
+        #     # Add vimba camera object to VKCamera wrapper.
+        #     camera_model = cameras.VKCameraVimbaDevice(device_id=camera.get_id())
+        #     available_devices.append(camera_model)
+        #     print(camera_model)
 
         return available_devices
 
